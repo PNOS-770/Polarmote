@@ -1,0 +1,821 @@
+{
+  "settings": {
+    "autoReconnect": true,
+    "confirmPaste": true,
+    "showHiddenFiles": true,
+    "locale": "zh",
+    "terminalSplitViewEnabled": true,
+    "terminalSplitPanes": [
+      {
+        "id": "pane-0",
+        "sessionId": "sess-1783337552143337"
+      }
+    ],
+    "activeTerminalSplitPaneId": "pane-0",
+    "maximizedTerminalSplitPaneId": "",
+    "terminalSplitPrimaryRatio": 0.5,
+    "terminalSplitSecondaryRatio": 0.5,
+    "mobileSidebarWidth": 304.0,
+    "terminalHorizontalScrollEnabled": false,
+    "mobileTerminalColumns": 132,
+    "terminalAccessibilitySemanticsEnabled": false,
+    "transferAutoRetryEnabled": true,
+    "transferResumeEnabled": true,
+    "transferRetryMaxAttempts": 3,
+    "transferRetryBaseDelayMs": 800,
+    "transferRetryMaxDelayMs": 10000,
+    "performanceSettings": {
+      "adaptiveThrottleEnabled": true
+    },
+    "androidKeepSshAliveInBackground": false,
+    "sessionQuery": "",
+    "sessionSortMode": "smart",
+    "settingsTabIndex": 0,
+    "globalAppearance": {
+      "fontFamily": "monospace",
+      "fontSize": 14.0,
+      "lineHeight": 1.25,
+      "cursorShape": "block"
+    },
+    "terminalBackgroundImages": [
+      {
+        "id": "bg-2",
+        "path": "C:\\Users\\UserX\\AppData\\Roaming\\com.example\\Asmote\\backgrounds\\bg-2.png",
+        "name": "鸣潮   2025_12_28 21_51_40.png"
+      },
+      {
+        "id": "bg-1",
+        "path": "C:\\Users\\UserX\\AppData\\Roaming\\com.example\\Asmote\\backgrounds\\bg-1.jpg",
+        "name": "2f6d4413b8b80c1a14a99e786c643f8d.jpg"
+      }
+    ],
+    "terminalBackgroundOpacity": 0.75,
+    "reuseSessionForNewPane": false,
+    "terminalBlockSelectEnabled": false,
+    "logVerbosity": 2,
+    "memoryMode": 1,
+    "customTerminalBufferSize": 5000,
+    "smartMemoryManagement": true,
+    "customKeyBindings": [],
+    "shortcutBindings": [
+      {
+        "id": "copy",
+        "name": "Copy",
+        "defaultKeys": "Ctrl+Shift+C / Ctrl+C"
+      },
+      {
+        "id": "paste",
+        "name": "Paste",
+        "defaultKeys": "Ctrl+V / Shift+Insert"
+      },
+      {
+        "id": "selectAll",
+        "name": "Select All",
+        "defaultKeys": "Ctrl+A"
+      },
+      {
+        "id": "search",
+        "name": "Find in terminal",
+        "defaultKeys": "Ctrl+F"
+      },
+      {
+        "id": "blockSelect",
+        "name": "Toggle block selection",
+        "defaultKeys": "Alt+B"
+      },
+      {
+        "id": "splitMaximize",
+        "name": "Maximize / Restore pane",
+        "defaultKeys": "Ctrl+Alt+Enter"
+      },
+      {
+        "id": "splitBroadcast",
+        "name": "Toggle input broadcast",
+        "defaultKeys": "Ctrl+Alt+B"
+      },
+      {
+        "id": "splitPrev",
+        "name": "Switch to previous pane",
+        "defaultKeys": "Ctrl+Alt+Left / Ctrl+Alt+Up"
+      },
+      {
+        "id": "splitNext",
+        "name": "Switch to next pane",
+        "defaultKeys": "Ctrl+Alt+Right / Ctrl+Alt+Down"
+      },
+      {
+        "id": "newSession",
+        "name": "New session",
+        "defaultKeys": "Ctrl+N"
+      },
+      {
+        "id": "quickConnect",
+        "name": "Quick connect",
+        "defaultKeys": "Ctrl+K"
+      },
+      {
+        "id": "closeSession",
+        "name": "Close current workspace",
+        "defaultKeys": "Ctrl+W"
+      },
+      {
+        "id": "closeAllSessions",
+        "name": "Close all sessions",
+        "defaultKeys": "Ctrl+Shift+W"
+      },
+      {
+        "id": "newScript",
+        "name": "New script",
+        "defaultKeys": "Ctrl+Shift+N"
+      },
+      {
+        "id": "runScript",
+        "name": "Run script",
+        "defaultKeys": "Ctrl+Shift+R"
+      },
+      {
+        "id": "scriptList",
+        "name": "Script list",
+        "defaultKeys": "Ctrl+Shift+L"
+      },
+      {
+        "id": "scriptMonitor",
+        "name": "Script monitor",
+        "defaultKeys": "Ctrl+Shift+M"
+      },
+      {
+        "id": "sftpBrowser",
+        "name": "SFTP browser",
+        "defaultKeys": "Ctrl+Shift+F"
+      },
+      {
+        "id": "transferManager",
+        "name": "Transfer manager",
+        "defaultKeys": "Ctrl+Shift+T"
+      },
+      {
+        "id": "portForwarding",
+        "name": "Port forwarding",
+        "defaultKeys": "Ctrl+Shift+P"
+      },
+      {
+        "id": "lanScan",
+        "name": "LAN scan",
+        "defaultKeys": "Ctrl+Shift+A"
+      },
+      {
+        "id": "openSettings",
+        "name": "Settings",
+        "defaultKeys": "Ctrl+,"
+      }
+    ],
+    "activeTerminalStageId": "stage-1",
+    "terminalStages": [
+      {
+        "id": "stage-1",
+        "name": "Stage 2",
+        "sessionIds": [
+          "sess-1783337551652890"
+        ],
+        "createdAt": "2026-07-06T00:21:09.342871",
+        "backgroundImageId": "bg-2",
+        "connectedHostIds": [
+          "script-local-1783270300450861-powershell",
+          "script-local-1783270300464740-powershell",
+          "host-1772331714093741"
+        ]
+      },
+      {
+        "id": "stage-0",
+        "name": "Stage 2",
+        "sessionIds": [
+          "sess-1783337552143337"
+        ],
+        "createdAt": "2026-07-06T16:24:59.651558",
+        "backgroundImageId": "bg-1",
+        "connectedHostIds": [
+          "host-1771825080027079"
+        ]
+      }
+    ]
+  },
+  "hosts": [
+    {
+      "id": "host-1771825080027079",
+      "name": "PowerShell",
+      "host": "local",
+      "port": 0,
+      "username": "magic",
+      "group": "默认",
+      "authType": "password",
+      "connectionType": "local",
+      "sshProxyType": "none",
+      "socksProxyHost": null,
+      "socksProxyPort": 1080,
+      "socksProxyUsername": null,
+      "jumpHosts": [],
+      "useSshAgent": false,
+      "sshAgentSocketPath": null,
+      "keepAliveSeconds": 10,
+      "connectTimeoutSeconds": 12,
+      "localShellType": "powershell",
+      "serialPortPath": null,
+      "serialBaudRate": 9600,
+      "serialDataBits": 8,
+      "serialStopBits": 1,
+      "serialParity": "none",
+      "privateKeyPath": null,
+      "lastConnected": "2026-07-06T19:32:32.166146",
+      "telnetPort": 23,
+      "fontFamily": null,
+      "fontSize": null,
+      "lineHeight": null,
+      "maxScrollbackLines": null
+    },
+    {
+      "id": "host-1772331714093741",
+      "name": "最新服务器",
+      "host": "116.62.15.134",
+      "port": 22,
+      "username": "root",
+      "group": "默认",
+      "authType": "password",
+      "connectionType": "ssh",
+      "sshProxyType": "none",
+      "socksProxyHost": null,
+      "socksProxyPort": 1080,
+      "socksProxyUsername": null,
+      "jumpHosts": [],
+      "useSshAgent": false,
+      "sshAgentSocketPath": null,
+      "keepAliveSeconds": 10,
+      "connectTimeoutSeconds": 12,
+      "localShellType": "systemDefault",
+      "serialPortPath": null,
+      "serialBaudRate": 9600,
+      "serialDataBits": 8,
+      "serialStopBits": 1,
+      "serialParity": "none",
+      "privateKeyPath": null,
+      "lastConnected": "2026-07-06T19:38:35.998567",
+      "telnetPort": 23,
+      "fontFamily": null,
+      "fontSize": null,
+      "lineHeight": null,
+      "maxScrollbackLines": null
+    },
+    {
+      "id": "host-1780365590546283",
+      "name": "Bash",
+      "host": "local",
+      "port": 0,
+      "username": "magic",
+      "group": "默认",
+      "authType": "password",
+      "connectionType": "local",
+      "sshProxyType": "none",
+      "socksProxyHost": null,
+      "socksProxyPort": 1080,
+      "socksProxyUsername": null,
+      "jumpHosts": [],
+      "useSshAgent": false,
+      "sshAgentSocketPath": null,
+      "keepAliveSeconds": 10,
+      "connectTimeoutSeconds": 12,
+      "localShellType": "bash",
+      "serialPortPath": null,
+      "serialBaudRate": 9600,
+      "serialDataBits": 8,
+      "serialStopBits": 1,
+      "serialParity": "none",
+      "privateKeyPath": null,
+      "lastConnected": "2026-07-06T00:50:53.875516",
+      "telnetPort": 23,
+      "fontFamily": null,
+      "fontSize": null,
+      "lineHeight": null,
+      "maxScrollbackLines": null
+    },
+    {
+      "id": "host-1781700231658100",
+      "name": "命令提示符",
+      "host": "local",
+      "port": 0,
+      "username": "magic",
+      "group": "默认",
+      "authType": "password",
+      "connectionType": "local",
+      "sshProxyType": "none",
+      "socksProxyHost": null,
+      "socksProxyPort": 1080,
+      "socksProxyUsername": null,
+      "jumpHosts": [],
+      "useSshAgent": false,
+      "sshAgentSocketPath": null,
+      "keepAliveSeconds": 10,
+      "connectTimeoutSeconds": 12,
+      "localShellType": "commandPrompt",
+      "serialPortPath": null,
+      "serialBaudRate": 9600,
+      "serialDataBits": 8,
+      "serialStopBits": 1,
+      "serialParity": "none",
+      "privateKeyPath": null,
+      "lastConnected": "2026-07-06T15:26:51.548419",
+      "telnetPort": 23,
+      "fontFamily": null,
+      "fontSize": null,
+      "lineHeight": null,
+      "maxScrollbackLines": null
+    },
+    {
+      "id": "lan-192-168-1-10",
+      "name": "test-device-1",
+      "host": "192.168.1.10",
+      "port": 22,
+      "username": "root",
+      "group": "LAN Scan",
+      "authType": "password",
+      "connectionType": "ssh",
+      "sshProxyType": "none",
+      "socksProxyHost": null,
+      "socksProxyPort": 1080,
+      "socksProxyUsername": null,
+      "jumpHosts": [],
+      "useSshAgent": false,
+      "sshAgentSocketPath": null,
+      "keepAliveSeconds": 10,
+      "connectTimeoutSeconds": 12,
+      "localShellType": "systemDefault",
+      "serialPortPath": null,
+      "serialBaudRate": 9600,
+      "serialDataBits": 8,
+      "serialStopBits": 1,
+      "serialParity": "none",
+      "privateKeyPath": null,
+      "lastConnected": null,
+      "telnetPort": 23,
+      "fontFamily": null,
+      "fontSize": null,
+      "lineHeight": null,
+      "maxScrollbackLines": null
+    }
+  ],
+  "scripts": [
+    {
+      "id": "script-1771289477999233",
+      "name": "启动连接安卓模拟器-手机",
+      "folderId": "script-folder-default",
+      "commands": [
+        "cd \"C:\\Users\\UserX\\AppData\\Local\\Android\\Sdk\\platform-tools\"",
+        ".\\adb.exe kill-server",
+        ".\\adb.exe connect 127.0.0.1:16416"
+      ],
+      "createdAt": "2026-02-17T08:51:17.999233",
+      "updatedAt": "2026-07-03T18:44:37.184644",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershellAdmin"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": true,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772075599886819",
+      "name": "frp服务器端配置",
+      "folderId": "script-folder-1781922596120123-0",
+      "commands": [
+        "mkdir -p frp",
+        "tar -zxvf frp_0.67.0_linux_amd64.tar.gz",
+        "cat > /root/frp/frp_0.67.0_linux_amd64/frps.toml << 'EOF'\r\nbindPort = 7000\r\nauth.token = \"mc_pokemon\"\r\nlog.level = \"info\"\r\nlog.file = \"/root/frp/frp_0.67.0_linux_amd64/frps.log\"\r\nEOF",
+        "cat > /etc/systemd/system/frps.service << 'EOF'\r\n[Unit]\r\nDescription = frp server\r\nAfter = network.target syslog.target\r\nWants = network.target\r\n[Service]\r\nType = simple\r\nExecStart = /root/frp/frp_0.67.0_linux_amd64/frps -c /root/frp/frp_0.67.0_linux_amd64/frps.toml\r\nRestart = always\r\nRestartSec = 5\r\n[Install]\r\nWantedBy = multi-user.target\r\nEOF",
+        "sudo systemctl daemon-reload",
+        "sudo systemctl stop frps",
+        "sudo systemctl start frps",
+        "sudo systemctl enable frps"
+      ],
+      "createdAt": "2026-02-26T11:13:19.886819",
+      "updatedAt": "2026-06-20T10:30:09.807695",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "continueOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772169591630884",
+      "name": "启动frp客户端内网穿透",
+      "folderId": "script-folder-1781922596120123-0",
+      "commands": [
+        "cd C:\\frp\\frp_0.67.0_windows_amd64",
+        ".\\frpc.exe -c frpc.toml"
+      ],
+      "createdAt": "2026-02-27T13:19:51.630884",
+      "updatedAt": "2026-06-20T10:29:56.120123",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": true,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772352908165364",
+      "name": "错题软件后端重启",
+      "folderId": "script-folder-default",
+      "commands": [
+        "systemctl daemon-reload",
+        "systemctl enable memo_path_update",
+        "systemctl stop memo_path_update",
+        "systemctl start memo_path_update"
+      ],
+      "createdAt": "2026-03-01T16:15:08.165364",
+      "updatedAt": "2026-03-08T10:08:55.462750",
+      "lastRunConfig": {
+        "hostIds": [
+          "host-1772331714093741"
+        ],
+        "localShellTypes": [],
+        "notifyEnabled": true,
+        "silentExecution": true,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772599146995552",
+      "name": "Asmote桌面端编译",
+      "folderId": "script-folder-default",
+      "commands": [
+        "cd C:\\srcqaq\\Asmote",
+        "flutter build windows"
+      ],
+      "createdAt": "2026-03-04T12:39:06.995552",
+      "updatedAt": "2026-06-27T18:28:29.340605",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772629700492669",
+      "name": "Asmote安卓编译",
+      "folderId": "script-folder-default",
+      "commands": [
+        "cd C:\\srcqaq\\Asmote",
+        "flutter build apk"
+      ],
+      "createdAt": "2026-03-04T21:08:20.492669",
+      "updatedAt": "2026-06-20T17:55:11.318765",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772637717070681",
+      "name": "Asmote安卓编译11",
+      "folderId": "script-folder-default",
+      "commands": [
+        "@script:启动连接安卓模拟器"
+      ],
+      "createdAt": "2026-03-04T23:21:57.070681",
+      "updatedAt": "2026-03-18T22:31:32.897937",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1772973341541692",
+      "name": "启动连接安卓模拟器-平板",
+      "folderId": "script-folder-default",
+      "commands": [
+        "cd \"C:\\Users\\UserX\\AppData\\Local\\Android\\Sdk\\platform-tools\"",
+        ".\\adb.exe kill-server",
+        ".\\adb.exe connect 127.0.0.1:16384"
+      ],
+      "createdAt": "2026-03-08T20:35:41.541692",
+      "updatedAt": "2026-03-08T20:35:56.576471",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": true,
+        "failurePolicy": "continueOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1780847977720990",
+      "name": "git推送",
+      "commands": [
+        "cd \\srcqaq\\Asmote",
+        "git push",
+        "git tag v1.0.5",
+        "git push origin v1.0.5"
+      ],
+      "createdAt": "2026-06-07T23:59:37.720990",
+      "updatedAt": "2026-06-08T11:28:39.740961",
+      "lastRunConfig": {
+        "hostIds": [
+          "host-1771825080027079"
+        ],
+        "localShellTypes": [],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-publish-release",
+      "name": "Publish Release",
+      "commands": [
+        "cd \\srcqaq\\Asmote",
+        "flutter build apk --release --no-tree-shake-icons",
+        "Copy-Item build/app/outputs/flutter-apk/app-release.apk Asmote-android.apk",
+        "flutter build windows --release",
+        "Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Asmote-windows.zip",
+        "$_v = if ((Get-Content pubspec.yaml -Raw) -match 'version:\\s*([\\d\\.\\+]+)') { $Matches[1] }; gh release create \"v$_v\" Asmote-android.apk, Asmote-windows.zip --generate-notes",
+        "Remove-Item Asmote-android.apk, Asmote-windows.zip -Force"
+      ],
+      "createdAt": "2026-06-08T23:00:00.000",
+      "updatedAt": "2026-06-17T12:06:46.928058",
+      "precheckCommands": [
+        "if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'gh CLI not found. Install: winget install GitHub.cli' }",
+        "if (-not (gh auth status 2>&1)) { throw 'Not logged into GitHub. Run: gh auth login' }",
+        "if (Test-Path 'build/windows/x64/pdfium/chromium%2F7202' -PathType Container -ErrorAction SilentlyContinue) { New-Item -ItemType Junction -Path 'build/windows/x64/pdfium/chromium/7202' -Target 'build/windows/x64/pdfium/chromium%2F7202' -Force | Out-Null }"
+      ],
+      "lastRunConfig": {
+        "hostIds": [
+          "host-1771825080027079"
+        ],
+        "localShellTypes": [],
+        "notifyEnabled": false,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1781705362493434",
+      "name": "github",
+      "commands": [
+        "cd \\srcqaq\\Asmote",
+        "$env:HTTP_PROXY=\"http://127.0.0.1:7897\"",
+        "$env:HTTPS_PROXY=\"http://127.0.0.1:7897\"",
+        "git commit -am \"哈哈哈\"",
+        "git push origin main"
+      ],
+      "createdAt": "2026-06-17T22:09:22.493434",
+      "updatedAt": "2026-07-06T19:41:17.750312",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1781714152403130",
+      "name": "release发布",
+      "commands": [
+        "gh release create v1.0.0 \"C:\\srcqaq\\Asmote\\build\\windows\\x64\\runner\\windows_v1.0.0.zip\" --repo PNOS-770/Asmote-docs --title \"Asmote v1.0.0\" --notes \"版本\""
+      ],
+      "createdAt": "2026-06-18T00:35:52.403130",
+      "updatedAt": "2026-06-18T00:41:46.497221",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1781882354315618",
+      "name": "基金软件服务器部署脚本",
+      "folderId": "script-folder-1781882354315618-0",
+      "commands": [
+        "cd /opt/fundmind/backend",
+        "python3 -m venv venv",
+        "source venv/bin/activate",
+        "pip install --upgrade pip",
+        "pip install -r requirements.txt",
+        "mkdir -p storage/models storage/reports storage/news models",
+        "python -c \"from app.core.database import init_db; init_db()\"",
+        "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      ],
+      "createdAt": "2026-06-19T23:19:14.315618",
+      "updatedAt": "2026-06-20T09:51:57.564949",
+      "lastRunConfig": {
+        "hostIds": [
+          "host-1772331714093741"
+        ],
+        "localShellTypes": [],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1781920662597639",
+      "name": "123",
+      "folderId": "script-folder-1781882354315618-0",
+      "commands": [
+        "cd /opt/fundmind/backend",
+        "sed -i 's/port: int = 8000/port: int = 8080/' app/core/config.py",
+        "sed -i '3i\\    model_config = {\"protected_namespaces\": (\"settings_\",)}' app/core/config.py",
+        "sed -i 's/def init_db():/def init_db():\\n    from app.models import fund, market, news, user, report/' app/core/database.py",
+        "rm -f fundmind.db",
+        "python -c \"from app.core.database import init_db; init_db()\"",
+        "fuser -k 8080/tcp 2>/dev/null",
+        "uvicorn app.main:app --host 0.0.0.0 --port 8080"
+      ],
+      "createdAt": "2026-06-20T09:57:42.597639",
+      "updatedAt": "2026-06-20T09:59:00.776892",
+      "lastRunConfig": {
+        "hostIds": [
+          "host-1772331714093741"
+        ],
+        "localShellTypes": [],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1781921213920125",
+      "name": "服务配置",
+      "folderId": "script-folder-1781882354315618-0",
+      "commands": [
+        "sudo tee /etc/systemd/system/fundmind.service > /dev/null << 'EOF'\r\n[Unit]\r\nDescription=FundMind API\r\nAfter=network.target\r\n\r\n[Service]\r\nType=simple\r\nUser=root\r\nWorkingDirectory=/opt/fundmind/backend\r\nEnvironmentFile=/opt/fundmind/.env\r\nExecStart=/opt/fundmind/backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8080\r\nRestart=always\r\nRestartSec=5\r\n\r\n[Install]\r\nWantedBy=multi-user.target\r\nEOF",
+        "sudo systemctl daemon-reload && sudo systemctl enable --now fundmind"
+      ],
+      "createdAt": "2026-06-20T10:06:53.920125",
+      "updatedAt": "2026-06-20T10:07:20.854264",
+      "lastRunConfig": {
+        "hostIds": [
+          "host-1772331714093741"
+        ],
+        "localShellTypes": [],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    },
+    {
+      "id": "script-1782523905053651",
+      "name": "opencode",
+      "folderId": "script-folder-1782523905052649-0",
+      "commands": [
+        "cd \\srcqaq\\Asmote",
+        "opencode"
+      ],
+      "createdAt": "2026-06-27T09:31:45.053651",
+      "updatedAt": "2026-06-27T17:49:07.564016",
+      "lastRunConfig": {
+        "hostIds": [],
+        "localShellTypes": [
+          "powershell"
+        ],
+        "notifyEnabled": true,
+        "silentExecution": false,
+        "failurePolicy": "stopOnFailure",
+        "retryPerHost": 1
+      }
+    }
+  ],
+  "scriptFolders": [
+    {
+      "id": "script-folder-default",
+      "name": "asmote编译",
+      "createdAt": "2026-03-08T10:08:55.462750",
+      "updatedAt": "2026-06-20T10:28:47.935492"
+    },
+    {
+      "id": "script-folder-1781882354315618-0",
+      "name": "基金软件",
+      "createdAt": "2026-06-19T23:19:14.315618",
+      "updatedAt": "2026-06-19T23:19:14.315618"
+    },
+    {
+      "id": "script-folder-1781922596120123-0",
+      "name": "frp-我的世界联机",
+      "createdAt": "2026-06-20T10:29:56.120123",
+      "updatedAt": "2026-06-20T10:29:56.120123"
+    },
+    {
+      "id": "script-folder-1782097036950228-0",
+      "name": "海思",
+      "createdAt": "2026-06-22T10:57:16.950228",
+      "updatedAt": "2026-06-22T10:57:16.950228"
+    },
+    {
+      "id": "script-folder-1782523905052649-0",
+      "name": "opencode",
+      "createdAt": "2026-06-27T09:31:45.052649",
+      "updatedAt": "2026-06-27T09:31:45.052649"
+    }
+  ],
+  "scriptWorkflows": [],
+  "scriptBatchTemplates": [],
+  "scriptTriggers": [],
+  "portForwards": [
+    {
+      "id": "pf-1781697974479219",
+      "name": "d",
+      "hostId": "host-1772331714093741",
+      "localHost": "127.0.0.1",
+      "localPort": 9999,
+      "remoteHost": "0.0.0.0",
+      "remotePort": 9999,
+      "createdAt": "2026-06-17T20:06:14.479219",
+      "autoStart": false,
+      "type": "reverse"
+    },
+    {
+      "id": "pf-1781698156403996",
+      "name": "12",
+      "hostId": "host-1772331714093741",
+      "localHost": "127.0.0.1",
+      "localPort": 10000,
+      "remoteHost": "127.0.0.1",
+      "remotePort": 10000,
+      "createdAt": "2026-06-17T20:09:16.403996",
+      "autoStart": false,
+      "type": "local"
+    }
+  ],
+  "portForwardTemplates": [],
+  "knownHostFingerprints": {
+    "host-1772331714093741::ssh-ed25519": "3c:3b:ac:31:44:79:42:a1:87:f6:b2:ec:3f:9a:ed:19"
+  },
+  "pinnedHostIds": [],
+  "visitedFiles": [],
+  "scriptRunHistory": [],
+  "scriptShortcutBindings": {},
+  "scriptSchedules": [
+    {
+      "id": "script-schedule-1781747300939528",
+      "scriptId": "script-1772599146995552",
+      "cronExpression": "*/5 * * * *",
+      "enabled": true,
+      "hostIds": [],
+      "localShellTypes": [
+        "powershell"
+      ],
+      "failurePolicy": "stopOnFailure",
+      "retryPerHost": 1,
+      "silentExecution": true,
+      "timezoneOffsetMinutes": 480,
+      "missedRunPolicy": "skip",
+      "createdAt": "2026-06-18T09:48:01.191070",
+      "updatedAt": "2026-06-18T15:48:07.659176",
+      "lastTriggeredAt": "2026-06-18T07:45:00.000Z",
+      "lastEvaluatedAt": "2026-06-18T07:48:00.000Z"
+    }
+  ]
+}

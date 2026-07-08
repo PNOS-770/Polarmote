@@ -1,0 +1,28 @@
+# Flutter
+.dart_tool/
+.packages
+.pub/
+build/
+*.iml
+.idea/
+.metadata
+*.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+*.log
+stderr.txt
+stdout.txt
+native/Polarmote_native_core/target/
+native/Polarmote_native_core/.cargo/
+native/Polarmote_native_core/.cargo-local/
+native/Polarmote_native_core/.rustup-local/
+windows/flutter/ephemeral/

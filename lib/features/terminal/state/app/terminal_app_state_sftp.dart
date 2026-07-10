@@ -133,7 +133,6 @@ extension TerminalAppStateSftp on TerminalAppState {
     if (!session.profile.isLocal && sftp == null) return;
 
     session.fileState.loading.add(normalizedPath);
-    notifyState();
     try {
       final entries = <FileNode>[];
       if (session.profile.isLocal) {

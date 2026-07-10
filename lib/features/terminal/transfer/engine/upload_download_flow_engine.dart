@@ -221,8 +221,9 @@ class UploadDownloadFlowEngine {
   }
 
   Future<String> _dragTempDir() async {
-    final base = await resolveDesktopDirectory();
-    final dir = Directory(p.join(base.path, 'Polarmote-transfer-temp'));
+    final dir = Directory(
+      p.join(Directory.systemTemp.path, _localTransferTempRootName),
+    );
     await dir.create(recursive: true);
     return dir.path;
   }

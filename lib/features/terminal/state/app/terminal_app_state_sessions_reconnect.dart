@@ -64,10 +64,12 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
     }
   }
 
-  void restoreStageSessions() {
+  Future<void> restoreStageSessions() async {
     if (!stageManagerEnabled) return;
     addStructuredLog(category: TerminalLogCategory.session, message: 'Restoring stage sessions...', notifyListeners: false);
-    var delay = 0;
+    if (terminalStages.isEmpty) return;
+    restorationInProgress = true;
+    var count = 0;
     for (final stage in terminalStages) {
       if (stage.connectedHostIds.isEmpty) continue;
       for (final hostId in stage.connectedHostIds) {
@@ -76,18 +78,32 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
           addStructuredLog(category: TerminalLogCategory.session, message: 'restore: host not found id=$hostId', notifyListeners: false);
           continue;
         }
-        delay += 500;
+        await Future.delayed(const Duration(milliseconds: 500));
         final capturedStageId = stage.id;
-        unawaited(Future.delayed(Duration(milliseconds: delay), () {
-          activeTerminalStageId = capturedStageId;
-          unawaited(connectToHost(host));
-        }));
+        await connectToHost(host, background: true);
+        // Manually assign session to the correct stage (silent, no notifyState).
+        // Guards (onAppStateChanged, statusBar) check restorationInProgress to
+        // suppress rebuilds; next external timer tick will expose final state.
+        if (sessions.isNotEmpty) {
+          final newSession = sessions.last;
+          final idx = terminalStages.indexWhere((s) => s.id == capturedStageId);
+          if (idx >= 0) {
+            terminalStages[idx] = terminalStages[idx].copyWith(
+              sessionIds: [...terminalStages[idx].sessionIds, newSession.id],
+              connectedHostIds: [
+                ...terminalStages[idx].connectedHostIds.where((id) => id != host.id),
+                host.id,
+              ],
+            );
+          }
+        }
+        count++;
       }
     }
-    if (delay > 0) {
-      final count = delay ~/ 500;
-      addStructuredLog(category: TerminalLogCategory.session, message: 'Restored $count stage sessions with staggered delays', notifyListeners: false);
+    if (count > 0) {
+      addStructuredLog(category: TerminalLogCategory.session, message: 'Restored $count stage sessions silently', notifyListeners: false);
     }
+    restorationInProgress = false;
   }
 }
 

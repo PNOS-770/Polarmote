@@ -30,6 +30,10 @@ extension TerminalAppStateMetrics on TerminalAppState {
     if (session.tab.status != TerminalStatus.connected) {
       return;
     }
+    // 只对当前活跃会话采集指标，后台会话跳过昂贵的 SSH proc/* 查询
+    if (activeSession != session) {
+      return;
+    }
     if (session.profile.isLocal) {
       await _pollLocalMetrics(session);
     } else {

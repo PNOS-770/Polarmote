@@ -48,7 +48,7 @@ class _FileTreeColumnsHeader extends StatelessWidget {
     }
 
     return Container(
-      height: 28,
+      height: 24,
       padding: const EdgeInsets.fromLTRB(
         _fileTreeLeadingWidth,
         0,
@@ -160,6 +160,8 @@ class FileTreeHeader extends StatefulWidget {
     required this.onSearchChanged,
     required this.onUploadFromSystem,
     required this.onPathSubmitted,
+    required this.onGoHome,
+    required this.onDownload,
   });
 
   final TerminalSession session;
@@ -176,6 +178,8 @@ class FileTreeHeader extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onUploadFromSystem;
   final ValueChanged<String> onPathSubmitted;
+  final VoidCallback onGoHome;
+  final VoidCallback onDownload;
 
   @override
   State<FileTreeHeader> createState() => FileTreeHeaderState();
@@ -248,14 +252,14 @@ class FileTreeHeaderState extends State<FileTreeHeader> {
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: borderColor),
               ),
-              child: Icon(icon, size: 16, color: iconColor),
+              child: Icon(icon, size: 14, color: iconColor),
             ),
           ),
         ),
@@ -263,128 +267,129 @@ class FileTreeHeaderState extends State<FileTreeHeader> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
       decoration: const BoxDecoration(
         color: TerminalUiPalette.panelBackground,
         border: Border(bottom: BorderSide(color: TerminalUiPalette.border)),
       ),
-      child: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                toolbarIconButton(
-                  onPressed: widget.canGoBack ? widget.onGoBack : null,
-                  icon: Icons.arrow_back,
-                  semanticsLabel: l(appState, AppStrings.values.back),
-                ),
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.canGoForward ? widget.onGoForward : null,
-                  icon: Icons.arrow_forward,
-                  semanticsLabel: l(appState, AppStrings.values.forward),
-                ),
-                const SizedBox(width: 6),
-                toolbarIconButton(
-                  onPressed: widget.onCreateFile,
-                  icon: Icons.note_add_outlined,
-                  semanticsLabel: l(appState, AppStrings.values.newFile),
-                ),
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.onCreateFolder,
-                  icon: Icons.create_new_folder_outlined,
-                  semanticsLabel: l(appState, AppStrings.values.newFolder),
-                ),
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.onToggleShowHidden,
-                  icon: widget.showHiddenFiles
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  semanticsLabel: l(
-                    appState,
-                    AppStrings.values.showHiddenFiles,
-                  ),
-                  active: widget.showHiddenFiles,
-                ),
-                if (!isDesktopPlatform()) ...[
-                  const SizedBox(width: 2),
-                  toolbarIconButton(
-                    onPressed: widget.onUploadFromSystem,
-                    icon: Icons.upload_file_outlined,
-                    semanticsLabel: l(appState, AppStrings.values.uploads),
-                  ),
-                ],
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.onRefresh,
-                  icon: Icons.refresh,
-                  semanticsLabel: l(appState, AppStrings.values.refresh),
-                ),
-              ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            toolbarIconButton(
+              onPressed: widget.onGoHome,
+              icon: Icons.home_outlined,
+              semanticsLabel: 'Home',
             ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 34,
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              style: const TextStyle(
-                fontSize: 12,
-                color: TerminalUiPalette.textPrimary,
-                fontWeight: FontWeight.w500,
+            const SizedBox(width: 4),
+            toolbarIconButton(
+              onPressed: widget.canGoBack ? widget.onGoBack : null,
+              icon: Icons.arrow_back,
+              semanticsLabel: l(appState, AppStrings.values.back),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.canGoForward ? widget.onGoForward : null,
+              icon: Icons.arrow_forward,
+              semanticsLabel: l(appState, AppStrings.values.forward),
+            ),
+            const SizedBox(width: 4),
+            toolbarIconButton(
+              onPressed: widget.onCreateFile,
+              icon: Icons.note_add_outlined,
+              semanticsLabel: l(appState, AppStrings.values.newFile),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onCreateFolder,
+              icon: Icons.create_new_folder_outlined,
+              semanticsLabel: l(appState, AppStrings.values.newFolder),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onToggleShowHidden,
+              icon: widget.showHiddenFiles
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              semanticsLabel: l(
+                appState,
+                AppStrings.values.showHiddenFiles,
               ),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: l(appState, AppStrings.values.enterPath),
-                hintStyle: const TextStyle(
-                  color: TerminalUiPalette.textSecondary,
+              active: widget.showHiddenFiles,
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onUploadFromSystem,
+              icon: Icons.upload_outlined,
+              semanticsLabel: l(appState, AppStrings.values.uploads),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onDownload,
+              icon: Icons.download_outlined,
+              semanticsLabel: l(appState, AppStrings.values.downloads),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onRefresh,
+              icon: Icons.refresh,
+              semanticsLabel: l(appState, AppStrings.values.refresh),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 200,
+              height: 28,
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                style: const TextStyle(
                   fontSize: 12,
+                  color: TerminalUiPalette.textPrimary,
                 ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  size: 16,
-                  color: TerminalUiPalette.textSecondary,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: TerminalUiPalette.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: TerminalUiPalette.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: TerminalUiPalette.accent,
-                    width: 1.2,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: l(appState, AppStrings.values.enterPath),
+                  hintStyle: const TextStyle(
+                    color: TerminalUiPalette.textSecondary,
+                    fontSize: 12,
                   ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 14,
+                    color: TerminalUiPalette.textSecondary,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: TerminalUiPalette.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: TerminalUiPalette.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(
+                      color: TerminalUiPalette.accent,
+                      width: 1.2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  filled: true,
+                  fillColor: TerminalUiPalette.cardBackground,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                filled: true,
-                fillColor: TerminalUiPalette.cardBackground,
+                onChanged: (value) {
+                  widget.onSearchChanged(value.trim());
+                },
+                onSubmitted: (value) {
+                  widget.onPathSubmitted(value);
+                },
               ),
-              onChanged: (value) {
-                widget.onSearchChanged(value.trim());
-              },
-              onSubmitted: (value) {
-                final trimmed = value.trim();
-                if (trimmed.isEmpty) {
-                  _controller.text = _currentPath();
-                  return;
-                }
-                widget.onPathSubmitted(trimmed);
-              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

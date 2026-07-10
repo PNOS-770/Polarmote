@@ -287,9 +287,7 @@ void SystemTrayPlugin::initSystemTray(
     const std::string* toolTip =
         std::get_if<std::string>(ValueOrNull(*map, kToolTipKey));
 
-    printf("[system_tray_debug] initSystemTray: nativeWindow=%p ancestor=%p\n",
-           view->GetNativeWindow(), window);
-    fflush(stdout);
+    
     if (!system_tray_ ||
         !system_tray_->initSystemTray(window, title, iconPath, toolTip)) {
       result.Error(kBadArgumentsError, "Unable to init system tray",

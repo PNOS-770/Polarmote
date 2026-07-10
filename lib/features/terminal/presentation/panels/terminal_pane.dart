@@ -38,9 +38,7 @@ class _TerminalPaneState extends State<_TerminalPane> {
   bool _ghostActive = false;
   int _ghostStartCol = 0;
   int _ghostEndCol = 0;
-  Timer? _selectionPollTimer;
   Timer? _ghostDebounceTimer;
-  bool _hasSelection = false;
 
 
   void _clearGhostState() {
@@ -222,14 +220,6 @@ class _TerminalPaneState extends State<_TerminalPane> {
     await Clipboard.setData(ClipboardData(text: text));
   }
 
-  void _syncSelectionState() {
-    final next = widget.controller.selection != null;
-    if (next == _hasSelection || !mounted) return;
-    setState(() {
-      _hasSelection = next;
-    });
-  }
-
   KeyEventResult _handleTerminalKeyEvent(FocusNode _, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
@@ -345,7 +335,6 @@ class _TerminalPaneState extends State<_TerminalPane> {
     widget.appState.removeListener(_onAppStateChanged);
     widget.session.terminal.removeListener(_onTerminalChanged);
     widget.session.onUserInput = null;
-    _selectionPollTimer?.cancel();
     _ghostDebounceTimer?.cancel();
     _horizontalScrollController.dispose();
     super.dispose();
@@ -354,10 +343,6 @@ class _TerminalPaneState extends State<_TerminalPane> {
   @override
   void initState() {
     super.initState();
-    _selectionPollTimer = Timer.periodic(
-      const Duration(milliseconds: 180),
-      (_) => _syncSelectionState(),
-    );
     widget.appState.addListener(_onAppStateChanged);
     widget.session.onUserInput = _onUserInput;
     widget.session.terminal.addListener(_onTerminalChanged);
@@ -382,6 +367,7 @@ class _TerminalPaneState extends State<_TerminalPane> {
 
   void _onAppStateChanged() {
     if (!mounted) return;
+    if (widget.appState.restorationInProgress) return;
     var needsRebuild = false;
     final cursorShape = widget.appState.globalAppearance.cursorShape;
     if (cursorShape != _lastCursorShape) {
@@ -398,7 +384,9 @@ class _TerminalPaneState extends State<_TerminalPane> {
       _lastBackgroundOpacity = bgOpacity;
       needsRebuild = true;
     }
-    if (needsRebuild) setState(() {});
+    if (needsRebuild) {
+      setState(() {});
+    }
   }
 
   @override
@@ -584,8 +572,90 @@ class _TerminalPaneState extends State<_TerminalPane> {
       children: [
         Expanded(child: paneContent),
         if (widget.session.tab.status == TerminalStatus.connected)
-          TerminalStatusBar(session: widget.session, appState: widget.appState),
+          widget.session.profile.isLocal
+              ? _LocalStatusBar(session: widget.session, appState: widget.appState)
+              : TerminalStatusBar(session: widget.session, appState: widget.appState),
       ],
+    );
+  }
+}
+
+class _LocalStatusBar extends StatelessWidget {
+  const _LocalStatusBar({required this.session, required this.appState});
+  final TerminalSession session;
+  final TerminalAppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    final diagnostics = session.getAdaptiveThrottleDiagnostics();
+    final levelName = diagnostics['currentLevel'] as String;
+    final level = ThrottleLevel.values.byName(levelName);
+    final showThrottle = appState.performanceSettings.adaptiveThrottleEnabled;
+
+    return Container(
+      height: 22,
+      decoration: const BoxDecoration(
+        color: TerminalUiPalette.statusBarBg,
+        border: Border(
+          top: BorderSide(color: TerminalUiPalette.statusBarBorder, width: 0.5),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        children: [
+          Icon(Icons.computer, size: 12, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
+            style: AppTextStyles.captionSmall,
+          ),
+          const Spacer(),
+          if (showThrottle) ...[
+            _ThrottleBadge(level: level, diagnostics: diagnostics),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            t(context, AppStrings.values.localTerminalStatusLabel),
+            style: AppTextStyles.captionSmall.copyWith(
+              color: AppColors.textTertiary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThrottleBadge extends StatelessWidget {
+  const _ThrottleBadge({required this.level, required this.diagnostics});
+  final ThrottleLevel level;
+  final Map<String, dynamic> diagnostics;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ThrottleLevelStyles.getColor(level);
+    final icon = ThrottleLevelStyles.getIndicatorIcon(level);
+    final flushMs = diagnostics['flushIntervalMs'];
+    final bufferKB = diagnostics['bufferSizeKB'];
+
+    return Tooltip(
+      message: '${flushMs}ms • ${bufferKB}KB',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 3),
+          Text(
+            level.name,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -140,8 +140,13 @@ extension TerminalAppStateSessions on TerminalAppState {
         activeTerminalSplitPaneId = paneId;
       }
     }
-    notifyState();
-    syncSshForegroundGuardNow();
+    if (activate) {
+      // Only notify when activating (session is visible in UI).
+      // Background sessions (activate=false) don't need to trigger rebuild
+      // until _connectSession sets their status.
+      notifyState();
+      syncSshForegroundGuardNow();
+    }
     return session;
   }
 
@@ -151,7 +156,9 @@ extension TerminalAppStateSessions on TerminalAppState {
   }) async {
     if (!sessions.contains(session) || session.closedByUser) return;
     session.tab = session.tab.copyWith(status: TerminalStatus.connecting);
-    notifyState();
+    if (!background) {
+      notifyState();
+    }
     syncSshForegroundGuardNow();
     try {
       if (!sessions.contains(session) || session.closedByUser) return;
@@ -235,8 +242,10 @@ extension TerminalAppStateSessions on TerminalAppState {
       }
       startMetricsPolling(session);
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
       if (!sessions.contains(session) || session.closedByUser) {
         return;
@@ -345,8 +354,10 @@ extension TerminalAppStateSessions on TerminalAppState {
         );
       }
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
       PolarmoteLog.error('session', 'serial session ${session.id} failed: $e');
       session.closeConnection();
@@ -414,8 +425,10 @@ extension TerminalAppStateSessions on TerminalAppState {
         );
       }
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
       PolarmoteLog.error('session', 'telnet session ${session.id} $host:$telnetPort failed: $e');
       session.closeConnection();
@@ -522,8 +535,10 @@ extension TerminalAppStateSessions on TerminalAppState {
       }
       startMetricsPolling(session);
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
       PolarmoteLog.error('session', 'local session ${session.id} failed: $e');
       session.closeConnection();

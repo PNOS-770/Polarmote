@@ -22,6 +22,7 @@ class _SessionThumbnailState extends State<SessionThumbnail> {
   late final ScrollController _scrollController;
   int _lastCursorY = -1;
   bool _ready = false;
+  DateTime _lastThumbnailUpdate = DateTime(2000);
 
   @override
   void initState() {
@@ -42,11 +43,19 @@ class _SessionThumbnailState extends State<SessionThumbnail> {
 
   void _onTerminalUpdate() {
     if (!_scrollController.hasClients) return;
+
+    // 节流：快速输出时最多每 100ms 更新一次缩略图位置
+    final now = DateTime.now();
+    if (now.difference(_lastThumbnailUpdate) < const Duration(milliseconds: 100)) {
+      return;
+    }
+
     final terminal = widget.session.terminal;
     final buffer = terminal.buffer;
     final cursorY = buffer.absoluteCursorY;
     if (cursorY == _lastCursorY) return;
     _lastCursorY = cursorY;
+    _lastThumbnailUpdate = now;
 
     const cellHeight = 7.0;
     const visibleLines = 15;

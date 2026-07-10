@@ -8,10 +8,52 @@ class _SessionTransferRuntimeSet {
 
   final _SessionTransferRuntime uploadRuntime;
   final _SessionTransferRuntime downloadRuntime;
+}
 
-  bool removeQueuedWhere(bool Function(_QueuedTransferJob job) predicate) {
-    return uploadRuntime.removeQueuedWhere(predicate) || downloadRuntime.removeQueuedWhere(predicate);
+class _TransferAdaptiveState {
+  int consecutiveTransportFailures = 0;
+  DateTime lastFailureAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime conservativeUntil = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime profileLockedUntil = DateTime.fromMillisecondsSinceEpoch(0);
+  _AdaptiveTransferProfile? activeProfile;
+}
+
+class _AdaptiveTransferProfile {
+  const _AdaptiveTransferProfile({
+    required this.name,
+    required this.queueParallelJobs,
+    required this.nativeConcurrency,
+    required this.chunkSizeKb,
+  });
+
+  final String name;
+  final int queueParallelJobs;
+  final int nativeConcurrency;
+  final int chunkSizeKb;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _AdaptiveTransferProfile &&
+        other.name == name &&
+        other.queueParallelJobs == queueParallelJobs &&
+        other.nativeConcurrency == nativeConcurrency &&
+        other.chunkSizeKb == chunkSizeKb;
   }
+
+  @override
+  int get hashCode =>
+      Object.hash(name, queueParallelJobs, nativeConcurrency, chunkSizeKb);
+}
+
+class _TransferPressure {
+  const _TransferPressure({
+    required this.runningJobs,
+    required this.queuedJobs,
+  });
+
+  final int runningJobs;
+  final int queuedJobs;
 }
 
 class _TransferForegroundServiceState {
@@ -60,6 +102,18 @@ class _QueuedTransferJob {
   final TransferTask task;
   final Future<void> Function() execute;
   final Completer<void> completer;
+  final bool priority;
+}
+
+class _StoredTransferTaskRunner {
+  _StoredTransferTaskRunner({
+    required this.taskTemplate,
+    required this.execute,
+    required this.priority,
+  });
+
+  final TransferTask taskTemplate;
+  final Future<void> Function() execute;
   final bool priority;
 }
 
@@ -270,5 +324,3 @@ class _SessionTransferRuntime {
     return removed;
   }
 }
-
-

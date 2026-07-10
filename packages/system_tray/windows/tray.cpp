@@ -138,9 +138,7 @@ bool SystemTray::installTrayIcon(HWND window,
   do {
     destroyIcon();
 
-    printf("[system_tray_debug] installTrayIcon nid_hWnd=%p tray_window_=%p msg_id=0x%04X\n",
-           tray_window_, window, tray_notify_callback_message_);
-    fflush(stdout);
+    
 
     std::wstring title_u = title ? Utf16FromUtf8(*title) : L"";
     std::wstring iconPath_u = iconPath ? Utf16FromUtf8(*iconPath) : L"";
@@ -225,9 +223,7 @@ std::optional<LRESULT> SystemTray::HandleWindowProc(HWND hwnd,
 std::optional<LRESULT> SystemTray::OnTrayIconCallback(UINT id,
                                                        UINT notifyMsg,
                                                        const POINT& pt) {
-  printf("[system_tray_debug] OnTrayIconCallback id=%u notifyMsg=0x%04X pt(%d,%d)\n",
-         id, notifyMsg, pt.x, pt.y);
-  fflush(stdout);
+  
   do {
     switch (notifyMsg) {
       case WM_LBUTTONDOWN: {
@@ -337,9 +333,7 @@ LRESULT SystemTray::TrayMessageHandler(HWND window,
     return 0;
   }
   if (message == tray_notify_callback_message_) {
-    printf("[system_tray_debug] tray_wnd_callback msg=0x%04X wp=0x%08llX lp=0x%08llX\n",
-           message, (unsigned long long)wparam, (unsigned long long)lparam);
-    fflush(stdout);
+    
     UINT id = HIWORD(lparam);
     UINT notifyMsg = LOWORD(lparam);
     POINT pt = {GET_X_LPARAM(wparam), GET_Y_LPARAM(wparam)};

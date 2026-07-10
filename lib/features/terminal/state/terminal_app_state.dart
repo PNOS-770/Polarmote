@@ -81,7 +81,7 @@ class TerminalAppState extends ChangeNotifier {
       _checkShortcutConflicts();
       _cleanupOrphanStages();
       if (stageManagerEnabled && terminalStages.isEmpty) createTerminalStage('Stage 1');
-      restoreStageSessions();
+      unawaited(restoreStageSessions());
     }));
     unawaited(refreshPortableStateSnapshots().catchError((_) => const <PortableStateSnapshot>[]));
     unawaited(Future.delayed(const Duration(seconds: 2), () => ServerMonitorService.instance.start(this)));
@@ -209,6 +209,11 @@ class TerminalAppState extends ChangeNotifier {
   String activeTerminalStageId = '';
   int _terminalStageIdSeed = 0;
   bool stageManagerEnabled = true;
+  bool _restorationInProgress = false;
+  bool get restorationInProgress => _restorationInProgress;
+  set restorationInProgress(bool value) {
+    _restorationInProgress = value;
+  }
   bool broadcastEnabled = false;
   double terminalSplitPrimaryRatio = 0.5;
   double terminalSplitSecondaryRatio = 0.5;
@@ -272,6 +277,51 @@ class TerminalAppState extends ChangeNotifier {
   TerminalSession? get activeSession => sessions.isEmpty || activeSessionIndex < 0 ? null : sessions[activeSessionIndex];
 
   void notifyState() { notifyListeners(); }
+
+  Future<Directory> resolveDesktopDirectory() async {
+    if (Platform.isWindows) {
+      final oneDriveCandidates = <String?>[
+        Platform.environment['OneDrive'],
+        Platform.environment['OneDriveConsumer'],
+        Platform.environment['OneDriveCommercial'],
+      ];
+      for (final base in oneDriveCandidates) {
+        if (base == null || base.isEmpty) continue;
+        final desktop = Directory(p.join(base, 'Desktop'));
+        if (await desktop.exists()) {
+          return desktop;
+        }
+      }
+      final profile =
+          Platform.environment['USERPROFILE'] ??
+          Platform.environment['HOMEPATH'];
+      if (profile != null && profile.isNotEmpty) {
+        final oneDriveDesktop = Directory(
+          p.join(profile, 'OneDrive', 'Desktop'),
+        );
+        if (await oneDriveDesktop.exists()) {
+          return oneDriveDesktop;
+        }
+        final desktop = Directory(p.join(profile, 'Desktop'));
+        if (await desktop.exists()) {
+          return desktop;
+        }
+      }
+    } else {
+      final home = Platform.environment['HOME'];
+      if (home != null && home.isNotEmpty) {
+        final desktop = Directory(p.join(home, 'Desktop'));
+        if (await desktop.exists()) {
+          return desktop;
+        }
+      }
+    }
+    final downloads = await getDownloadsDirectory();
+    if (downloads != null && await downloads.exists()) {
+      return downloads;
+    }
+    return getApplicationDocumentsDirectory();
+  }
 
   @override
   void dispose() {

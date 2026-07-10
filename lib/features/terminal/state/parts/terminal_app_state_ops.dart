@@ -208,7 +208,7 @@ extension TerminalAppStateOps on TerminalAppState {
   void ensureSessionProbeRuntime() {
     if (_sessionProbeTimer != null) return;
     _sessionProbeTimer = Timer.periodic(const Duration(seconds: 5), (_) => _tickSessionProbes());
-    _tickSessionProbes();
+    Future.microtask(() => _tickSessionProbes());
   }
 
   void _tickSessionProbes() {

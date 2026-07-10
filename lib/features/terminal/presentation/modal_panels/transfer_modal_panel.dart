@@ -5,15 +5,13 @@ import 'package:safe_layout_x/safe_layout_x.dart' hide formatBytes;
 import '../../../../shared/design_system/design_system.dart';
 import '../../../../shared/constants/app_string.dart';
 import '../../state/terminal_app_state.dart';
-import '../../models/transfer_task.dart';
 import '../../models/file_node.dart';
 import '../common/terminal_localization.dart';
-import '../common/terminal_formatters.dart';
 import '../file_tree/file_icon_resolver.dart';
 import '../dialogs/terminal_dialogs.dart' show openVisitedFileEntry;
+import '../transfers/terminal_transfer_panel.dart';
 import 'modal_panel_base.dart';
 
-/// 传输状态模态面板
 class TransferModalPanel extends StatelessWidget {
   const TransferModalPanel({super.key});
 
@@ -27,7 +25,9 @@ class TransferModalPanel extends StatelessWidget {
       height: 550,
       child: Column(
         children: [
-          Expanded(child: _buildTransferList(context, appState)),
+          Expanded(
+            child: TransferPanel(appState: appState),
+          ),
           _buildFooter(context, appState),
         ],
       ),
@@ -172,109 +172,6 @@ class TransferModalPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildTransferList(BuildContext context, TerminalAppState appState) {
-    final allTransfers = <TransferTask>[];
-    for (final session in appState.sessions) {
-      allTransfers.addAll(session.transferQueue);
-    }
-
-    if (allTransfers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.cloud_done,
-              size: 64,
-              color: AppColors.textTertiary,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l(appState, AppStrings.values.noActiveTransfers),
-              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: allTransfers.length,
-      itemBuilder: (context, index) {
-        final task = allTransfers[index];
-        return _buildTransferItem(context, appState, task);
-      },
-    );
-  }
-
-  Widget _buildTransferItem(
-    BuildContext context,
-    TerminalAppState appState,
-    TransferTask task,
-  ) {
-    final statusIcon = switch (task.status) {
-      TransferStatus.queued => Icons.schedule,
-      TransferStatus.running => Icons.sync,
-      TransferStatus.completed => Icons.check_circle,
-      TransferStatus.failed => Icons.error,
-      TransferStatus.paused => Icons.pause,
-      TransferStatus.canceled => Icons.cancel,
-    };
-
-    final statusColor = switch (task.status) {
-      TransferStatus.queued => AppColors.textSecondary,
-      TransferStatus.running => AppColors.primary,
-      TransferStatus.completed => AppColors.success,
-      TransferStatus.failed => AppColors.error,
-      TransferStatus.paused => AppColors.textTertiary,
-      TransferStatus.canceled => AppColors.textTertiary,
-    };
-
-    final transferred = (task.size * task.progress).toInt();
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: ListTile(
-        leading: Icon(statusIcon, color: statusColor),
-        title: Text(
-          task.name,
-          style: AppTextStyles.bodySmall,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '${formatBytes(transferred)} / ${formatBytes(task.size)}',
-              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
-            ),
-            if (task.status == TransferStatus.running)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: LinearProgressIndicator(
-                  value: task.progress,
-                  backgroundColor: AppColors.border,
-                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                ),
-              ),
-          ],
-        ),
-        trailing: task.status == TransferStatus.running
-            ? IconButton(
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: () {
-                  // TODO: Cancel transfer
-                },
-              )
-            : null,
-      ),
-    );
-  }
-
-  /// 显示传输面板
   static Future<void> show(BuildContext context) {
     return showDialog(
       context: context,
@@ -284,4 +181,3 @@ class TransferModalPanel extends StatelessWidget {
     );
   }
 }
-

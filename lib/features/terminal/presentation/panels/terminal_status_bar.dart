@@ -36,7 +36,9 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     widget.appState.addListener(_onChanged);
     // 定期检查限流级别变化（每秒）
     _throttleUpdateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && !widget.appState.restorationInProgress) {
+        setState(() {});
+      }
     });
   }
 

@@ -471,14 +471,16 @@ class TerminalStage {
     this.createdAt,
     this.backgroundImageId = '',
     this.connectedHostIds = const [],
+    this.fileTreeHeight = 220,
   });
 
   final String id;
   final String name;
-  final List<String> sessionIds; // 一个 Stage 可拥有多个会话
+  final List<String> sessionIds;
   final DateTime? createdAt;
   final String backgroundImageId;
-  final List<String> connectedHostIds; // 启动时恢复连接的 host ID 列表
+  final List<String> connectedHostIds;
+  final double fileTreeHeight;
 
   TerminalStage copyWith({
     String? id,
@@ -486,6 +488,7 @@ class TerminalStage {
     List<String>? sessionIds,
     String? backgroundImageId,
     List<String>? connectedHostIds,
+    double? fileTreeHeight,
   }) {
     return TerminalStage(
       id: id ?? this.id,
@@ -494,6 +497,7 @@ class TerminalStage {
       createdAt: createdAt,
       backgroundImageId: backgroundImageId ?? this.backgroundImageId,
       connectedHostIds: connectedHostIds ?? this.connectedHostIds,
+      fileTreeHeight: fileTreeHeight ?? this.fileTreeHeight,
     );
   }
 
@@ -504,6 +508,7 @@ class TerminalStage {
     'createdAt': createdAt?.toIso8601String(),
     'backgroundImageId': backgroundImageId,
     'connectedHostIds': connectedHostIds,
+    'fileTreeHeight': fileTreeHeight,
   };
 
   factory TerminalStage.fromJson(Map<String, dynamic> json) {
@@ -533,6 +538,7 @@ class TerminalStage {
           : null,
       backgroundImageId: json['backgroundImageId']?.toString() ?? '',
       connectedHostIds: hostIds,
+      fileTreeHeight: (json['fileTreeHeight'] as num?)?.toDouble() ?? 220,
     );
   }
 }

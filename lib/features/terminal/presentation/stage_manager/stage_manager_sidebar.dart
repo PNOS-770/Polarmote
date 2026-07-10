@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../../state/terminal_app_state.dart';
 import '../../models/terminal_session.dart';
@@ -12,6 +10,7 @@ import '../common/stage_background.dart';
 import '../common/stage_context_menu.dart';
 import '../common/stage_background_picker.dart';
 import '../common/command_executor.dart';
+import '../common/cascading_menu.dart';
 
 String t(BuildContext context, AppText text) =>
     text.resolveLocale(Localizations.localeOf(context));
@@ -104,123 +103,80 @@ class StageManagerSidebar extends StatelessWidget {
     }
 
     final categories = [
-      _MenuCategoryData(
+      MenuCategoryData(
         'sessions',
         Icons.terminal,
         t(context, AppStrings.values.commandBarSessions),
         [
-          _MenuItemData(
-            'new_session',
-            Icons.add,
-            t(context, AppStrings.values.commandBarNewSession),
-            shortcut: shortcut('newSession'),
-          ),
-          _MenuItemData(
-            'quick_connect',
-            Icons.flash_on,
-            t(context, AppStrings.values.commandBarQuickConnect),
-            shortcut: shortcut('quickConnect'),
-          ),
-          _MenuItemData(
-            'close_workspace',
-            Icons.close,
-            t(context, AppStrings.values.commandBarCloseCurrentWorkspace),
-            shortcut: shortcut('closeSession'),
-          ),
-          _MenuItemData(
-            'close_all',
-            Icons.highlight_off,
-            t(context, AppStrings.values.commandBarCloseAllSessions),
-            shortcut: shortcut('closeAllSessions'),
-          ),
+          MenuItemData('new_session', Icons.add,
+              t(context, AppStrings.values.commandBarNewSession),
+              shortcut: shortcut('newSession')),
+          MenuItemData('quick_connect', Icons.flash_on,
+              t(context, AppStrings.values.commandBarQuickConnect),
+              shortcut: shortcut('quickConnect')),
+          MenuItemData('close_workspace', Icons.close,
+              t(context, AppStrings.values.commandBarCloseCurrentWorkspace),
+              shortcut: shortcut('closeSession')),
+          MenuItemData('close_all', Icons.highlight_off,
+              t(context, AppStrings.values.commandBarCloseAllSessions),
+              shortcut: shortcut('closeAllSessions')),
         ],
       ),
-      _MenuCategoryData(
+      MenuCategoryData(
         'scripts',
         Icons.code,
         t(context, AppStrings.values.commandBarScripts),
         [
-          _MenuItemData(
-            'new_script',
-            Icons.add,
-            t(context, AppStrings.values.commandBarNewScript),
-            shortcut: shortcut('newScript'),
-          ),
-          _MenuItemData(
-            'script_list',
-            Icons.list,
-            t(context, AppStrings.values.commandBarScriptList),
-            shortcut: shortcut('scriptList'),
-          ),
-          _MenuItemData(
-            'script_monitor',
-            Icons.monitor_heart,
-            t(context, AppStrings.values.commandBarScriptMonitor),
-            shortcut: shortcut('scriptMonitor'),
-          ),
+          MenuItemData('new_script', Icons.add,
+              t(context, AppStrings.values.commandBarNewScript),
+              shortcut: shortcut('newScript')),
+          MenuItemData('script_list', Icons.list,
+              t(context, AppStrings.values.commandBarScriptList),
+              shortcut: shortcut('scriptList')),
+          MenuItemData('script_monitor', Icons.monitor_heart,
+              t(context, AppStrings.values.commandBarScriptMonitor),
+              shortcut: shortcut('scriptMonitor')),
         ],
       ),
-      _MenuCategoryData(
+      MenuCategoryData(
         'files',
         Icons.folder,
         t(context, AppStrings.values.commandBarTransfer),
         [
-          _MenuItemData(
-            'sftp_browser',
-            Icons.folder_open,
-            t(context, AppStrings.values.commandBarSftpBrowser),
-            shortcut: shortcut('sftpBrowser'),
-          ),
-          _MenuItemData(
-            'transfer_manager',
-            Icons.compare_arrows,
-            t(context, AppStrings.values.commandBarTransferManager),
-            shortcut: shortcut('transferManager'),
-          ),
+          MenuItemData('sftp_browser', Icons.folder_open,
+              t(context, AppStrings.values.commandBarSftpBrowser),
+              shortcut: shortcut('sftpBrowser')),
+          MenuItemData('transfer_manager', Icons.compare_arrows,
+              t(context, AppStrings.values.commandBarTransferManager),
+              shortcut: shortcut('transferManager')),
         ],
       ),
-      _MenuCategoryData(
+      MenuCategoryData(
         'tools',
         Icons.build,
         t(context, AppStrings.values.commandBarTools),
         [
-          _MenuItemData(
-            'port_forwarding',
-            Icons.route,
-            t(context, AppStrings.values.settingsPortForwarding),
-            shortcut: shortcut('portForwarding'),
-          ),
-          _MenuItemData(
-            'lan_scan',
-            Icons.wifi_find,
-            t(context, AppStrings.values.lanScan),
-            shortcut: shortcut('lanScan'),
-          ),
+          MenuItemData('port_forwarding', Icons.route,
+              t(context, AppStrings.values.settingsPortForwarding),
+              shortcut: shortcut('portForwarding')),
+          MenuItemData('lan_scan', Icons.wifi_find,
+              t(context, AppStrings.values.lanScan),
+              shortcut: shortcut('lanScan')),
         ],
       ),
-      _MenuCategoryData(
+      MenuCategoryData(
         'settings',
         Icons.settings,
         t(context, AppStrings.values.commandBarSettings),
         [
-          _MenuItemData(
-            'open_settings',
-            Icons.settings,
-            t(context, AppStrings.values.commandBarSettings),
-            shortcut: shortcut('openSettings'),
-          ),
+          MenuItemData('open_settings', Icons.settings,
+              t(context, AppStrings.values.commandBarSettings),
+              shortcut: shortcut('openSettings')),
         ],
       ),
     ];
 
-    _showCascadingMenu(context, categories);
-  }
-
-  void _showCascadingMenu(
-    BuildContext context,
-    List<_MenuCategoryData> categories,
-  ) {
-    _CascadingMenuOverlay.show(context, categories, (cmd) {
+    CascadingMenuOverlay.show(context, categories, (cmd) {
       executeTerminalCommand(context, appState, cmd);
     });
   }
@@ -535,266 +491,7 @@ class StageManagerSidebar extends StatelessWidget {
 
 }
 
-// ─── Cascading Command Menu ─────────────────────────────────────────
 
-class _MenuCategoryData {
-  final String id;
-  final IconData icon;
-  final String label;
-  final List<_MenuItemData> items;
-  const _MenuCategoryData(this.id, this.icon, this.label, this.items);
-}
-
-class _MenuItemData {
-  final String id;
-  final IconData icon;
-  final String label;
-  final String? shortcut;
-  const _MenuItemData(this.id, this.icon, this.label, {this.shortcut});
-}
-
-/// Shows a cascading two-level popup menu anchored near the sidebar header.
-/// Uses OverlayEntry with positioning relative to the Overlay's Stack.
-class _CascadingMenuOverlay extends StatefulWidget {
-  const _CascadingMenuOverlay({
-    required this.categories,
-    required this.anchorDx,
-    required this.anchorDy,
-    required this.onDismiss,
-    required this.onCommand,
-  });
-
-  final List<_MenuCategoryData> categories;
-  final double anchorDx;
-  final double anchorDy;
-  final VoidCallback onDismiss;
-  final ValueChanged<String> onCommand;
-
-  /// Show the cascading menu. Anchors at (anchorDx, anchorDy) relative to
-  /// the Overlay's Stack origin (typically screen top-left).
-  static void show(
-    BuildContext context,
-    List<_MenuCategoryData> categories,
-    ValueChanged<String> onCommand,
-  ) {
-    final overlay = Overlay.of(context);
-    // Default anchor: a few pixels from top-left of the overlay
-    const double left = 4;
-    const double top = 40;
-
-    late OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (_) => _CascadingMenuOverlay(
-        categories: categories,
-        anchorDx: left,
-        anchorDy: top,
-        onDismiss: () => entry.remove(),
-        onCommand: (cmd) {
-          entry.remove();
-          onCommand(cmd);
-        },
-      ),
-    );
-    overlay.insert(entry);
-  }
-
-  @override
-  State<_CascadingMenuOverlay> createState() => _CascadingMenuOverlayState();
-}
-
-class _CascadingMenuOverlayState extends State<_CascadingMenuOverlay> {
-  String? _hoveredCategory;
-  Timer? _exitTimer;
-
-  static const double _level1Width = 120;
-  static const double _level2Width = 220;
-  static const double _itemHeight = 34;
-
-  int get _hoveredIndex {
-    if (_hoveredCategory == null) return -1;
-    return widget.categories.indexWhere((c) => c.id == _hoveredCategory);
-  }
-
-  void _onCategoryEnter(String id) {
-    _exitTimer?.cancel();
-    if (_hoveredCategory != id) setState(() => _hoveredCategory = id);
-  }
-
-  void _onCategoryExit() {
-    _exitTimer?.cancel();
-    _exitTimer = Timer(const Duration(milliseconds: 200), () {
-      if (mounted) setState(() => _hoveredCategory = null);
-    });
-  }
-
-  void _onLevel2Enter() => _exitTimer?.cancel();
-
-  void _onLevel2Exit() {
-    _exitTimer?.cancel();
-    _exitTimer = Timer(const Duration(milliseconds: 200), () {
-      if (mounted) setState(() => _hoveredCategory = null);
-    });
-  }
-
-  @override
-  void dispose() {
-    _exitTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: widget.onDismiss,
-          child: Container(color: Colors.transparent),
-        ),
-        // Level 1 menu
-        Positioned(
-          left: widget.anchorDx,
-          top: widget.anchorDy,
-          child: Material(
-            type: MaterialType.card,
-            color: AppColors.cardBackground,
-            elevation: 12,
-            shadowColor: Colors.black.withValues(alpha: 0.4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              side: BorderSide(color: AppColors.border.withValues(alpha: 0.6)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: SizedBox(
-              width: _level1Width,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final cat in widget.categories) _buildCategoryItem(cat),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Level 2 menu – shown to the right of hovered category
-        if (_hoveredCategory != null && _hoveredIndex >= 0)
-          Positioned(
-            left: widget.anchorDx + _level1Width + 4,
-            top: widget.anchorDy + (_hoveredIndex * _itemHeight),
-            child: MouseRegion(
-              onEnter: (_) => _onLevel2Enter(),
-              onExit: (_) => _onLevel2Exit(),
-              child: Material(
-                type: MaterialType.card,
-                color: AppColors.cardBackground,
-                elevation: 12,
-                shadowColor: Colors.black.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  side: BorderSide(
-                    color: AppColors.border.withValues(alpha: 0.6),
-                  ),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: SizedBox(
-                  width: _level2Width,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final item in _hoveredItems) _buildItemRow(item),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  List<_MenuItemData> get _hoveredItems {
-    final cat = widget.categories
-        .where((c) => c.id == _hoveredCategory)
-        .firstOrNull;
-    return cat?.items ?? [];
-  }
-
-  Widget _buildCategoryItem(_MenuCategoryData cat) {
-    final isHovered = _hoveredCategory == cat.id;
-    return MouseRegion(
-      onEnter: (_) => _onCategoryEnter(cat.id),
-      onExit: (_) => _onCategoryExit(),
-      child: InkWell(
-        onTap: () => _onCategoryEnter(cat.id),
-        child: Container(
-          height: _itemHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          color: isHovered
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          child: Row(
-            children: [
-              Icon(
-                cat.icon,
-                size: 16,
-                color: isHovered ? AppColors.primary : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  cat.label,
-                  style: AppTextStyles.caption.copyWith(
-                    color: isHovered
-                        ? AppColors.primary
-                        : AppColors.textPrimary,
-                    fontWeight: isHovered ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildItemRow(_MenuItemData item) {
-    return InkWell(
-      onTap: () => widget.onCommand(item.id),
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          children: [
-            Icon(item.icon, size: 14, color: AppColors.textSecondary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                item.label,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textPrimary,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (item.shortcut != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                item.shortcut!,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontFamily: 'monospace',
-                  color: Colors.grey.shade400,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 
 

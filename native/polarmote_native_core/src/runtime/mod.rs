@@ -478,6 +478,29 @@ impl RuntimeSession {
                     break;
                 }
 
+                // All pending nodes are waiting for retry cooldown — wait
+                // for the earliest timer instead of declaring a deadlock.
+                let all_in_retry_cooldown =
+                    pending.iter().all(|id| retry_after.contains_key(id));
+                if all_in_retry_cooldown {
+                    let earliest = retry_after
+                        .values()
+                        .min()
+                        .copied()
+                        .unwrap_or_else(Instant::now);
+                    let wait = earliest.saturating_duration_since(Instant::now());
+                    if !wait.is_zero() {
+                        let deadline = Instant::now() + wait;
+                        while Instant::now() < deadline {
+                            if token.is_cancelled() {
+                                break;
+                            }
+                            thread::sleep(Duration::from_millis(200));
+                        }
+                    }
+                    continue;
+                }
+
                 // Dependency deadlock (e.g. parents failed and children keep waiting).
                 for node_id in pending.drain() {
                     failed.insert(node_id);

@@ -101,6 +101,7 @@ enum _ModifiedSortOrder { none, desc, asc }
 
 class FileTree extends StatefulWidget {
   const FileTree({
+    super.key,
     required this.appState,
     required this.session,
     required this.showHidden,
@@ -115,7 +116,7 @@ class FileTree extends StatefulWidget {
 }
 
 class FileTreeState extends State<FileTree> {
-  static const double _rowHeight = 32;
+  static const double _rowHeight = 26;
   static const double _listVerticalPadding = 0;
   final ScrollController _scrollController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
@@ -124,6 +125,7 @@ class FileTreeState extends State<FileTree> {
   PointerRoute? _globalPointerRoute;
   _ModifiedSortOrder _modifiedSortOrder = _ModifiedSortOrder.none;
   String _nameFilterQuery = '';
+  bool _sftpInitAttempted = false;
 
   bool _isMultiSelectPressed() {
     return HardwareKeyboard.instance.isControlPressed ||
@@ -500,7 +502,8 @@ class FileTreeState extends State<FileTree> {
         ? (session.fileState.homePath == null &&
               session.fileState.directories.isEmpty)
         : session.sftp == null;
-    if (needsFileTreeInit) {
+    if (needsFileTreeInit && !_sftpInitAttempted) {
+      _sftpInitAttempted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(appState.ensureSftpReady(session));
       });
@@ -549,6 +552,7 @@ class FileTreeState extends State<FileTree> {
           }
         },
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             FileTreeHeader(
               session: session,
@@ -580,6 +584,18 @@ class FileTreeState extends State<FileTree> {
               ),
               onPathSubmitted: (value) =>
                   unawaited(appState.navigateToPath(session, value)),
+              onGoHome: () {
+                final home = session.fileState.homePath ?? session.fileState.rootPath;
+                unawaited(appState.navigateToPath(session, home));
+              },
+              onDownload: () {
+                final selected = session.fileState.selected.toList();
+                if (selected.isEmpty) return;
+                unawaited(() async {
+                  final dir = await appState.resolveDesktopDirectory();
+                  await appState.downloadFiles(session, selected, dir.path);
+                }());
+              },
             ),
             Expanded(
               child: LayoutBuilder(
@@ -784,21 +800,23 @@ class FileTreeState extends State<FileTree> {
                           : const NeverScrollableScrollPhysics(),
                       child: SizedBox(
                         width: contentWidth,
-                        child: Column(
-                          children: [
-                            _FileTreeColumnsHeader(
-                              appState: appState,
-                              columnLayout: columnLayout,
-                              modifiedSortOrder: _modifiedSortOrder,
-                              onToggleModifiedSort: _toggleModifiedSort,
-                            ),
-                            Expanded(
-                              child: KeyedSubtree(
-                                key: _listKey,
-                                child: treeView,
+                        child: ClipRect(
+                          child: Column(
+                            children: [
+                              _FileTreeColumnsHeader(
+                                appState: appState,
+                                columnLayout: columnLayout,
+                                modifiedSortOrder: _modifiedSortOrder,
+                                onToggleModifiedSort: _toggleModifiedSort,
                               ),
-                            ),
-                          ],
+                              Expanded(
+                                child: KeyedSubtree(
+                                  key: _listKey,
+                                  child: treeView,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

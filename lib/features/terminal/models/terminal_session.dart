@@ -95,6 +95,17 @@ class TerminalSession {
   bool closedByUser = false;
   bool _closedNotified = false;
   bool _isClosing = false;
+  bool _backgroundMode = false;
+
+  static const Duration _backgroundFlushInterval = Duration(milliseconds: 500);
+
+  void setBackgroundMode(bool value) {
+    if (_backgroundMode == value) return;
+    _backgroundMode = value;
+    if (!value) {
+      _flushOutputBuffer();
+    }
+  }
   void Function()? onSessionClosed;
   void Function(String sessionId, List<int> bytes)? onOutputBytes;
   Timer? metricsTimer;
@@ -235,11 +246,14 @@ class TerminalSession {
 
     const smallDataThreshold = 256;
     final isSmall = bytes.length < smallDataThreshold;
+    final flushInterval = _backgroundMode
+        ? _backgroundFlushInterval
+        : _adaptiveThrottle.currentFlushInterval;
     
-    if (isSmall && _outputBuffer.isEmpty) {
+    if (isSmall && _outputBuffer.isEmpty && !_backgroundMode) {
       _writeToTerminal(Uint8List.fromList(bytes));
       _outputFlushTimer ??= Timer.periodic(
-        _adaptiveThrottle.currentFlushInterval,
+        flushInterval,
         (_) => _flushOutputBuffer(),
       );
       
@@ -264,7 +278,7 @@ class TerminalSession {
     }
 
     _outputFlushTimer ??= Timer.periodic(
-      _adaptiveThrottle.currentFlushInterval,
+      flushInterval,
       (_) => _flushOutputBuffer(),
     );
   }

@@ -13,11 +13,18 @@ import '../common/shortcut_key_names.dart';
 import '../../../../shared/constants/app_string.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
+import '../../models/terminal_adaptive_throttle.dart';
 import '../../state/terminal_app_state.dart';
 import '../common/terminal_localization.dart';
+import '../common/terminal_ui_palette.dart';
 import '../../../../shared/design_system/design_system.dart';
-import '../stage_manager/stage_manager_sidebar.dart';
+import '../stage_manager/grid_stage_panel.dart';
+import '../common/stage_background_picker.dart';
+import '../common/stage_context_menu.dart';
+import '../common/command_executor.dart';
+import '../common/cascading_menu.dart';
 import '../session_tree/session_tree_panel.dart';
+import '../file_tree/terminal_file_tree.dart';
 import '../mobile/mobile_terminal_layout.dart';
 import '../dialogs/terminal_dialogs.dart';
 import '../modal_panels/file_tree_modal_panel.dart';
@@ -46,9 +53,6 @@ class MainPanel extends StatelessWidget {
           return _TerminalAreaSelection(
             activeIndex: state.activeSessionIndex,
             sessionIds: sessions.map((s) => s.id).toList(growable: false),
-            statuses: sessions
-                .map((s) => s.tab.status.index)
-                .toList(growable: false),
             emptyPaneTreeKey: _emptyPaneTreeKey(state),
             recoveryToken: state.keyboardRecoveryToken,
             splitEnabled: state.terminalSplitViewEnabled,
@@ -68,6 +72,7 @@ class MainPanel extends StatelessWidget {
             stageChangeToken: state.stageChangeToken,
             showThumbnailBackground: state.showThumbnailBackground,
             selectedHostIdsHash: state.selectedHostIds.hashCode,
+            restorationInProgress: false,
           );
         },
         builder: (context, selection, child) {
@@ -84,7 +89,6 @@ class _TerminalAreaSelection {
   const _TerminalAreaSelection({
     required this.activeIndex,
     required this.sessionIds,
-    required this.statuses,
     required this.emptyPaneTreeKey,
     required this.recoveryToken,
     required this.splitEnabled,
@@ -101,11 +105,11 @@ class _TerminalAreaSelection {
     required this.stageChangeToken,
     required this.showThumbnailBackground,
     required this.selectedHostIdsHash,
+    required this.restorationInProgress,
   });
 
   final int activeIndex;
   final List<String> sessionIds;
-  final List<int> statuses;
   final String emptyPaneTreeKey;
   final int recoveryToken;
   final bool splitEnabled;
@@ -122,6 +126,7 @@ class _TerminalAreaSelection {
   final int stageChangeToken;
   final bool showThumbnailBackground;
   final int selectedHostIdsHash;
+  final bool restorationInProgress;
 
   @override
   bool operator ==(Object other) {
@@ -137,14 +142,14 @@ class _TerminalAreaSelection {
         other.mobileHorizontalScrollEnabled == mobileHorizontalScrollEnabled &&
         other.mobileTerminalColumns == mobileTerminalColumns &&
         listEquals(other.sessionIds, sessionIds) &&
-        listEquals(other.statuses, statuses) &&
         other.emptyPaneTreeKey == emptyPaneTreeKey &&
         other.stageManagerEnabled == stageManagerEnabled &&
         other.stageCount == stageCount &&
         other.activeStageId == activeStageId &&
         other.stageChangeToken == stageChangeToken &&
         other.showThumbnailBackground == showThumbnailBackground &&
-        other.selectedHostIdsHash == selectedHostIdsHash;
+        other.selectedHostIdsHash == selectedHostIdsHash &&
+        other.restorationInProgress == restorationInProgress;
   }
 
   @override
@@ -160,12 +165,12 @@ class _TerminalAreaSelection {
     mobileHorizontalScrollEnabled,
     mobileTerminalColumns,
     Object.hashAll(sessionIds),
-    Object.hashAll(statuses),
     emptyPaneTreeKey,
     stageManagerEnabled,
     stageCount,
     activeStageId,
     stageChangeToken,
+    restorationInProgress,
     showThumbnailBackground,
     selectedHostIdsHash,
   );
@@ -276,9 +281,14 @@ class _TerminalAreaState extends State<_TerminalArea> {
   final Map<String, ScrollController> _terminalScrollControllers = {};
   final Map<String, String> _pendingSearchPaneSessionIds = <String, String>{};
   final Map<String, String> _pendingSearchPaneQueries = <String, String>{};
+  final Map<String, Widget> _cachedPaneWidgets = {};
 
   bool _splitEnabled = false;
   int _lastSessionCount = -1;
+
+  String _focusedStageId = '';
+  bool _showFileTreePanel = true;
+  double _fileTreeHeight = 220;
 
   int _searchCurrentIndex = 0;
   List<_SearchMatch> _searchMatches = [];
@@ -431,9 +441,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
     required TerminalController controller,
     required Offset position,
   }) async {
-    if (_sessionForPane(appState, paneId)?.id != session.id) {
-      return;
-    }
+    if (!appState.sessions.contains(session)) return;
     final menuText = _selectedOrAllText(session, controller);
     final hasText = menuText.isNotEmpty;
     final selectedText = _selectedTerminalText(session, controller);
@@ -472,7 +480,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
       ],
     );
     if (!context.mounted || action == null) return;
-    if (_sessionForPane(appState, paneId)?.id != session.id) {
+    if (!appState.sessions.contains(session)) {
       return;
     }
     switch (action) {
@@ -498,7 +506,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
           if (!context.mounted) {
             return;
           }
-          if (_sessionForPane(appState, paneId)?.id != session.id) {
+          if (!appState.sessions.contains(session)) {
             return;
           }
           if (!confirmed) {
@@ -624,6 +632,10 @@ class _TerminalAreaState extends State<_TerminalArea> {
     required bool showTitle,
     required String paneId,
   }) {
+    final cached = _cachedPaneWidgets[session.id];
+    if (cached != null) {
+      return cached;
+    }
     final captureKey = GlobalKey();
     final isMobile = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
     final pane = _TerminalPane(
@@ -651,26 +663,32 @@ class _TerminalAreaState extends State<_TerminalArea> {
 
     // On mobile, let TerminalView handle gestures and focus internally.
     // On desktop, wrap with Listener for right-click menu and focus.
-    if (isMobile) return pane;
-
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (event) {
-        if (event.buttons == kSecondaryMouseButton) {
-          _showTerminalMenu(
-            context: context,
-            appState: appState,
-            paneId: paneId,
-            session: session,
-            controller: _controllerForSession(session),
-            position: event.position,
-          );
-        } else {
-          _focusNodeForSession(session).requestFocus();
-        }
-      },
-      child: pane,
-    );
+    Widget result;
+    if (isMobile) {
+      result = pane;
+    } else {
+      result = Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (event) {
+          if (event.buttons == kSecondaryMouseButton) {
+            _showTerminalMenu(
+              context: context,
+              appState: appState,
+              paneId: paneId,
+              session: session,
+              controller: _controllerForSession(session),
+              position: event.position,
+            );
+          } else {
+            final fn = _focusNodeForSession(session);
+            if (!fn.hasFocus) fn.requestFocus();
+          }
+        },
+        child: pane,
+      );
+    }
+    _cachedPaneWidgets[session.id] = result;
+    return result;
   }
 
   KeyEventResult _handleSplitShortcut(BuildContext context, KeyEvent event) {
@@ -728,6 +746,11 @@ class _TerminalAreaState extends State<_TerminalArea> {
     }
 
     if (event.logicalKey == LogicalKeyboardKey.escape) {
+      if (_focusedStageId.isNotEmpty) {
+        setState(() => _focusedStageId = '');
+        _updateSessionBackgroundMode();
+        return KeyEventResult.handled;
+      }
       final paneId = appState.activeTerminalSplitPaneId;
       if (paneId.isNotEmpty && _pendingSearchPaneSessionIds.containsKey(paneId)) {
         _cancelSearchPane(paneId);
@@ -903,6 +926,355 @@ class _TerminalAreaState extends State<_TerminalArea> {
   }
 
 
+  void _updateSessionBackgroundMode() {
+    final focused = _focusedStageId;
+    final focusedStage = widget.appState.terminalStages
+        .where((s) => s.id == focused)
+        .firstOrNull;
+    final focusedSessionIds = focusedStage?.sessionIds.toSet() ?? {};
+    for (final s in widget.appState.sessions) {
+      s.setBackgroundMode(!focusedSessionIds.contains(s.id));
+    }
+  }
+
+  void _onStageTapFromGrid(String stageId) {
+    widget.appState.switchTerminalStage(stageId);
+    setState(() {
+      _focusedStageId = stageId;
+      _updateSessionBackgroundMode();
+    });
+    _ensureSftpForFocusedStage();
+  }
+
+  void _ensureSftpForFocusedStage() {
+    final session = widget.appState.activeSession;
+    if (session == null) return;
+    if (!session.profile.isLocal && session.sftp != null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(widget.appState.ensureSftpReady(session));
+    });
+  }
+
+  void _onStageSecondaryTapFromGrid(String stageId, TapDownDetails details) {
+    final stage = widget.appState.terminalStages.firstWhere(
+      (s) => s.id == stageId,
+      orElse: () => widget.appState.terminalStages.first,
+    );
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      details.globalPosition & const Size(1, 1),
+      Offset.zero & overlay.size,
+    );
+    showStageCardContextMenu(
+      context: context,
+      appState: widget.appState,
+      stage: stage,
+      position: position,
+      includeBackground: true,
+      onBackgroundTap: () =>
+          showStageBackgroundPicker(context, widget.appState, stage),
+      selectBackgroundLabel:
+          l(widget.appState, AppStrings.values.selectBackground),
+      renameLabel: l(widget.appState, AppStrings.values.renameStage),
+      renameTitle: l(widget.appState, AppStrings.values.renameStageTitle),
+      renameConfirm: l(widget.appState, AppStrings.values.rename),
+      renameCancel: l(widget.appState, AppStrings.values.cancel),
+      closeSessionLabel:
+          l(widget.appState, AppStrings.values.commandBarCloseSession),
+      deleteLabel: l(widget.appState, AppStrings.values.deleteStage),
+      deleteTitle: l(widget.appState, AppStrings.values.deleteStage),
+      deleteMessage: l(widget.appState, AppStrings.values.deleteVar),
+      deleteConfirm: l(widget.appState, AppStrings.values.delete),
+      deleteCancel: l(widget.appState, AppStrings.values.cancel),
+    );
+  }
+
+  void _showCreateStageDialog(BuildContext context) {
+    final appState = widget.appState;
+    showInputDialog(
+      context,
+      title: l(appState, AppStrings.values.createStageTitle),
+      hint: l(appState, AppStrings.values.enterStageName),
+      initialValue: 'Stage ${appState.terminalStages.length + 1}',
+      confirmText: l(appState, AppStrings.values.create),
+      cancelText: l(appState, AppStrings.values.cancel),
+    ).then((name) {
+      if (name != null && name.trim().isNotEmpty) {
+        appState.createTerminalStage(name.trim());
+      }
+    });
+  }
+
+  void _showGridMenu(BuildContext context) {
+    final appState = widget.appState;
+    String? shortcut(String id) {
+      final idx = appState.shortcutBindings.indexWhere((s) => s.id == id);
+      if (idx < 0) return null;
+      final keys = appState.shortcutBindings[idx].effectiveKeys;
+      return keys.isEmpty ? null : keys;
+    }
+
+    final categories = [
+      MenuCategoryData(
+        'sessions',
+        Icons.terminal,
+        l(appState, AppStrings.values.commandBarSessions),
+        [
+          MenuItemData('new_session', Icons.add,
+              l(appState, AppStrings.values.commandBarNewSession),
+              shortcut: shortcut('newSession')),
+          MenuItemData('quick_connect', Icons.flash_on,
+              l(appState, AppStrings.values.commandBarQuickConnect),
+              shortcut: shortcut('quickConnect')),
+          MenuItemData('close_workspace', Icons.close,
+              l(appState, AppStrings.values.commandBarCloseCurrentWorkspace),
+              shortcut: shortcut('closeSession')),
+          MenuItemData('close_all', Icons.highlight_off,
+              l(appState, AppStrings.values.commandBarCloseAllSessions),
+              shortcut: shortcut('closeAllSessions')),
+        ],
+      ),
+      MenuCategoryData(
+        'scripts',
+        Icons.code,
+        l(appState, AppStrings.values.commandBarScripts),
+        [
+          MenuItemData('new_script', Icons.add,
+              l(appState, AppStrings.values.commandBarNewScript),
+              shortcut: shortcut('newScript')),
+          MenuItemData('script_list', Icons.list,
+              l(appState, AppStrings.values.commandBarScriptList),
+              shortcut: shortcut('scriptList')),
+          MenuItemData('script_monitor', Icons.monitor_heart,
+              l(appState, AppStrings.values.commandBarScriptMonitor),
+              shortcut: shortcut('scriptMonitor')),
+        ],
+      ),
+      MenuCategoryData(
+        'files',
+        Icons.folder,
+        l(appState, AppStrings.values.commandBarTransfer),
+        [
+          MenuItemData('transfer_manager', Icons.compare_arrows,
+              l(appState, AppStrings.values.commandBarTransferManager),
+              shortcut: shortcut('transferManager')),
+        ],
+      ),
+      MenuCategoryData(
+        'tools',
+        Icons.build,
+        l(appState, AppStrings.values.commandBarTools),
+        [
+          MenuItemData('port_forwarding', Icons.route,
+              l(appState, AppStrings.values.settingsPortForwarding),
+              shortcut: shortcut('portForwarding')),
+          MenuItemData('lan_scan', Icons.wifi_find,
+              l(appState, AppStrings.values.lanScan),
+              shortcut: shortcut('lanScan')),
+        ],
+      ),
+      MenuCategoryData(
+        'settings',
+        Icons.settings,
+        l(appState, AppStrings.values.commandBarSettings),
+        [
+          MenuItemData('open_settings', Icons.settings,
+              l(appState, AppStrings.values.commandBarSettings),
+              shortcut: shortcut('openSettings')),
+        ],
+      ),
+    ];
+    CascadingMenuOverlay.show(context, categories, (cmd) {
+      executeTerminalCommand(context, appState, cmd);
+    });
+  }
+
+  Widget _buildGridHeader(BuildContext context, TerminalAppState appState) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            key: const ValueKey('stage_menu_btn'),
+            iconSize: 20,
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: Icon(Icons.menu, color: AppColors.textSecondary),
+            onPressed: () => _showGridMenu(context),
+            tooltip: l(appState, AppStrings.values.commandBarMore),
+          ),
+          Container(width: 1, height: 20, color: AppColors.border),
+          const SizedBox(width: 10),
+          Icon(Icons.dashboard, size: 14, color: AppColors.textTertiary),
+          const SizedBox(width: 6),
+          Text(
+            'Stage 概览',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: AppColors.border.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${appState.terminalStages.length}',
+              style: AppTextStyles.captionSmall.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 11,
+              ),
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            iconSize: 20,
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: Icon(Icons.add, color: AppColors.textSecondary),
+            onPressed: () => _showCreateStageDialog(context),
+            tooltip: l(appState, AppStrings.values.newStage),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _switchToStage(TerminalAppState appState, int direction) {
+    final stages = appState.terminalStages;
+    if (stages.length < 2) return;
+    final idx = stages.indexWhere((s) => s.id == _focusedStageId);
+    if (idx < 0) return;
+    final target = (idx + direction) % stages.length;
+    _focusedStageId = stages[target].id;
+    _updateSessionBackgroundMode();
+  }
+
+  Widget _buildStageNavButton(IconData icon, VoidCallback onPressed) {
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: IconButton(
+        iconSize: 16,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        icon: Icon(icon, color: AppColors.textSecondary),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Widget _buildFocusedHeader(
+      BuildContext context, TerminalAppState appState, TerminalSession? session) {
+    final stage = appState.terminalStages.firstWhere(
+      (s) => s.id == _focusedStageId,
+      orElse: () => appState.terminalStages.first,
+    );
+    final isConnected =
+        session != null && session.tab.status == TerminalStatus.connected;
+
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 36,
+            child: InkWell(
+              onTap: () {
+                setState(() => _focusedStageId = '');
+                _updateSessionBackgroundMode();
+              },
+              child: Center(
+                child: Icon(Icons.arrow_back,
+                    size: 18, color: AppColors.textSecondary),
+              ),
+            ),
+          ),
+          IconButton(
+            iconSize: 20,
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: Icon(Icons.menu, color: AppColors.textSecondary),
+            onPressed: () => _showGridMenu(context),
+            tooltip: l(appState, AppStrings.values.commandBarMore),
+          ),
+          Container(
+              width: 1, height: 20, color: AppColors.border),
+          const SizedBox(width: 4),
+          _buildStageNavButton(
+            Icons.chevron_left,
+            () => _switchToStage(appState, -1),
+          ),
+          _buildStageNavButton(
+            Icons.chevron_right,
+            () => _switchToStage(appState, 1),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.dashboard, size: 14, color: AppColors.textTertiary),
+          const SizedBox(width: 6),
+          Text(
+            stage.name,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (session != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isConnected ? AppColors.success : AppColors.border,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                session.tab.title.isNotEmpty
+                    ? session.tab.title
+                    : session.profile.name,
+                style: AppTextStyles.captionSmall
+                    .copyWith(color: AppColors.textTertiary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+          const Spacer(),
+          if (session != null)
+          SizedBox(
+            width: 36,
+            child: InkWell(
+              onTap: () => setState(() => _showFileTreePanel = !_showFileTreePanel),
+              child: Center(
+                child: Icon(
+                  Icons.folder_open,
+                  size: 16,
+                  color: _showFileTreePanel
+                      ? AppColors.accent
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = widget.appState;
@@ -912,30 +1284,35 @@ class _TerminalAreaState extends State<_TerminalArea> {
       _lastSessionCount = sessions.length;
       _pruneFocusNodes(sessions);
       _pruneControllers(sessions);
-    }
-    final session = appState.activeSession;
-    _splitEnabled = appState.terminalSplitViewEnabled;
-
-    Widget terminalContent;
-    // 始终使用 Stage 模式渲染终端，侧边栏只控制可见性
-    if (session == null) {
-      terminalContent = Container(
-        color: AppColors.terminalBackground,
-        child: const SessionTreePanel(),
-      );
-    } else {
-      final paneId = appState.terminalSplitPanes
-          .where((p) => p.sessionId == session.id)
-          .map((p) => p.id)
-          .firstOrNull
-          ?? (appState.terminalSplitPanes.isNotEmpty
-              ? appState.terminalSplitPanes.first.id
-              : 'pane-0');
-      terminalContent = _buildPane(context, appState, session, showTitle: false, paneId: paneId);
+      // remove cached panes for disposed sessions
+      final activeIds = sessions.map((s) => s.id).toSet();
+      _cachedPaneWidgets.removeWhere((id, _) => !activeIds.contains(id));
     }
 
     final isMobile = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
     if (isMobile) {
+      final session = appState.activeSession;
+      _splitEnabled = appState.terminalSplitViewEnabled;
+
+      Widget terminalContent;
+      if (session == null) {
+        terminalContent = Container(
+          color: AppColors.terminalBackground,
+          child: const SessionTreePanel(),
+        );
+      } else {
+        final paneId = appState.terminalSplitPanes
+                .where((p) => p.sessionId == session.id)
+                .map((p) => p.id)
+                .firstOrNull ??
+            (appState.terminalSplitPanes.isNotEmpty
+                ? appState.terminalSplitPanes.first.id
+                : 'pane-0');
+        terminalContent =
+            _buildPane(context, appState, session, showTitle: false, paneId: paneId);
+      }
+
       return Container(
         key: _terminalStackKey,
         color: AppColors.terminalBackground,
@@ -948,57 +1325,232 @@ class _TerminalAreaState extends State<_TerminalArea> {
       );
     }
 
+    // Desktop: Grid overview
+    if (_focusedStageId.isEmpty) {
+      return Container(
+        key: _terminalStackKey,
+        child: Stack(
+          children: [
+            const Positioned.fill(child: BreatheGrid()),
+            Container(
+              color: AppColors.terminalTreeBackground.withValues(alpha: 0.85),
+              child: Column(
+                children: [
+                  _buildGridHeader(context, appState),
+                  Expanded(
+                    child: GridStagePanel(
+                      appState: appState,
+                      onStageTap: _onStageTapFromGrid,
+                      onStageSecondaryTap: _onStageSecondaryTapFromGrid,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Desktop: Focused stage — verify stage still exists
+    if (!appState.terminalStages.any((s) => s.id == _focusedStageId)) {
+      _focusedStageId = '';
+      _updateSessionBackgroundMode();
+      return build(context);
+    }
+
+    if (appState.activeTerminalStageId != _focusedStageId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        appState.switchTerminalStage(_focusedStageId);
+      });
+    }
+
+    final session = appState.activeSession;
+    _splitEnabled = appState.terminalSplitViewEnabled;
+
+    Widget terminalContent;
+    if (session == null) {
+      terminalContent = Container(
+        color: AppColors.terminalBackground,
+        child: const SessionTreePanel(),
+      );
+    } else {
+      final paneId = appState.terminalSplitPanes
+              .where((p) => p.sessionId == session.id)
+              .map((p) => p.id)
+              .firstOrNull ??
+          (appState.terminalSplitPanes.isNotEmpty
+              ? appState.terminalSplitPanes.first.id
+              : 'pane-0');
+      terminalContent =
+          _buildPane(context, appState, session, showTitle: false, paneId: paneId);
+    }
+
+    final showFileTree = _showFileTreePanel && session != null;
+    final currentStage = appState.terminalStages.where(
+      (s) => s.id == _focusedStageId,
+    ).firstOrNull;
+    if (currentStage != null && _fileTreeHeight != currentStage.fileTreeHeight) {
+      _fileTreeHeight = currentStage.fileTreeHeight;
+    }
+
     return Container(
       key: _terminalStackKey,
       color: AppColors.terminalBackground,
-      child: Row(
+      child: Stack(
         children: [
-          if (appState.stageManagerEnabled)
-            StageManagerSidebar(
-              appState: appState,
-              onStageClick: (stageId) {
-                appState.switchTerminalStage(stageId);
-              },
-              onStageShiftClick: (stageId) {
-                // Shift+Click: 不再需要，一个 Stage 只对应一个会话
-              },
-            )
-          else
-            GestureDetector(
-              onTap: () => appState.toggleStageManager(),
-              child: Container(
-                width: 10,
-                color: AppColors.terminalBackground,
-                child: Center(
-                  child: Icon(Icons.chevron_right, size: 14, color: AppColors.textSecondary),
+          Column(
+            children: [
+              _buildFocusedHeader(context, appState, session),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: showFileTree ? _fileTreeHeight + 6 : 0,
+                  ),
+                  child: RepaintBoundary(child: terminalContent),
+                ),
+              ),
+            ],
+          ),
+          if (showFileTree)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _FileTreePanel(
+                appState: appState,
+                session: session,
+                initialHeight: _fileTreeHeight,
+                onHeightChanged: (h) {
+                  final needsRebuild = h != _fileTreeHeight;
+                  if (needsRebuild) {
+                    setState(() { _fileTreeHeight = h; });
+                  }
+                  final stageIdx = appState.terminalStages.indexWhere(
+                    (s) => s.id == _focusedStageId,
+                  );
+                  if (stageIdx >= 0 &&
+                      h != appState.terminalStages[stageIdx].fileTreeHeight) {
+                    appState.terminalStages[stageIdx] =
+                        appState.terminalStages[stageIdx].copyWith(
+                      fileTreeHeight: h,
+                    );
+                    appState.scheduleStateSave();
+                  }
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FileTreeSelector {
+  const _FileTreeSelector({
+    required this.version,
+    required this.showHiddenFiles,
+  });
+  final int version;
+  final bool showHiddenFiles;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _FileTreeSelector &&
+      other.version == version &&
+      other.showHiddenFiles == showHiddenFiles;
+
+  @override
+  int get hashCode => Object.hash(version, showHiddenFiles);
+}
+
+class _FileTreePanel extends StatefulWidget {
+  const _FileTreePanel({
+    required this.appState,
+    required this.session,
+    required this.onHeightChanged,
+    this.initialHeight = 220,
+  });
+  final TerminalAppState appState;
+  final TerminalSession session;
+  final ValueChanged<double> onHeightChanged;
+  final double initialHeight;
+
+  @override
+  State<_FileTreePanel> createState() => _FileTreePanelState();
+}
+
+class _FileTreePanelState extends State<_FileTreePanel> {
+  late double _height;
+  static const double _minHeight = 100;
+  static const double _maxHeight = 500;
+
+  @override
+  void initState() {
+    super.initState();
+    _height = widget.initialHeight;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onHeightChanged(_height);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildDivider(),
+        SizedBox(
+          height: _height,
+          child: ClipRect(
+            child: Container(
+              color: Colors.white,
+              child: RepaintBoundary(
+                child: Selector<TerminalAppState, _FileTreeSelector>(
+                  selector: (_, state) => _FileTreeSelector(
+                    version: state.activeSession?.fileState.version ?? -1,
+                    showHiddenFiles: state.showHiddenFiles,
+                  ),
+                  builder: (_, sel, __) => FileTree(
+                    appState: widget.appState,
+                    session: widget.session,
+                    showHidden: sel.showHiddenFiles,
+                  ),
                 ),
               ),
             ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              layoutBuilder: (currentChild, previousChildren) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ...previousChildren,
-                    if (currentChild != null) currentChild,
-                  ],
-                );
-              },
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
-              },
-              child: Container(
-                key: ValueKey(appState.activeTerminalStageId),
-                child: terminalContent,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeRow,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          final newHeight = (_height - details.delta.dy)
+              .clamp(_minHeight, _maxHeight);
+          if (newHeight != _height) {
+            setState(() { _height = newHeight; });
+            widget.onHeightChanged(_height);
+          }
+        },
+        child: Container(
+          height: 6,
+          color: AppColors.backgroundGrey,
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1053,8 +1605,5 @@ class _SearchMatch {
   final int start;
   final int end;
 }
-
-
-
 
 

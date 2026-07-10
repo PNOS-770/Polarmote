@@ -518,7 +518,6 @@ class ServerMonitorService {
     if (_history[hostId]!.length > maxHistory) {
       _history[hostId]!.removeAt(0);
     }
-    _appState?.notifyState();
   }
 }
 

@@ -230,6 +230,7 @@ class _AppStringValues {
     en: 'Failed to start local session: {error}',
     zh: '启动本地会话失败: {error}',
   );
+  final localTerminalStatusLabel = const AppText(en: 'Local Terminal', zh: '本地终端');
   final serialTerminal = const AppText(en: 'Serial Session', zh: '串口会话');
   final serialTerminalHint = const AppText(
     en: 'Connect directly to a local serial device (COM/tty).',

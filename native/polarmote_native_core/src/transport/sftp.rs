@@ -479,11 +479,9 @@ where
     let total_hint = match connection.sftp().metadata(&remote_path) {
         Ok(m) => {
             let size = m.len();
-            eprintln!("[DOWNLOAD_FILE] metadata {remote_path}: size={size:?}");
             size
         }
         Err(e) => {
-            eprintln!("[DOWNLOAD_FILE] metadata {remote_path} FAILED: {e}");
             return Err(e.into());
         }
     };
@@ -494,14 +492,8 @@ where
         .sftp()
         .open(&remote_path, OpenFlags::READ_ONLY, 0)
     {
-        Ok(f) => {
-            eprintln!("[DOWNLOAD_FILE] open {remote_path}: OK");
-            f
-        }
-        Err(e) => {
-            eprintln!("[DOWNLOAD_FILE] open {remote_path} FAILED: {e}");
-            return Err(e.into());
-        }
+        Ok(f) => f,
+        Err(e) => return Err(e.into()),
     };
     let remote_fingerprint = if let Some(total) = total_hint {
         Some(build_remote_fingerprint(&mut remote_file, total)?)
@@ -540,14 +532,12 @@ where
     let mut last_emit_bytes = transferred;
     let mut last_emit_at = Instant::now();
 
-    let mut read_ops = 0u32;
     loop {
         ensure_not_cancelled(cancelled)?;
         let bytes_read = remote_file.read(&mut buffer)?;
         if bytes_read == 0 {
             break;
         }
-        read_ops += 1;
 
         local_file.write_all(&buffer[..bytes_read])?;
         transferred += bytes_read as u64;
@@ -558,11 +548,6 @@ where
         }
     }
 
-    eprintln!(
-        "[DOWNLOAD_FILE] read loop done: read_ops={read_ops}, transferred={transferred}, total_hint={:?}",
-        total_hint,
-    );
-
     local_file.flush()?;
 
     // Safety net: if the remote file has a known size > 0 but we transferred
@@ -570,9 +555,6 @@ where
     // fail loudly rather than silently creating a 0-byte local file.
     if let Some(expected) = total_hint {
         if expected > 0 && transferred == 0 {
-            eprintln!(
-                "[DOWNLOAD_FILE] SAFETY FAIL: 0 bytes for {remote_path} (expected {expected})"
-            );
             let _ = fs::remove_file(local_path);
             return Err(CoreError::Io(format!(
                 "downloaded 0 bytes but remote file {remote_path} size is {expected}"
@@ -585,13 +567,7 @@ where
         let actual = fs::metadata(local_path)
             .map(|m| m.len())
             .unwrap_or(0);
-        eprintln!(
-            "[DOWNLOAD_FILE] local file check: transferred={transferred}, on_disk={actual}",
-        );
         if actual < transferred.saturating_sub(chunk_size_or_default(chunk_size) as u64) {
-            eprintln!(
-                "[DOWNLOAD_FILE] DISK MISMATCH: transferred={transferred} but on_disk={actual}, removing"
-            );
             let _ = fs::remove_file(local_path);
             return Err(CoreError::Io(format!(
                 "downloaded {transferred} bytes but local file {local_path} is only {actual} bytes"
@@ -604,10 +580,6 @@ where
         on_progress(transferred, output_total)?;
     }
     let _ = fs::remove_file(&resume_meta_path);
-
-    eprintln!(
-        "[DOWNLOAD_FILE] SUCCESS: {remote_path} -> local, transferred={transferred}",
-    );
 
     Ok(TaskExecutionOutput {
         transferred_bytes: transferred,

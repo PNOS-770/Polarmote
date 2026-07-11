@@ -144,15 +144,18 @@ class PlaceholderPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(title, style: AppTextStyles.h5),
-          const SizedBox(height: 8),
-          Text(description, style: AppTextStyles.secondary),
-          const SizedBox(height: 16),
-          PrimaryButton(onPressed: onAction, label: actionLabel),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(title, style: AppTextStyles.h5),
+            const SizedBox(height: 8),
+            Text(description, style: AppTextStyles.secondary),
+            const SizedBox(height: 16),
+            PrimaryButton(onPressed: onAction, label: actionLabel),
+          ],
+        ),
       ),
     );
   }

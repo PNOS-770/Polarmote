@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' show Random;
 
 import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
@@ -12,7 +11,6 @@ import '../../models/terminal_session.dart';
 import '../../models/transfer_task.dart';
 import '../control/cancellation_token.dart';
 import '../facade/transfer_facade.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
 
 typedef QueueTransferTaskRunner =
     Future<void> Function(
@@ -51,8 +49,6 @@ class UploadDownloadFlowEngine {
     required this.nextTransferId,
     required this.resolveDesktopDirectory,
   });
-
-  static final _random = Random();
 
   final String languageCode;
   final Future<TransferFacade> Function(
@@ -220,53 +216,63 @@ class UploadDownloadFlowEngine {
     return prepareDesktopDropFolder(folderName);
   }
 
-  Future<String> _dragTempDir() async {
-    final dir = Directory(
-      p.join(Directory.systemTemp.path, _localTransferTempRootName),
-    );
-    await dir.create(recursive: true);
-    return dir.path;
-  }
-
   Future<String> prepareDesktopDropFolder(String folderName) async {
-    final temp = await _dragTempDir();
-    final uuid = _uuidV4();
-    final target = p.join(temp, '$uuid-$folderName');
+    final base = await resolveDesktopDirectory();
+    final safeName = folderName.isEmpty ? 'remote-folder' : folderName;
+    var target = p.join(base.path, safeName);
+    if (await Directory(target).exists()) {
+      var index = 1;
+      while (true) {
+        final candidate = p.join(base.path, '$safeName ($index)');
+        if (!await Directory(candidate).exists()) {
+          target = candidate;
+          break;
+        }
+        index += 1;
+      }
+    }
     await Directory(target).create(recursive: true);
     return target;
   }
 
   Future<String> prepareDesktopDropFile(String fileName) async {
-    final temp = await _dragTempDir();
-    final uuid = _uuidV4();
-    final ext = p.extension(fileName);
-    final stem = p.basenameWithoutExtension(fileName);
-    final target = p.join(temp, '$stem-$uuid$ext');
-    await File(target).create(recursive: true);
+    final base = await resolveDesktopDirectory();
+    final safeName = fileName.isEmpty ? 'remote-file' : fileName;
+    var target = p.join(base.path, safeName);
+    if (await FileSystemEntity.type(target) != FileSystemEntityType.notFound) {
+      var index = 1;
+      while (true) {
+        final candidate = p.join(base.path, '$safeName ($index)');
+        if (await FileSystemEntity.type(candidate) ==
+            FileSystemEntityType.notFound) {
+          target = candidate;
+          break;
+        }
+        index += 1;
+      }
+    }
     return target;
   }
 
   Future<String> prepareDesktopDropDirectoryBundle(String folderName) async {
-    final temp = await _dragTempDir();
-    final uuid = _uuidV4();
-    final target = p.join(temp, '$folderName-$uuid');
+    final base = await resolveDesktopDirectory();
+    final safeName = folderName.trim().isEmpty
+        ? 'remote-selection'
+        : folderName;
+    var target = p.join(base.path, safeName);
+    if (await Directory(target).exists()) {
+      var index = 1;
+      while (true) {
+        final candidate = p.join(base.path, '$safeName ($index)');
+        if (!await Directory(candidate).exists()) {
+          target = candidate;
+          break;
+        }
+        index += 1;
+      }
+    }
     await Directory(target).create(recursive: true);
     return target;
-  }
-
-  String _uuidV4() {
-    // dart:math Random-based UUID v4. Good enough for temp file names.
-    final r = _random;
-    final bytes = List<int>.generate(16, (_) => r.nextInt(256));
-    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
-    return [
-      bytes.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-      bytes.sublist(4, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-      bytes.sublist(6, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-      bytes.sublist(8, 10).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-      bytes.sublist(10, 16).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-    ].join('-');
   }
 
   Future<void> cleanupDragFolder(String folderPath) async {
@@ -275,7 +281,7 @@ class UploadDownloadFlowEngine {
       if (await dir.exists()) {
         await dir.delete(recursive: true);
       }
-    } catch (e) { PolarmoteLog.error('upload_download_flow_engine', '$e'); }
+    } catch (_) {}
   }
 
   Future<void> cleanupDragFile(String filePath) async {
@@ -284,7 +290,7 @@ class UploadDownloadFlowEngine {
       if (await file.exists()) {
         await file.delete();
       }
-    } catch (e) { PolarmoteLog.error('upload_download_flow_engine', '$e'); }
+    } catch (_) {}
   }
 
   Future<void> downloadSelectionToLocal(
@@ -588,6 +594,7 @@ class UploadDownloadFlowEngine {
       await tempDir.delete(recursive: true);
     }
   }
+
 }
 
 

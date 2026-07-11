@@ -712,16 +712,17 @@ class FileTreeState extends State<FileTree> {
                       return DragItemWidget(
                         key: ValueKey<String>('drag-${fileNode.path}'),
                         dragItemProvider: (request) async {
+                          final selectedPaths = session.fileState.selected;
                           final selectedNodes = _selectedNodesForEntries(
                             session,
                             entries,
                           );
-                          final selectedPaths = session.fileState.selected;
                           final activeSelection =
                               selectedNodes.length > 1 &&
                                       selectedPaths.contains(fileNode.path)
                                   ? selectedNodes
                                   : <FileNode>[fileNode];
+
                           if (activeSelection.length > 1) {
                             final folderName =
                                 '${session.tab.title.replaceAll(RegExp(r'\s+'), '_')}-selection';
@@ -755,6 +756,7 @@ class FileTreeState extends State<FileTree> {
                             suggestedName: fileNode.name,
                             localData: _remoteFileTreeDragLocalDataTag,
                           );
+
                           if (fileNode.isDirectory) {
                             final folderPath = await appState
                                 .prepareDesktopDropFolder(fileNode.name);
@@ -797,6 +799,7 @@ class FileTreeState extends State<FileTree> {
                               );
                             }());
                           }
+
                           return item;
                         },
                         allowedOperations: () => [DropOperation.copy],

@@ -115,14 +115,8 @@ impl TransportProvider for SftpProvider {
     fn probe(&mut self) -> CoreResult<()> {
         let conn = self.connection_ref()?;
         match conn.sftp().metadata("/") {
-            Ok(_) => {
-                eprintln!("[SFTP_PROBE] OK");
-                Ok(())
-            }
-            Err(e) => {
-                eprintln!("[SFTP_PROBE] FAIL: {e}");
-                Err(e.into())
-            }
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -337,24 +331,17 @@ impl<T: TransportProvider + Default + 'static> ConnectionPool<T> {
         let mut idle = lock_unpoison(&self.idle);
 
         while let Some(mut pooled) = idle.pop() {
-            let age_ms = pooled.last_used.elapsed().as_millis();
             if pooled.last_used.elapsed() > self.idle_timeout {
-                eprintln!("[POOL_ACQUIRE] idle timeout, disconnect (age={age_ms}ms)");
                 pooled.provider.disconnect();
                 continue;
             }
             if !pooled.provider.is_connected() {
-                eprintln!("[POOL_ACQUIRE] not connected (age={age_ms}ms)");
                 continue;
             }
-            // Real health check — do a lightweight SFTP operation to verify
-            // the connection is actually alive, not just Option<Some(...)>.
             if pooled.provider.probe().is_err() {
-                eprintln!("[POOL_ACQUIRE] probe failed, disconnect (age={age_ms}ms)");
                 pooled.provider.disconnect();
                 continue;
             }
-            eprintln!("[POOL_ACQUIRE] reused idle connection (age={age_ms}ms)");
             return Ok(PooledConnectionGuard {
                 pooled: Some(pooled),
                 idle: Arc::clone(&self.idle),
@@ -363,7 +350,6 @@ impl<T: TransportProvider + Default + 'static> ConnectionPool<T> {
         }
 
         drop(idle);
-        eprintln!("[POOL_ACQUIRE] creating new connection");
         let mut provider = T::default();
         provider.connect(&self.config)?;
 

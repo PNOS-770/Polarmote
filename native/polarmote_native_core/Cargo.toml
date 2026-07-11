@@ -27,6 +27,12 @@ libssh-rs = { version = "0.3", default-features = false, features = ["vendored",
 [target.'cfg(not(target_os = "ios"))'.dependencies]
 portable-pty = "0.9"
 
+# windows crate removed — COM interfaces implemented via raw extern "system" FFI
+# in the shell module. Kept as an empty entry to avoid cargo errors.
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.58"
+features = ["implement", "Win32_Foundation"]
+
 [target.'cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))'.dependencies]
 
 [profile.dev]

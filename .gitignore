@@ -17,6 +17,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Reference copy of Asmote project (not part of Polarmote)
+lib/Asmote-main/
+
 # Project specific
 *.log
 stderr.txt

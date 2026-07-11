@@ -938,6 +938,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
   }
 
   void _onStageTapFromGrid(String stageId) {
+    _cachedPaneWidgets.clear();
     widget.appState.switchTerminalStage(stageId);
     setState(() {
       _focusedStageId = stageId;
@@ -1112,7 +1113,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
           Icon(Icons.dashboard, size: 14, color: AppColors.textTertiary),
           const SizedBox(width: 6),
           Text(
-            'Stage 概览',
+            l(appState, AppStrings.values.stageOverview),
             style: AppTextStyles.caption.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
@@ -1134,14 +1135,6 @@ class _TerminalAreaState extends State<_TerminalArea> {
             ),
           ),
           const Spacer(),
-          IconButton(
-            iconSize: 20,
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            icon: Icon(Icons.add, color: AppColors.textSecondary),
-            onPressed: () => _showCreateStageDialog(context),
-            tooltip: l(appState, AppStrings.values.newStage),
-          ),
         ],
       ),
     );
@@ -1154,9 +1147,11 @@ class _TerminalAreaState extends State<_TerminalArea> {
     if (idx < 0) return;
     final target = (idx + direction) % stages.length;
     final targetId = stages[target].id;
+    _cachedPaneWidgets.clear();
     appState.switchTerminalStage(targetId);
     setState(() => _focusedStageId = targetId);
     _updateSessionBackgroundMode();
+    _ensureSftpForFocusedStage();
   }
 
   Widget _buildStageNavButton(IconData icon, String tooltip, VoidCallback onPressed) {
@@ -1184,13 +1179,34 @@ class _TerminalAreaState extends State<_TerminalArea> {
       ),
       child: Row(
         children: [
-          HeaderIconButton(
-            icon: Icons.arrow_back,
-            tooltip: l(appState, AppStrings.values.back),
-            onPressed: () {
-              setState(() => _focusedStageId = '');
-              _updateSessionBackgroundMode();
-            },
+          Tooltip(
+            message: l(appState, AppStrings.values.back),
+            waitDuration: const Duration(milliseconds: 250),
+            child: SizedBox(
+              width: 40,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  hoverColor: AppColors.grey100,
+                  onTap: () {
+                    setState(() => _focusedStageId = '');
+                    _updateSessionBackgroundMode();
+                  },
+                  child: Center(
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Icon(Icons.arrow_back_ios_new,
+                          size: 16, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           IconButton(
             iconSize: 20,
@@ -1328,6 +1344,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
                       appState: appState,
                       onStageTap: _onStageTapFromGrid,
                       onStageSecondaryTap: _onStageSecondaryTapFromGrid,
+                      onCreateStage: () => _showCreateStageDialog(context),
                     ),
                   ),
                 ],
@@ -1404,6 +1421,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
               right: 0,
               bottom: 0,
               child: _FileTreePanel(
+                key: ValueKey('filetree_${session.id}'),
                 appState: appState,
                 session: session,
                 initialHeight: _fileTreeHeight,
@@ -1455,6 +1473,7 @@ class _FileTreeSelector {
 
 class _FileTreePanel extends StatefulWidget {
   const _FileTreePanel({
+    super.key,
     required this.appState,
     required this.session,
     required this.onHeightChanged,
@@ -1481,6 +1500,17 @@ class _FileTreePanelState extends State<_FileTreePanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onHeightChanged(_height);
     });
+  }
+
+  @override
+  void didUpdateWidget(_FileTreePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.session.id != oldWidget.session.id) {
+      _height = widget.initialHeight;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onHeightChanged(_height);
+      });
+    }
   }
 
   @override

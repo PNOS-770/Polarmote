@@ -734,7 +734,7 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_getThrottleLevelText(level)} • ${flushMs}ms • ${bufferKB}KB',
+                            '${_getThrottleLevelText(level)} • $flushMs${t(context, AppStrings.values.millisecondsAbbreviation)} • $bufferKB${t(context, AppStrings.values.kilobytesAbbreviation)}',
                             style: TextStyle(
                               fontSize: 11,
                               color: color,

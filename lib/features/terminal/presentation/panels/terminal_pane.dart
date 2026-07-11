@@ -609,11 +609,11 @@ class _LocalStatusBar extends StatelessWidget {
             session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
             style: AppTextStyles.captionSmall,
           ),
-          const Spacer(),
           if (showThrottle) ...[
-            _ThrottleBadge(level: level, diagnostics: diagnostics),
             const SizedBox(width: 8),
+            _ThrottleBadge(level: level, diagnostics: diagnostics),
           ],
+          const Spacer(),
           Text(
             t(context, AppStrings.values.localTerminalStatusLabel),
             style: AppTextStyles.captionSmall.copyWith(
@@ -632,22 +632,33 @@ class _ThrottleBadge extends StatelessWidget {
   final ThrottleLevel level;
   final Map<String, dynamic> diagnostics;
 
+  String _levelText(BuildContext context) {
+    return switch (level) {
+      ThrottleLevel.normal => t(context, AppStrings.values.throttleLevelNormal),
+      ThrottleLevel.moderate => t(context, AppStrings.values.throttleLevelModerate),
+      ThrottleLevel.high => t(context, AppStrings.values.throttleLevelHigh),
+      ThrottleLevel.critical => t(context, AppStrings.values.throttleLevelCritical),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = ThrottleLevelStyles.getColor(level);
     final icon = ThrottleLevelStyles.getIndicatorIcon(level);
     final flushMs = diagnostics['flushIntervalMs'];
     final bufferKB = diagnostics['bufferSizeKB'];
+    final msText = t(context, AppStrings.values.millisecondsAbbreviation);
+    final kbText = t(context, AppStrings.values.kilobytesAbbreviation);
 
     return Tooltip(
-      message: '${flushMs}ms • ${bufferKB}KB',
+      message: '$flushMs$msText • $bufferKB$kbText',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 3),
           Text(
-            level.name,
+            _levelText(context),
             style: TextStyle(
               fontSize: 10,
               color: color,

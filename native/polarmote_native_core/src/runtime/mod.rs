@@ -713,10 +713,6 @@ impl RuntimeSession {
                 local_path,
                 chunk_size,
             } => {
-                eprintln!(
-                    "[EXEC_NODE] id={} DownloadFile remote={remote_path} local={local_path}",
-                    node.node_id.0,
-                );
                 let output = try_provider!(provider.download(
                     remote_path,
                     local_path,
@@ -736,12 +732,6 @@ impl RuntimeSession {
                         Ok(())
                     },
                 ))?;
-                eprintln!(
-                    "[EXEC_NODE] id={} DownloadFile result: transferred={} total={:?}",
-                    node.node_id.0,
-                    output.transferred_bytes,
-                    output.total_bytes,
-                );
                 Ok(output)
             }
             NodeOperation::UploadBatch {

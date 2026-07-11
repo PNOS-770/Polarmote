@@ -2160,6 +2160,8 @@ class _AppStringValues {
     en: 'Reset adaptive throttle to normal level?',
     zh: '将自适应限流器重置为正常级别？',
   );
+  final millisecondsAbbreviation = const AppText(en: 'ms', zh: '毫秒');
+  final kilobytesAbbreviation = const AppText(en: 'KB', zh: 'KB');
   final clearVisitedFiles = const AppText(
     en: 'Clear All',
     zh: '清空全部',
@@ -2193,6 +2195,10 @@ class _AppStringValues {
   final workspace = const AppText(en: 'Workspace', zh: '工作区');
   final stageBackgroundImage = const AppText(en: 'Background Image', zh: '背景图片');
   final noStageSessions = const AppText(en: 'Not connected', zh: '未连接');
+  final stageOverview = const AppText(en: 'Stage Overview', zh: 'Stage 概览');
+  final clickToConnect = const AppText(en: 'Click to connect', zh: '点击连接');
+  final noStageDescription = const AppText(en: 'No stages yet. A new stage will be created automatically when you connect.', zh: '暂无 Stage，新建连接后将自动创建');
+  final addStage = const AppText(en: 'Add Stage', zh: '新建 Stage');
   final previousStage = const AppText(en: 'Previous stage', zh: '上一个 Stage');
   final nextStage = const AppText(en: 'Next stage', zh: '下一个 Stage');
 }

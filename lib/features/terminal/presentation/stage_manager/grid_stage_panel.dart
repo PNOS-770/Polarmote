@@ -4,20 +4,24 @@ import '../../state/terminal_app_state.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
 import '../../../../shared/design_system/design_system.dart';
+import '../../../../shared/constants/app_string.dart';
 import '../common/session_thumbnail.dart';
 import '../common/stage_background.dart';
+import '../common/terminal_localization.dart';
 
 class GridStagePanel extends StatelessWidget {
   final TerminalAppState appState;
   final void Function(String stageId) onStageTap;
   final void Function(String stageId, TapDownDetails details)
       onStageSecondaryTap;
+  final VoidCallback onCreateStage;
 
   const GridStagePanel({
     super.key,
     required this.appState,
     required this.onStageTap,
     required this.onStageSecondaryTap,
+    required this.onCreateStage,
   });
 
   @override
@@ -25,20 +29,7 @@ class GridStagePanel extends StatelessWidget {
     final stages = appState.terminalStages;
 
     if (stages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.dashboard_customize,
-                size: 64, color: AppColors.textTertiary),
-            const SizedBox(height: 16),
-            Text(
-              '暂无 Stage，新建连接后将自动创建',
-              style: AppTextStyles.body.copyWith(color: AppColors.textTertiary),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState(context);
     }
 
     return LayoutBuilder(
@@ -54,8 +45,11 @@ class GridStagePanel extends StatelessWidget {
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,
           ),
-          itemCount: stages.length,
+          itemCount: stages.length + 1,
           itemBuilder: (context, index) {
+            if (index == stages.length) {
+              return _AddStageCard(appState: appState, onTap: onCreateStage);
+            }
             final stage = stages[index];
             return _StageCard(
               key: ValueKey('grid_stage_${stage.id}'),
@@ -68,6 +62,112 @@ class GridStagePanel extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.dashboard_customize,
+              size: 64, color: AppColors.textTertiary),
+          const SizedBox(height: 16),
+          Text(
+            l(appState, AppStrings.values.noStageDescription),
+            style: AppTextStyles.body.copyWith(color: AppColors.textTertiary),
+          ),
+          const SizedBox(height: 24),
+          _AddStageCard(appState: appState, onTap: onCreateStage),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddStageCard extends StatelessWidget {
+  final TerminalAppState appState;
+  final VoidCallback onTap;
+
+  const _AddStageCard({required this.appState, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Material(
+            color: AppColors.cardBackground,
+            child: InkWell(
+              onTap: onTap,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Container(
+                      color: AppColors.terminalTreeBackground,
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.05),
+                            Colors.white.withValues(alpha: 0.02),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_circle_outline,
+                            color: AppColors.textTertiary, size: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          l(appState, AppStrings.values.addStage),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -205,7 +305,7 @@ class _StageCardState extends State<_StageCard> {
               color: AppColors.textTertiary, size: 28),
           const SizedBox(height: 6),
           Text(
-            '点击连接',
+            l(widget.appState, AppStrings.values.clickToConnect),
             style: AppTextStyles.captionSmall.copyWith(
               color: AppColors.textTertiary,
             ),

@@ -174,8 +174,10 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
       ThrottleLevel.critical => l(appState, AppStrings.values.throttleLevelCritical),
     };
     
+    final msText = l(appState, AppStrings.values.millisecondsAbbreviation);
+    final kbText = l(appState, AppStrings.values.kilobytesAbbreviation);
     return Tooltip(
-      message: '$levelText\n${flushMs}ms • ${bufferKB}KB',
+      message: '$levelText\n$flushMs$msText • $bufferKB$kbText',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

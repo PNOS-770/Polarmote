@@ -380,7 +380,7 @@ class ShortcutPreset {
 
   static List<ShortcutPreset> builtinPresets() {
     return [
-      const ShortcutPreset(id: 'default', name: 'Asmote Default', bindings: _defaultBindings),
+      const ShortcutPreset(id: 'default', name: 'Polarmote Default', bindings: _defaultBindings),
       ShortcutPreset(
         id: 'vscode',
         name: 'VS Code Style',

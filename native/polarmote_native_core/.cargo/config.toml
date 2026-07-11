@@ -1,0 +1,6 @@
+[build]
+rustflags = ["-L", "C:\\Program Files\\OpenSSL-Win64\\lib\\VC\\x64\\MT"]
+
+[env]
+OPENSSL_LIB_DIR = "C:\\Program Files\\OpenSSL-Win64\\lib\\VC\\x64\\MT"
+OPENSSL_INCLUDE_DIR = "C:\\Program Files\\OpenSSL-Win64\\include"

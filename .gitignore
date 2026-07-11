@@ -1,31 +1,62 @@
-# Flutter
-.dart_tool/
-.packages
-.pub/
-build/
-*.iml
-.idea/
-.metadata
-*.lock
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-*.swp
-*.swo
-
-# Reference copy of Asmote project (not part of Polarmote)
-lib/Asmote-main/
-
-# Project specific
+# Miscellaneous
+*.class
 *.log
-stderr.txt
-stdout.txt
-native/Polarmote_native_core/target/
-native/Polarmote_native_core/.cargo/
-native/Polarmote_native_core/.cargo-local/
-native/Polarmote_native_core/.rustup-local/
-windows/flutter/ephemeral/
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+.vscode/
+node_modules/
+*.dll
+*.dll.lib
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+/native/asmote_native_core/target/
+/native/asmote_native_core/.rustup-local/
+/native/asmote_native_core/.cargo-local/
+/native/polarmote_native_core/target/
+/native/polarmote_native_core/.rustup-local/
+/native/polarmote_native_core/.cargo-local/
+/ios/Flutter/asmote_native/
+/.gradle-mobile-cache/
+/.gradle-mobile-cache2/
+/.npm-cache/
+**/build/
+**/.gradle/
+/nul
+**/nul

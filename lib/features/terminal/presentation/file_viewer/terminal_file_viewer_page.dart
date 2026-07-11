@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/constants/app_string.dart';
+import '../../../../shared/design_system/design_system.dart';
 import '../../state/terminal_app_state_models.dart';
 import '../../state/terminal_app_state.dart';
 import 'file_viewer_engine.dart';
@@ -39,9 +41,10 @@ class TerminalFileViewerPage extends StatelessWidget {
       await OpenFilex.open(filePath);
     } catch (error) {
       if (!context.mounted) return;
+      final locale = (Localizations.maybeLocaleOf(context)?.languageCode ?? 'en').toLowerCase();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Open failed: $error')));
+      ).showSnackBar(SnackBar(content: Text(AppStrings.values.openFailedVar.resolve(locale, params: {'error': '$error'}))));
     }
   }
 
@@ -141,7 +144,7 @@ class TerminalFileViewerPage extends StatelessWidget {
                 stream: sharedProgressStream,
               ),
             IconButton(
-              tooltip: 'Open in system',
+              tooltip: AppStrings.values.openInSystemTooltip.en,
               onPressed: () => _openInSystem(context),
               icon: const Icon(Icons.open_in_new),
             ),
@@ -210,23 +213,16 @@ class _AppBarDownloadProgress extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  progress.done ? 'Downloaded' : 'Downloading',
+                  progress.done ? AppStrings.values.downloadCompleted.en : AppStrings.values.downloadingLabel.en,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   '$bytesText$percent',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black54,
-                  ),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -236,3 +232,4 @@ class _AppBarDownloadProgress extends StatelessWidget {
     );
   }
 }
+

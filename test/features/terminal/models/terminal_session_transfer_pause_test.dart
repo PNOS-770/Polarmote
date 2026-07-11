@@ -1,7 +1,7 @@
-import 'package:asmote/features/terminal/models/host_entry.dart';
-import 'package:asmote/features/terminal/models/terminal_session.dart';
-import 'package:asmote/features/terminal/models/terminal_tab.dart';
-import 'package:asmote/features/terminal/models/transfer_task.dart';
+import 'package:Polarmote/features/terminal/models/host_entry.dart';
+import 'package:Polarmote/features/terminal/models/terminal_session.dart';
+import 'package:Polarmote/features/terminal/models/terminal_tab.dart';
+import 'package:Polarmote/features/terminal/models/transfer_task.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -13,9 +13,8 @@ class ByteConsumer {
 
   void add(String data) {
     if (data.isEmpty) return;
-    final runes = data.runes.toList(growable: false);
-    _queue.addLast(runes);
-    _length += runes.length;
+    _queue.addLast(data.codeUnits);
+    _length += data.length;
   }
 
   int peek() {

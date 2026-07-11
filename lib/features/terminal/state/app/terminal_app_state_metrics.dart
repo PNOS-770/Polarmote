@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
+
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
+import '../../transport/native/native_local_metrics_bridge.dart';
 import '../terminal_app_state.dart';
 
 extension TerminalAppStateMetrics on TerminalAppState {
   void startMetricsPolling(TerminalSession session) {
     _stopMetricsPolling(session);
     session.metricsTimer = Timer.periodic(
-      const Duration(seconds: 3),
+      const Duration(seconds: 4),
       (_) => _pollMetrics(session),
     );
     unawaited(_pollMetrics(session));
@@ -25,12 +27,129 @@ extension TerminalAppStateMetrics on TerminalAppState {
   }
 
   Future<void> _pollMetrics(TerminalSession session) async {
-    final client = session.client;
-    if (client == null || session.tab.status != TerminalStatus.connected) {
+    if (session.tab.status != TerminalStatus.connected) {
       return;
     }
+    // 只对当前活跃会话采集指标，后台会话跳过昂贵的 SSH proc/* 查询
+    if (activeSession != session) {
+      return;
+    }
+    if (session.profile.isLocal) {
+      await _pollLocalMetrics(session);
+    } else {
+      await _pollRemoteMetrics(session);
+    }
+  }
+
+  // ── Native local metrics collector (singleton) ──
+
+  static LocalMetricsCollector? _nativeCollector;
+
+  static LocalMetricsCollector _getCollector() {
+    if (_nativeCollector == null) {
+      try {
+        _nativeCollector = LocalMetricsCollector();
+      } catch (e) {
+        
+        rethrow;
+      }
+    }
+    return _nativeCollector!;
+  }
+
+  // ── CPU delta state ──
+
+  static int? _prevCpuIdle;
+  static int? _prevTotal;
+
+  Future<void> _pollLocalMetrics(TerminalSession session) async {
     try {
-      final output = await client
+      final collector = _getCollector();
+      final data = collector.collect();
+      if (data == null || data.isEmpty) {
+        
+        return;
+      }
+
+      // CPU - compute fraction from idle/total delta
+      if (data.cpuIdle != null && data.cpuKernel != null && data.cpuUser != null) {
+        final total = data.cpuIdle! + data.cpuKernel! + data.cpuUser!;
+        if (_prevCpuIdle != null && _prevTotal != null && total > _prevTotal!) {
+          final deltaTotal = total - _prevTotal!;
+          final deltaIdle = data.cpuIdle! - _prevCpuIdle!;
+          if (deltaTotal > 0) {
+            session.cpuUsage = (deltaTotal - deltaIdle) / deltaTotal;
+          }
+        }
+        _prevCpuIdle = data.cpuIdle;
+        _prevTotal = total;
+      }
+
+      // Memory
+      if (data.memTotal != null && data.memAvail != null && data.memTotal! > 0) {
+        session.memUsage =
+            (data.memTotal! - data.memAvail!) / data.memTotal!;
+        session.memUsedBytes = data.memTotal! - data.memAvail!;
+        session.memTotalBytes = data.memTotal!;
+      }
+
+      // Network - cumulative, need delta for rate
+      if (data.netRx != null && data.netTx != null) {
+        _updateNetRates(session, data.netRx!, data.netTx!);
+        session.netRxHistory.add(session.netRxRate ?? 0);
+        if (session.netRxHistory.length > 60) session.netRxHistory.removeAt(0);
+        session.netTxHistory.add(session.netTxRate ?? 0);
+        if (session.netTxHistory.length > 60) session.netTxHistory.removeAt(0);
+      }
+
+      // Disk - cumulative I/O, need delta for rate
+      if (data.diskRead != null && data.diskWrite != null) {
+        _updateDiskRatesFromNative(session, data.diskRead!, data.diskWrite!);
+      }
+
+      // Disk capacity
+      if (data.diskTotal != null && data.diskTotal! > 0) {
+        session.diskUsage = (data.diskTotal! - (data.diskFree ?? data.diskTotal!)) / data.diskTotal!;
+      }
+
+      session.metricsUpdatedAt = DateTime.now();
+      _updateMetricHistory(session);
+      notifyState();
+    } catch (e) {
+      
+    }
+  }
+
+  void _updateDiskRatesFromNative(
+    TerminalSession session,
+    int readBytes,
+    int writeBytes,
+  ) {
+    final now = DateTime.now();
+    final lastAt = session.lastDiskAt;
+    final lastRead = session.lastDiskReadBytes;
+    final lastWrite = session.lastDiskWriteBytes;
+    session.lastDiskReadBytes = readBytes;
+    session.lastDiskWriteBytes = writeBytes;
+    session.lastDiskAt = now;
+    if (lastAt == null || lastRead == null || lastWrite == null) return;
+    final elapsed = now.difference(lastAt).inMilliseconds / 1000;
+    if (elapsed <= 0) return;
+    session.diskReadRate = (readBytes - lastRead) / elapsed;
+    session.diskWriteRate = (writeBytes - lastWrite) / elapsed;
+  }
+
+  // ── Remote (SSH) metrics: parses /proc/* output ──
+
+  Future<void> _pollRemoteMetrics(TerminalSession session) async {
+    if (session.client == null) return;
+    try {
+      if (session.metricsClient == null) {
+        final c = await connectSshClientForHost(session.profile).timeout(const Duration(seconds: 10));
+        if (session.client == null) { c.close(); return; }
+        session.metricsClient = c;
+      }
+      final output = await session.metricsClient!
           .run(
             "sh -c 'cat /proc/stat; echo __MEM__; cat /proc/meminfo; echo __DF__; df -P /; echo __LOAD__; cat /proc/loadavg; echo __NET__; cat /proc/net/dev; echo __DISK__; cat /proc/diskstats'",
             stdout: true,
@@ -40,6 +159,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
       final text = utf8.decode(output, allowMalformed: true);
       _parseMetrics(session, text);
       session.metricsUpdatedAt = DateTime.now();
+      _updateMetricHistory(session);
       notifyState();
     } catch (_) {
       // Ignore metrics failures (non-Linux or permission issues).
@@ -143,6 +263,10 @@ extension TerminalAppStateMetrics on TerminalAppState {
         }
       }
       _updateNetRates(session, rxTotal, txTotal);
+      session.netRxHistory.add(session.netRxRate ?? 0);
+      if (session.netRxHistory.length > 60) session.netRxHistory.removeAt(0);
+      session.netTxHistory.add(session.netTxRate ?? 0);
+      if (session.netTxHistory.length > 60) session.netTxHistory.removeAt(0);
     }
 
     final diskIndex = lines.indexWhere((line) => line.startsWith('__DISK__'));
@@ -208,4 +332,20 @@ extension TerminalAppStateMetrics on TerminalAppState {
     session.diskReadRate = (readBytes - lastRead) / elapsed;
     session.diskWriteRate = (writeBytes - lastWrite) / elapsed;
   }
+
+  void _updateMetricHistory(TerminalSession session) {
+    if (session.cpuUsage != null) {
+      session.cpuHistory.add(session.cpuUsage!);
+      if (session.cpuHistory.length > 60) {
+        session.cpuHistory.removeAt(0);
+      }
+    }
+    if (session.memUsage != null) {
+      session.memHistory.add(session.memUsage!);
+      if (session.memHistory.length > 60) {
+        session.memHistory.removeAt(0);
+      }
+    }
+  }
 }
+

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <title>ui_group_folder</title>
-  <path d="M4.5 9.2A2.2 2.2 0 0 1 6.7 7h7.3l2 2.4h9.3A2.2 2.2 0 0 1 27.5 11.6v12.1a2.3 2.3 0 0 1-2.3 2.3H6.8a2.3 2.3 0 0 1-2.3-2.3z" fill="#c88d2a"/>
-  <path d="M4.5 13.1h23v10.6a2.3 2.3 0 0 1-2.3 2.3H6.8a2.3 2.3 0 0 1-2.3-2.3z" fill="#e5a93f"/>
-  <path d="M5.7 13.1h20.7" stroke="#f6d28f" stroke-width="1.1" stroke-linecap="round"/>
-  <rect x="15.1" y="18.1" width="6.1" height="1.7" rx="0.85" fill="#9a691a"/>
-  <rect x="17.3" y="15.9" width="1.7" height="6.1" rx="0.85" fill="#9a691a"/>
-</svg>

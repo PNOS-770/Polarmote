@@ -1,8 +1,8 @@
-set(_project_root "${ASMOTE_ROOT_DIR}")
+set(_project_root "${Polarmote_ROOT_DIR}")
 set(_build_dir "${BUILD_DIR}")
 
 if(NOT _project_root OR NOT _build_dir)
-  message(FATAL_ERROR "Missing ASMOTE_ROOT_DIR or BUILD_DIR.")
+  message(FATAL_ERROR "Missing Polarmote_ROOT_DIR or BUILD_DIR.")
 endif()
 
 set(_src_dll "${_project_root}/x86_64-pc-windows-msvc_super_native_extensions.dll")

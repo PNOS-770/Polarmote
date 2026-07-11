@@ -64,3 +64,4 @@ class HomeShellSelection {
     mobileSidebarWidth,
   );
 }
+

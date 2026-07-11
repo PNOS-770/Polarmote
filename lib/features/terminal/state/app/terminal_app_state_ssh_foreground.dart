@@ -25,3 +25,4 @@ extension TerminalAppStateSshForeground on TerminalAppState {
     // No runtime state in Flutter-only mode.
   }
 }
+

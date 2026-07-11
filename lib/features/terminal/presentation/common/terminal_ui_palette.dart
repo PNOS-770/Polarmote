@@ -14,7 +14,8 @@ class TerminalUiPalette {
   static const Color accent = Color(0xFF0F766E);
   static const Color accentHover = Color(0xFF115E59);
   static const Color accentSoft = Color(0xFFD9F3EF);
-  static const Color accentSelected = Color(0xFFDDEBEA);
+  static const Color accentSelected = Color(0xFFE8F5F4); // 浅青绿色，更柔和的选中背景
+  static const Color accentSelectedLight = Color(0xFFF3F4F6); // 更浅的灰色
 
   static const Color inkBlue = Color(0xFF2E4A57);
 
@@ -35,4 +36,10 @@ class TerminalUiPalette {
   static const Color railSelected = accent;
   static const Color railUnselected = textSecondary;
   static const Color railSelectedBackground = accentSelected;
+
+  static const Color statusBarBg = Color(0xFFFFFFFF);
+  static const Color statusBarBorder = Color(0xFFE5E7EB);
+  static const Color statusBarLabel = Color(0xFF888888);
+  static const Color statusBarValue = Color(0xFF333333);
 }
+

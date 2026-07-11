@@ -55,14 +55,32 @@ Future<void> showFilesMenu(
 
 Future<void> showSettingsDialog(
   BuildContext context,
-  TerminalAppState appState,
-) async {
-  await showDialog<void>(
-    context: context,
-    builder: (context) {
-      return TerminalSettingsPanel(appState: appState);
-    },
-  );
+  TerminalAppState appState, {
+  int initialCategoryIndex = 0,
+}) async {
+  final isMobile = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  if (isMobile) {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TerminalSettingsPanel(
+          appState: appState,
+          mobilePage: true,
+          initialCategoryIndex: initialCategoryIndex,
+        ),
+      ),
+    );
+  } else {
+    await showDialog<void>(
+      context: context,
+      builder: (_) {
+        return TerminalSettingsPanel(
+          appState: appState,
+          initialCategoryIndex: initialCategoryIndex,
+        );
+      },
+    );
+  }
 }
 
 Future<void> confirmDeleteHost(
@@ -205,3 +223,4 @@ void showHostKeyPromptIfNeeded(
     appState.endHostKeyPromptDialog();
   });
 }
+

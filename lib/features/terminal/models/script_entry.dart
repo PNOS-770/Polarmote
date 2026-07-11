@@ -327,3 +327,4 @@ int _normalizeRetryCount(dynamic value) {
   }
   return 1;
 }
+

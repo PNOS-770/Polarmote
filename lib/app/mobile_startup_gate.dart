@@ -8,6 +8,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../shared/constants/app_string.dart';
+import '../shared/design_system/design_system.dart';
+
 class MobileStartupGate extends StatefulWidget {
   const MobileStartupGate({required this.child, super.key});
 
@@ -20,7 +23,7 @@ class MobileStartupGate extends StatefulWidget {
 class _MobileStartupGateState extends State<MobileStartupGate>
     with SingleTickerProviderStateMixin {
   static const MethodChannel _startupGuardChannel = MethodChannel(
-    'asmote/startup_guard',
+    'Polarmote/startup_guard',
   );
   static const String _startupGuardDoneFileName = 'startup_guard_done_v1.flag';
 
@@ -87,11 +90,12 @@ class _MobileStartupGateState extends State<MobileStartupGate>
   }
 
   Future<List<String>> _loadBlueLayerSvgs() async {
-    final raw = await rootBundle.loadString('assets/images/app_icon.svg');
-    final viewBox = _matchFirst(raw, RegExp(r'viewBox="([^"]+)"'));
-    final defs = _matchFirst(raw, RegExp(r'<defs>([\s\S]*?)</defs>'));
-    final bluePathTag = _matchFirst(
-      raw,
+    try {
+      final raw = await rootBundle.loadString('assets/images/app_icon.svg');
+      final viewBox = _matchFirst(raw, RegExp(r'viewBox="([^"]+)"'));
+      final defs = _matchFirst(raw, RegExp(r'<defs>([\s\S]*?)</defs>'));
+      final bluePathTag = _matchFirst(
+        raw,
       RegExp(r'(<path[^>]*fill="url\(#blue\)"[^>]*/>)'),
     );
     final blueD = _matchFirst(bluePathTag, RegExp(r'd="([^"]+)"'));
@@ -127,6 +131,10 @@ class _MobileStartupGateState extends State<MobileStartupGate>
 ''';
         })
         .toList(growable: false);
+    } catch (e) {
+      // 桌面端可能无法加载移动端资源，返回空列表
+      return const [];
+    }
   }
 
   String _matchFirst(String source, RegExp pattern) {
@@ -148,8 +156,8 @@ class _MobileStartupGateState extends State<MobileStartupGate>
     return languageCode.startsWith('zh');
   }
 
-  String _text({required String zh, required String en}) {
-    return _isChineseLocale() ? zh : en;
+  String _text(AppText text) {
+    return text.resolve(_isChineseLocale() ? 'zh' : 'en');
   }
 
   Future<void> _runStartupGate() async {
@@ -182,10 +190,7 @@ class _MobileStartupGateState extends State<MobileStartupGate>
 
     if (!mounted) return;
     setState(() {
-      _startupStatus = _text(
-        zh: '正在检查首次启动授权...',
-        en: 'Checking first-launch permissions...',
-      );
+      _startupStatus = _text(AppStrings.values.checkingFirstLaunchPermissions);
     });
     final permissionsOk = await _ensureMandatoryPermissionsGranted();
     if (!permissionsOk) {
@@ -195,16 +200,9 @@ class _MobileStartupGateState extends State<MobileStartupGate>
 
     if (!mounted) return;
     setState(() {
-      _startupStatus = _text(
-        zh: '正在检查省电策略...',
-        en: 'Checking battery optimization policy...',
-      );
+      _startupStatus = _text(AppStrings.values.checkingBatteryOptimization);
     });
-    final batteryOk = await _ensureBatteryOptimizationDisabled();
-    if (!batteryOk) {
-      await _exitAppNow();
-      return;
-    }
+    await _ensureBatteryOptimizationDisabled();
 
     await _markStartupGuardDone();
 
@@ -251,40 +249,12 @@ class _MobileStartupGateState extends State<MobileStartupGate>
   }
 
   Future<bool?> _showMandatoryIntroDialog() {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(_text(zh: '首次启动授权', en: 'First Launch Requirements')),
-          content: Text(
-            _text(
-              zh:
-                  '首次启动必须完成以下授权后才能进入：\n'
-                  '1. 通知权限\n'
-                  '2. 文件访问权限\n'
-                  '3. 关闭本应用省电优化\n\n'
-                  '若未完成，将直接退出应用。',
-              en:
-                  'You must complete all required permissions on first launch:\n'
-                  '1. Notification permission\n'
-                  '2. File access permission\n'
-                  '3. Disable battery optimization for this app\n\n'
-                  'If not completed, the app will exit immediately.',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(_text(zh: '退出应用', en: 'Exit')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(_text(zh: '继续', en: 'Continue')),
-            ),
-          ],
-        );
-      },
+    return showConfirmDialog(
+      context,
+      title: _text(AppStrings.values.firstLaunchRequirements),
+      message: _text(AppStrings.values.firstLaunchDesc),
+      confirmText: _text(AppStrings.values.continueLabel),
+      cancelText: _text(AppStrings.values.exitApp),
     );
   }
 
@@ -364,84 +334,32 @@ class _MobileStartupGateState extends State<MobileStartupGate>
     return manageStatus.isGranted || storageStatus.isGranted;
   }
 
-  Future<bool> _ensureBatteryOptimizationDisabled() async {
-    if (!_isAndroidPlatform) {
-      return true;
-    }
-    if (await _isIgnoringBatteryOptimizations()) {
-      return true;
-    }
+  Future<void> _ensureBatteryOptimizationDisabled() async {
+    if (!_isAndroidPlatform) return;
+    if (await _isIgnoringBatteryOptimizations()) return;
 
     await _requestIgnoreBatteryOptimizations();
     await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (await _isIgnoringBatteryOptimizations()) {
-      return true;
-    }
+    if (await _isIgnoringBatteryOptimizations()) return;
 
-    if (!mounted) return false;
-    final openSettings = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(_text(zh: '关闭省电优化', en: 'Disable Battery Optimization')),
-          content: Text(
-            _text(
-              zh:
-                  '系统仍未关闭本应用省电优化。\n'
-                  '请前往系统设置将本应用设为“不受限制/无限制”。',
-              en:
-                  'Battery optimization is still enabled.\n'
-                  'Please set this app to "Unrestricted" in system settings.',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(_text(zh: '退出应用', en: 'Exit')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(_text(zh: '前往设置', en: 'Open Settings')),
-            ),
-          ],
-        );
-      },
+    if (!mounted) return;
+    final openSettings = await showConfirmDialog(
+      context,
+      title: _text(AppStrings.values.disableBatteryOptimization),
+      message: _text(AppStrings.values.disableBatteryOptimizationDesc),
+      confirmText: _text(AppStrings.values.openSettings),
+      cancelText: _text(AppStrings.values.continueLabel),
     );
-    if (openSettings != true) {
-      return false;
-    }
+    if (openSettings != true) return;
 
     await _openBatteryOptimizationSettings();
-    if (!mounted) return false;
-    final confirm = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          content: Text(
-            _text(
-              zh: '完成设置后，点击“继续检查”。',
-              en: 'After finishing settings, tap "Check Again".',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(_text(zh: '退出应用', en: 'Exit')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(_text(zh: '继续检查', en: 'Check Again')),
-            ),
-          ],
-        );
-      },
+    if (!mounted) return;
+    await showConfirmDialog(
+      context,
+      title: _text(AppStrings.values.disableBatteryOptimization),
+      message: _text(AppStrings.values.afterSettingsTapCheckAgain),
+      confirmText: _text(AppStrings.values.continueLabel),
     );
-    if (confirm != true) {
-      return false;
-    }
-    return _isIgnoringBatteryOptimizations();
   }
 
   Future<bool> _isIgnoringBatteryOptimizations() async {
@@ -482,10 +400,7 @@ class _MobileStartupGateState extends State<MobileStartupGate>
     _exitTriggered = true;
     if (mounted) {
       setState(() {
-        _startupStatus = _text(
-          zh: '授权未完成，应用即将退出...',
-          en: 'Requirements not met. Exiting...',
-        );
+        _startupStatus = _text(AppStrings.values.requirementsNotMetExiting);
       });
     }
     await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -509,7 +424,7 @@ class _MobileStartupGateState extends State<MobileStartupGate>
           ),
         ),
         ColoredBox(
-          color: Colors.white,
+          color: AppColors.background,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -529,16 +444,10 @@ class _MobileStartupGateState extends State<MobileStartupGate>
                   width: 280,
                   child: Text(
                     _startupStatus.isEmpty
-                        ? _text(
-                            zh: '首次启动初始化中，请稍候...',
-                            en: 'Preparing first-launch checks...',
-                          )
+                        ? _text(AppStrings.values.preparingFirstLaunchChecks)
                         : _startupStatus,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: AppTextStyles.caption,
                   ),
                 ),
               ],
@@ -592,6 +501,7 @@ class _AnimatedBlueLayers extends StatelessWidget {
             'assets/images/app_icon.svg',
             width: 122,
             height: 122,
+            placeholderBuilder: (context) => const SizedBox.shrink(),
           ),
         ),
       );
@@ -616,3 +526,4 @@ class _AnimatedBlueLayers extends StatelessWidget {
     );
   }
 }
+

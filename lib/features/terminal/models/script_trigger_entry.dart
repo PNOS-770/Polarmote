@@ -182,3 +182,4 @@ int _normalizeInt(
   }
   return fallback;
 }
+

@@ -6,7 +6,7 @@ import 'dart:math';
 import 'package:dartssh2/dartssh2.dart';
 
 import '../../../../shared/constants/app_string.dart';
-import '../../../../shared/notifications/asmote_system_notifications.dart';
+import '../../../../shared/notifications/Polarmote_system_notifications.dart';
 import '../../../../shared/utils/cron_expression.dart';
 import '../../models/host_entry.dart';
 import '../../models/terminal_session.dart';
@@ -19,6 +19,7 @@ import '../../models/workflow_node.dart';
 import '../terminal_app_state.dart';
 
 part 'terminal_app_state_scripts_execution.dart';
+part 'terminal_app_state_scripts_schedule.dart';
 
 final Expando<List<ScriptRunEvent>> _scriptRunEventsByState =
     Expando<List<ScriptRunEvent>>('script-run-events');
@@ -51,7 +52,7 @@ String _randomHex(int len) {
   return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join().substring(0, len);
 }
 
-String _markerPrefix(String token) => '__ASMOTE_${token}__';
+String _markerPrefix(String token) => '__Polarmote_${token}__';
 
 enum ScriptRunEventType {
   runStarted,
@@ -235,101 +236,7 @@ extension TerminalAppStateScripts on TerminalAppState {
     );
   }
 
-  void ensureScriptScheduleRuntime() {
-    final existing = _scriptScheduleTimerByState[this];
-    if (existing?.isActive ?? false) {
-      return;
-    }
-    _scriptScheduleTimerByState[this] = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => unawaited(_runScriptScheduleTick()),
-    );
-    // 延迟到下一帧执行，避免在 build 期间调用 notifyState
-    Future.microtask(() => _runScriptScheduleTick());
-  }
 
-  void disposeScriptScheduleRuntime() {
-    _scriptScheduleTimerByState[this]?.cancel();
-    _scriptScheduleRunningByState[this]?.clear();
-  }
-
-  List<ScriptScheduleEntry> scriptSchedulesForScript(String scriptId) {
-    return scriptSchedules
-        .where((item) => item.scriptId == scriptId)
-        .toList(growable: false);
-  }
-
-  DateTime? scriptScheduleNextTriggerTime(
-    ScriptScheduleEntry schedule, {
-    DateTime? from,
-  }) {
-    final expression = schedule.cronExpression.trim();
-    if (!CronExpression.isValid(expression)) {
-      return null;
-    }
-    final offsetMinutes = schedule.timezoneOffsetMinutes.clamp(
-      -12 * 60,
-      14 * 60,
-    );
-    final offset = Duration(minutes: offsetMinutes);
-    final startUtc = (from ?? DateTime.now()).toUtc();
-    final startLocal = startUtc.add(offset);
-    var cursor = CronExpression.minuteBucket(startLocal);
-    if (!cursor.isAfter(startLocal)) {
-      cursor = cursor.add(const Duration(minutes: 1));
-    }
-    const maxSearchMinutes = 366 * 24 * 60;
-    for (var i = 0; i < maxSearchMinutes; i++) {
-      if (CronExpression.matches(expression, cursor)) {
-        return cursor.subtract(offset).toLocal();
-      }
-      cursor = cursor.add(const Duration(minutes: 1));
-    }
-    return null;
-  }
-
-  void upsertScriptScheduleEntry(ScriptScheduleEntry entry) {
-    final scriptId = entry.scriptId.trim();
-    if (scriptId.isEmpty) {
-      return;
-    }
-    final index = scriptSchedules.indexWhere((item) => item.id == entry.id);
-    final now = DateTime.now();
-    final normalized = entry.copyWith(
-      retryPerHost: entry.retryPerHost.clamp(1, 6),
-      timezoneOffsetMinutes: entry.timezoneOffsetMinutes.clamp(
-        -12 * 60,
-        14 * 60,
-      ),
-      updatedAt: now,
-      lastEvaluatedAt: entry.lastEvaluatedAt ?? CronExpression.minuteBucket(now.toUtc()),
-    );
-    if (index >= 0) {
-      scriptSchedules[index] = normalized;
-    } else {
-      scriptSchedules.add(normalized);
-    }
-    ensureScriptScheduleRuntime();
-    scheduleStateSave();
-    notifyState();
-  }
-
-  void removeScriptScheduleEntry(String scheduleId) {
-    if (scheduleId.trim().isEmpty) {
-      return;
-    }
-    scriptSchedules.removeWhere((item) => item.id == scheduleId);
-    scheduleStateSave();
-    notifyState();
-  }
-
-  void clearAllScriptSchedules() {
-    if (scriptSchedules.isEmpty) return;
-    scriptSchedules.clear();
-    disposeScriptScheduleRuntime();
-    scheduleStateSave();
-    notifyState();
-  }
 
   List<ScriptHostRunRecord> recentScriptRunsForHost(
     String hostId, {
@@ -579,6 +486,7 @@ extension TerminalAppStateScripts on TerminalAppState {
     Map<String, String> environmentOverrides = const <String, String>{},
     Duration stepDelay = const Duration(milliseconds: 50),
     void Function(int stepIndex, int totalSteps, String command)? onStepStarted,
+    void Function(int stepIndex, String text)? onOutput,
   }) async {
     if (!sessions.contains(session) ||
         session.tab.status != TerminalStatus.connected) {
@@ -625,6 +533,7 @@ extension TerminalAppStateScripts on TerminalAppState {
     if (macroSteps.isEmpty) {
       return true;
     }
+    var bufferOffset = session.terminal.buffer.getText().length;
     for (var i = 0; i < macroSteps.length; i++) {
       final step = macroSteps[i];
       final command = step.trim();
@@ -635,7 +544,18 @@ extension TerminalAppStateScripts on TerminalAppState {
       final hasSubmitKey = command.endsWith('\n') || command.endsWith('\r');
       final payload = hasSubmitKey ? command : '$command\r';
       session.sendInput(payload, trackForHistory: false);
-      if (stepDelay.inMilliseconds > 0) {
+      if (onOutput != null) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        final fullText = session.terminal.buffer.getText();
+        final clampedOffset = bufferOffset.clamp(0, fullText.length);
+        if (clampedOffset < fullText.length) {
+          final newText = fullText.substring(clampedOffset);
+          if (newText.isNotEmpty) {
+            onOutput(i + 1, newText);
+          }
+        }
+        bufferOffset = fullText.length;
+      } else if (stepDelay.inMilliseconds > 0) {
         await Future<void>.delayed(stepDelay);
       }
     }
@@ -1026,54 +946,86 @@ extension TerminalAppStateScripts on TerminalAppState {
           success: false,
           detail: 'session unavailable',
         );
-      } else {
-        final previousError = (lastError ?? '').trim();
-        final success = await runScriptAsMacroOnSession(
-          scriptId: script.id,
-          session: session,
-          templateArgs: templateArgs,
-          environmentOverrides: environmentOverrides,
-          onStepStarted: (stepIndex, totalSteps, command) {
-            _updateScriptRunProgressStep(
-              runId: runId,
-              targetId: host.id,
-              targetName: host.name,
-              stepIndex: stepIndex,
-              totalSteps: totalSteps,
-            );
-          },
-        );
-        if (success) {
+        if (attempt < attempts) {
           _emitScriptEvent(
             runId: runId,
-            type: ScriptRunEventType.targetSucceeded,
+            type: ScriptRunEventType.targetFailed,
             target: host.name,
             targetId: host.id,
-            message: 'visible session injected',
+            message:
+                'attempt $attempt/$attempts failed, retrying: ${lastFailure.detail}',
             notify: true,
           );
-          _markScriptRunProgressTargetCompleted(
+        }
+        continue;
+      }
+      final previousError = (lastError ?? '').trim();
+      final success = await runScriptAsMacroOnSession(
+        scriptId: script.id,
+        session: session,
+        templateArgs: templateArgs,
+        environmentOverrides: environmentOverrides,
+        onStepStarted: (stepIndex, totalSteps, command) {
+          _emitScriptEvent(
+            runId: runId,
+            type: ScriptRunEventType.stepStarted,
+            target: host.name,
+            targetId: host.id,
+            stepIndex: stepIndex,
+            command: command,
+          );
+          _updateScriptRunProgressStep(
             runId: runId,
             targetId: host.id,
             targetName: host.name,
+            stepIndex: stepIndex,
+            totalSteps: totalSteps,
           );
-          return _ScriptTargetExecutionResult(
-            targetId: host.id,
-            targetName: host.name,
-            success: true,
-            detail: 'visible session injected',
-          );
-        }
-        final currentError = (lastError ?? '').trim();
-        lastFailure = _ScriptTargetExecutionResult(
+        },
+        onOutput: (stepIndex, text) {
+          for (final line in text.split('\n')) {
+            if (line.isEmpty) continue;
+            _emitScriptEvent(
+              runId: runId,
+              type: ScriptRunEventType.stdout,
+              target: host.name,
+              targetId: host.id,
+              stepIndex: stepIndex,
+              message: line,
+            );
+          }
+        },
+      );
+      if (success) {
+        _emitScriptEvent(
+          runId: runId,
+          type: ScriptRunEventType.targetSucceeded,
+          target: host.name,
+          targetId: host.id,
+          message: 'visible session injected',
+          notify: true,
+        );
+        _markScriptRunProgressTargetCompleted(
+          runId: runId,
           targetId: host.id,
           targetName: host.name,
-          success: false,
-          detail: currentError.isNotEmpty && currentError != previousError
-              ? currentError
-              : 'session execution failed',
+        );
+        return _ScriptTargetExecutionResult(
+          targetId: host.id,
+          targetName: host.name,
+          success: true,
+          detail: 'visible session injected',
         );
       }
+      final currentError = (lastError ?? '').trim();
+      lastFailure = _ScriptTargetExecutionResult(
+        targetId: host.id,
+        targetName: host.name,
+        success: false,
+        detail: currentError.isNotEmpty && currentError != previousError
+            ? currentError
+            : 'session execution failed',
+      );
       if (attempt < attempts) {
         _emitScriptEvent(
           runId: runId,
@@ -1113,56 +1065,54 @@ extension TerminalAppStateScripts on TerminalAppState {
   Future<TerminalSession?> _ensureScriptExecutionSessionVisible(
     HostEntry host,
   ) async {
+    for (final s in sessions) {
+      if (s.profile.id == host.id &&
+          s.tab.status == TerminalStatus.connected) {
+        scriptBusySessions.add(s.id);
+      }
+    }
+
+    await connectToHost(host, remember: false, background: true);
     TerminalSession? session;
-    int sessionIndex = -1;
     for (var i = sessions.length - 1; i >= 0; i--) {
       final candidate = sessions[i];
-      if (candidate.profile.id != host.id) {
-        continue;
-      }
+      if (candidate.profile.id != host.id) continue;
+      if (candidate.tab.status != TerminalStatus.connected) continue;
+      if (scriptBusySessions.contains(candidate.id)) continue;
       session = candidate;
-      sessionIndex = i;
-      if (candidate.tab.status == TerminalStatus.connected) {
-        break;
-      }
+      break;
     }
+    if (session == null) session = sessions.lastOrNull;
+    if (session == null) return null;
 
-    if (session == null) {
-      await connectToHost(host, remember: false, background: false);
-      for (var i = sessions.length - 1; i >= 0; i--) {
-        final candidate = sessions[i];
-        if (candidate.profile.id != host.id) {
-          continue;
-        }
-        session = candidate;
-        sessionIndex = i;
-        break;
-      }
-    } else {
-      if (sessionIndex >= 0) {
-        setActiveSession(sessionIndex);
-      }
-      if (session.tab.status != TerminalStatus.connected) {
-        await reconnectSession(session, background: false);
-      }
-    }
-
-    if (session == null ||
-        !sessions.contains(session) ||
+    if (!sessions.contains(session) ||
         session.tab.status != TerminalStatus.connected) {
       return null;
     }
-    if (sessionIndex < 0 || sessionIndex >= sessions.length) {
-      sessionIndex = sessions.indexOf(session);
-    }
-    if (sessionIndex >= 0) {
-      setActiveSession(sessionIndex);
-    }
-    if (navSection != NavSection.sessions) {
-      navSection = NavSection.sessions;
-      notifyState();
-    }
+
+    scriptBusySessions.add(session.id);
+    createTerminalStage(host.name, sessionIds: [session.id]);
+    setActiveTerminalSession(session.id);
     return session;
+  }
+
+  void _cleanupVisibleScriptSession(String sessionId) {
+    scriptBusySessions.remove(sessionId);
+    final stage = terminalStages.cast<TerminalStage?>().firstWhere(
+      (s) => s!.sessionIds.contains(sessionId),
+      orElse: () => null,
+    );
+    if (stage != null) {
+      if (terminalStages.length > 1) {
+        removeStageById(stage.id);
+      } else {
+        closeSession(sessionId);
+        scheduleStateSave();
+        notifyState();
+      }
+    } else {
+      closeSession(sessionId);
+    }
   }
 
   Future<void> _runScriptScheduleTick() async {
@@ -1892,3 +1842,4 @@ class _ScriptStepMarker {
     );
   }
 }
+

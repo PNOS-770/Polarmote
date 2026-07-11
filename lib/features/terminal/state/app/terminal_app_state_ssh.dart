@@ -8,7 +8,6 @@ import 'package:dartssh2/dartssh2.dart';
 import '../../models/host_entry.dart';
 import '../ssh/ssh_openssh_compat.dart';
 import '../terminal_app_state.dart';
-
 class _SshSocketRoute {
   const _SshSocketRoute({required this.socket, required this.auxiliaryClients});
 
@@ -388,10 +387,6 @@ extension TerminalAppStateSsh on TerminalAppState {
       }
     }
 
-    if (host.useSshAgent) {
-      identities.addAll(await loadSshAgentIdentities(host));
-      identities.addAll(await _loadDefaultDesktopSshKeys(host));
-    }
     return _dedupeIdentities(identities);
   }
 
@@ -406,41 +401,6 @@ extension TerminalAppStateSsh on TerminalAppState {
       }
     }
     return deduped;
-  }
-
-  Future<List<SSHKeyPair>> _loadDefaultDesktopSshKeys(HostEntry host) async {
-    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      return const <SSHKeyPair>[];
-    }
-    final home =
-        Platform.environment['USERPROFILE'] ??
-        Platform.environment['HOME'] ??
-        '';
-    if (home.trim().isEmpty) {
-      return const <SSHKeyPair>[];
-    }
-    final passphrase = (host.privateKeyPassphrase ?? '').trim();
-    final candidates = <String>[
-      '$home/.ssh/id_ed25519',
-      '$home/.ssh/id_rsa',
-      '$home/.ssh/id_ecdsa',
-    ];
-    final loaded = <SSHKeyPair>[];
-    for (final path in candidates) {
-      final file = File(path);
-      if (!await file.exists()) {
-        continue;
-      }
-      try {
-        final pem = await file.readAsString();
-        loaded.addAll(
-          SSHKeyPair.fromPem(pem, passphrase.isEmpty ? null : passphrase),
-        );
-      } catch (_) {
-        // Ignore invalid local key file and continue probing.
-      }
-    }
-    return loaded;
   }
 
   Future<SSHSocket> _connectViaSocks5(HostEntry host) async {
@@ -584,3 +544,5 @@ class _SocksDestination {
   final int atyp;
   final List<int> addressBytes;
 }
+
+

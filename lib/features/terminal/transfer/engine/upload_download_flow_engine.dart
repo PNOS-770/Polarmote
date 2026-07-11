@@ -51,7 +51,7 @@ class UploadDownloadFlowEngine {
   });
 
   final String languageCode;
-  final TransferFacade Function(
+  final Future<TransferFacade> Function(
     TerminalSession session, {
     required TransferDirection direction,
   })
@@ -83,7 +83,7 @@ class UploadDownloadFlowEngine {
   final String Function(String prefix) nextTransferId;
   final Future<Directory> Function() resolveDesktopDirectory;
 
-  static const String _localTransferTempRootName = 'asmote-transfer-temp';
+  static const String _localTransferTempRootName = 'Polarmote-transfer-temp';
 
   Future<void> uploadFiles(
     TerminalSession session,
@@ -93,7 +93,7 @@ class UploadDownloadFlowEngine {
     final sanitized = _sanitizeLocalPaths(localPaths);
     if (sanitized.isEmpty) return;
 
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.upload,
     );
@@ -144,7 +144,7 @@ class UploadDownloadFlowEngine {
         .toList(growable: false);
     if (sanitized.isEmpty) return;
 
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -313,7 +313,7 @@ class UploadDownloadFlowEngine {
     String localPath, {
     String? displayName,
   }) async {
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -471,7 +471,7 @@ class UploadDownloadFlowEngine {
     required VirtualFileEventSinkProvider sinkProvider,
     required WriteProgress progress,
   }) async {
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -520,7 +520,7 @@ class UploadDownloadFlowEngine {
     required VirtualFileEventSinkProvider sinkProvider,
     required WriteProgress progress,
   }) async {
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -594,4 +594,7 @@ class UploadDownloadFlowEngine {
       await tempDir.delete(recursive: true);
     }
   }
+
 }
+
+

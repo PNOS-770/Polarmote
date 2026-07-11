@@ -6,7 +6,7 @@ class AndroidTransferForegroundBridge {
   AndroidTransferForegroundBridge._();
 
   static const MethodChannel _channel = MethodChannel(
-    'asmote/transfer_foreground',
+    'Polarmote/transfer_foreground',
   );
 
   static Future<void> start({String? title}) async {
@@ -47,3 +47,4 @@ class AndroidTransferForegroundBridge {
     });
   }
 }
+

@@ -84,12 +84,40 @@ Future<void> showFileEditDialog(
   TerminalSession session,
   FileNode node,
 ) async {
+  final content = await appState.loadEditableFileText(session, node);
+  if (!context.mounted) return;
+  if (content == null) {
+    showMessageDialog(
+      context,
+      title: t(context, AppStrings.values.error),
+      message: t(context, AppStrings.values.fileEditLoadFailed),
+    );
+    return;
+  }
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (context) {
-      return _FileEditDialog(appState: appState, session: session, node: node);
-    },
+    builder: (_) => AppFileEditDialog(
+      title: AppStrings.values.fileEditTitle.resolve(
+        Localizations.localeOf(context).languageCode,
+        params: {'name': node.name},
+      ),
+      initialContent: content,
+      onSave: (text) => appState.saveEditableFileText(session, node, text),
+      onOpenInSystem: () => unawaited(
+        appState.openRemoteFileWithSystem(session, node),
+      ),
+      saveLabel: t(context, AppStrings.values.save),
+      closeLabel: t(context, AppStrings.values.close),
+      cancelLabel: t(context, AppStrings.values.cancel),
+      discardLabel: t(context, AppStrings.values.discard),
+      openInSystemLabel: t(context, AppStrings.values.openInSystem),
+      confirmCloseLabel: t(context, AppStrings.values.unsavedChangesPrompt),
+      unsavedMarker: AppStrings.values.fileEditUnsavedMarker.resolve(
+        Localizations.localeOf(context).languageCode,
+      ),
+      failedLabel: t(context, AppStrings.values.fileEditLoadFailed),
+    ),
   );
 }
 
@@ -150,4 +178,5 @@ Future<void> showFileMenu(
       break;
   }
 }
+
 

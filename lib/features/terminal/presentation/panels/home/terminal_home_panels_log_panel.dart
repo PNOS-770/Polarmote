@@ -19,7 +19,7 @@ class _LogPanelState extends State<_LogPanel> {
       return Center(
         child: Text(
           t(context, AppStrings.values.noLogs),
-          style: TextStyle(color: Colors.grey[600]),
+          style: AppTextStyles.secondarySmall,
         ),
       );
     }
@@ -80,14 +80,7 @@ class _LogPanelState extends State<_LogPanel> {
                                 ),
                                 const SizedBox(width: 8),
                               ],
-                              AppTextButton(
-                                onPressed: widget.appState.openLogFolder,
-                                icon: Icons.folder_open,
-                                label: l(
-                                  widget.appState,
-                                  AppStrings.values.openFolder,
-                                ),
-                              ),
+
                             ],
                           ),
                           if (!inlineSearch) ...[
@@ -133,7 +126,7 @@ class _LogPanelState extends State<_LogPanel> {
                   ? Center(
                       child: Text(
                         t(context, AppStrings.values.noLogs),
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: AppTextStyles.secondarySmall,
                       ),
                     )
                   : SingleChildScrollView(
@@ -142,7 +135,7 @@ class _LogPanelState extends State<_LogPanel> {
                         TextSpan(
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Colors.black87,
+                            color: AppColors.textPrimary,
                           ),
                           children: _buildHighlightedLogSpans(items),
                         ),
@@ -193,7 +186,7 @@ class _LogPanelState extends State<_LogPanel> {
         TextSpan(
           text: line.substring(matchIndex, end),
           style: const TextStyle(
-            color: Colors.red,
+            color: AppColors.error,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -217,3 +210,4 @@ class _LogPanelState extends State<_LogPanel> {
   }
 
 }
+

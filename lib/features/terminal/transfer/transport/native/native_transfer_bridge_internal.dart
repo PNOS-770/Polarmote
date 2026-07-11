@@ -311,7 +311,7 @@ class _NativeBindings {
     try {
       _createSession = dylib
           .lookupFunction<_CreateSessionNative, _CreateSessionDart>(
-            'asmote_create_session',
+            'Polarmote_create_session',
           );
     } catch (_) {
       _createSession = null;
@@ -319,7 +319,7 @@ class _NativeBindings {
     try {
       _destroySession = dylib
           .lookupFunction<_DestroySessionNative, _DestroySessionDart>(
-            'asmote_destroy_session',
+            'Polarmote_destroy_session',
           );
     } catch (_) {
       _destroySession = null;
@@ -327,14 +327,14 @@ class _NativeBindings {
     try {
       _enqueueTransfer = dylib
           .lookupFunction<_EnqueueTransferNative, _EnqueueTransferDart>(
-            'asmote_enqueue_transfer',
+            'Polarmote_enqueue_transfer',
           );
     } catch (_) {
       _enqueueTransfer = null;
     }
     try {
       _cancelTask = dylib.lookupFunction<_CancelTaskNative, _CancelTaskDart>(
-        'asmote_cancel_task',
+        'Polarmote_cancel_task',
       );
     } catch (_) {
       _cancelTask = null;
@@ -342,14 +342,14 @@ class _NativeBindings {
     try {
       _queryProgress = dylib
           .lookupFunction<_QueryProgressNative, _QueryProgressDart>(
-            'asmote_query_progress',
+            'Polarmote_query_progress',
           );
     } catch (_) {
       _queryProgress = null;
     }
     try {
       _pollEvents = dylib.lookupFunction<_PollEventsNative, _PollEventsDart>(
-        'asmote_poll_events',
+        'Polarmote_poll_events',
       );
     } catch (_) {
       _pollEvents = null;
@@ -358,7 +358,7 @@ class _NativeBindings {
     try {
       _runtimeCreate = dylib
           .lookupFunction<_RuntimeCreateNative, _RuntimeCreateDart>(
-            'asmote_runtime_create',
+            'Polarmote_runtime_create',
           );
     } catch (_) {
       _runtimeCreate = null;
@@ -366,14 +366,14 @@ class _NativeBindings {
     try {
       _runtimeDestroy = dylib
           .lookupFunction<_RuntimeDestroyNative, _RuntimeDestroyDart>(
-            'asmote_runtime_destroy',
+            'Polarmote_runtime_destroy',
           );
     } catch (_) {
       _runtimeDestroy = null;
     }
     try {
       _sessionOpen = dylib.lookupFunction<_SessionOpenNative, _SessionOpenDart>(
-        'asmote_session_open',
+        'Polarmote_session_open',
       );
     } catch (_) {
       _sessionOpen = null;
@@ -381,7 +381,7 @@ class _NativeBindings {
     try {
       _sessionClose = dylib
           .lookupFunction<_SessionCloseNative, _SessionCloseDart>(
-            'asmote_session_close',
+            'Polarmote_session_close',
           );
     } catch (_) {
       _sessionClose = null;
@@ -389,7 +389,7 @@ class _NativeBindings {
     try {
       _sessionSubmitGraph = dylib
           .lookupFunction<_SessionSubmitGraphNative, _SessionSubmitGraphDart>(
-            'asmote_session_submit_graph',
+            'Polarmote_session_submit_graph',
           );
     } catch (_) {
       _sessionSubmitGraph = null;
@@ -397,7 +397,7 @@ class _NativeBindings {
     try {
       _sessionCancelGraph = dylib
           .lookupFunction<_SessionCancelGraphNative, _SessionCancelGraphDart>(
-            'asmote_session_cancel_graph',
+            'Polarmote_session_cancel_graph',
           );
     } catch (_) {
       _sessionCancelGraph = null;
@@ -407,17 +407,17 @@ class _NativeBindings {
           .lookupFunction<
             _SessionPollEventsCursorNative,
             _SessionPollEventsCursorDart
-          >('asmote_session_poll_events_cursor');
+          >('Polarmote_session_poll_events_cursor');
     } catch (_) {
       _sessionPollEventsCursor = null;
     }
 
     _freeCString = dylib.lookupFunction<_FreeCStringNative, _FreeCStringDart>(
-      'asmote_free_c_string',
+      'Polarmote_free_c_string',
     );
     try {
       _buildInfo = dylib.lookupFunction<_BuildInfoNative, _BuildInfoDart>(
-        'asmote_build_info',
+        'Polarmote_build_info',
       );
     } catch (_) {
       _buildInfo = null;
@@ -478,7 +478,7 @@ class _NativeBindings {
   bool get supportsRuntimeApi => _hasRuntimeSymbols && _runtimeId > 0;
 
   static _NativeBindings? tryLoad() {
-    if (Platform.environment['ASMOTE_DISABLE_NATIVE_TRANSFER'] == '1') {
+    if (Platform.environment['Polarmote_DISABLE_NATIVE_TRANSFER'] == '1') {
       return null;
     }
     if (Platform.isIOS) {
@@ -487,13 +487,8 @@ class _NativeBindings {
           DynamicLibrary.process(),
           loadedFrom: '<process>',
         );
-        bindings.logLoaded();
         return bindings;
       } catch (error) {
-        AsmoteLog.warn(
-          'native_transfer',
-          'failed to initialize from <process>: $error',
-        );
         return null;
       }
     }
@@ -509,14 +504,9 @@ class _NativeBindings {
         final library = DynamicLibrary.open(candidate);
         try {
           final bindings = _NativeBindings._(library, loadedFrom: candidate);
-          bindings.logLoaded();
           return bindings;
         } catch (error) {
           lastError = error;
-          AsmoteLog.warn(
-            'native_transfer',
-            'loaded "$candidate" but initialization failed: $error',
-          );
         }
       } catch (error) {
         lastError = error;
@@ -524,7 +514,7 @@ class _NativeBindings {
     }
 
     if (lastError != null) {
-      AsmoteLog.warn('native_transfer', 'failed to load native core: $lastError');
+      
     }
     return null;
   }
@@ -698,20 +688,6 @@ class _NativeBindings {
     return normalized;
   }
 
-  void logLoaded() {
-    final sourceMeta = _sourceMeta();
-    final buildMeta = buildInfo;
-    final apiMeta = supportsRuntimeApi ? 'api=runtime_v2' : 'api=legacy_v1';
-    if (buildMeta == null) {
-      AsmoteLog.info('native_transfer', 'loaded ($sourceMeta, $apiMeta)');
-      return;
-    }
-    AsmoteLog.info(
-      'native_transfer',
-      'loaded ($sourceMeta, $apiMeta) build=$buildMeta',
-    );
-  }
-
   String _sourceMeta() {
     final source = loadedFrom.trim();
     if (source.isEmpty) {
@@ -756,13 +732,13 @@ class _NativeBindings {
 
   static String? _libraryFileName() {
     if (Platform.isWindows) {
-      return 'asmote_native_core.dll';
+      return 'Polarmote_native_core.dll';
     }
     if (Platform.isLinux || Platform.isAndroid) {
-      return 'libasmote_native_core.so';
+      return 'libPolarmote_native_core.so';
     }
     if (Platform.isMacOS) {
-      return 'libasmote_native_core.dylib';
+      return 'libPolarmote_native_core.dylib';
     }
     return null;
   }
@@ -778,7 +754,7 @@ class _NativeBindings {
       yield p.join(
         root,
         'native',
-        'asmote_native_core',
+        'Polarmote_native_core',
         'target',
         'debug',
         fileName,
@@ -786,7 +762,7 @@ class _NativeBindings {
       yield p.join(
         root,
         'native',
-        'asmote_native_core',
+        'Polarmote_native_core',
         'target',
         'release',
         fileName,
@@ -946,3 +922,4 @@ typedef _FreeCStringDart = void Function(Pointer<Int8> ptr);
 
 typedef _BuildInfoNative = Pointer<Utf8> Function();
 typedef _BuildInfoDart = Pointer<Utf8> Function();
+

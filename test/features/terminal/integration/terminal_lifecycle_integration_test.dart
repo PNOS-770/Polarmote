@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asmote/features/terminal/models/host_entry.dart';
-import 'package:asmote/features/terminal/models/port_forward_entry.dart';
-import 'package:asmote/features/terminal/models/terminal_session.dart';
-import 'package:asmote/features/terminal/models/terminal_tab.dart';
-import 'package:asmote/features/terminal/state/terminal_app_state.dart';
+import 'package:Polarmote/features/terminal/models/host_entry.dart';
+import 'package:Polarmote/features/terminal/models/port_forward_entry.dart';
+import 'package:Polarmote/features/terminal/models/terminal_session.dart';
+import 'package:Polarmote/features/terminal/models/terminal_tab.dart';
+import 'package:Polarmote/features/terminal/state/terminal_app_state.dart';
 
 Future<TerminalAppState> _newCleanState() async {
   final state = TerminalAppState();

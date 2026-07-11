@@ -27,6 +27,34 @@ class EscapeParser {
 
   void write(String chunk) {
     _queue.unrefConsumedBlocks();
+
+    // Fast path: when no pending escape sequence, process plain text directly
+    // without the queue. This eliminates allocation and per-char dispatch
+    // overhead for the common case of bulk terminal output.
+    if (_queue.isEmpty) {
+      final len = chunk.length;
+      for (var i = 0; i < len; i++) {
+        final code = chunk.codeUnitAt(i);
+        if (code == Ascii.ESC) {
+          // Flush remaining through the queue for correct rollback support
+          _queue.add(chunk.substring(i));
+          _process();
+          return;
+        }
+        if (code <= _sbcHandlers.maxIndex) {
+          final sbcHandler = _sbcHandlers[code];
+          if (sbcHandler != null) {
+            sbcHandler();
+          } else {
+            handler.unkownEscape(code);
+          }
+          continue;
+        }
+        handler.writeChar(code);
+      }
+      return;
+    }
+
     _queue.add(chunk);
     _process();
   }

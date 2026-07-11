@@ -6,7 +6,7 @@
 #include "resource.h"
 
 // Allow drag-and-drop from non-elevated processes (e.g. Explorer) when
-// Asmote is running as Administrator. UIPI blocks D&D across integrity
+// Polarmote is running as Administrator. UIPI blocks D&D across integrity
 // levels by default; these calls opt-in to receive the necessary messages.
 static void AllowCrossIntegrityDragDrop(HWND hwnd) {
   // WM_DROPFILES (0x0233) -- used by some file drag-drop paths.

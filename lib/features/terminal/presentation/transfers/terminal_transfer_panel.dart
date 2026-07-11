@@ -32,20 +32,19 @@ class TransferPanel extends StatelessWidget {
         if (sessions.isEmpty) {
           return Center(child: Text(l(appState, AppStrings.values.noSessions)));
         }
-        return ListView(
+        return ListView.builder(
           padding: EdgeInsets.symmetric(
             vertical: 8,
             horizontal: isCompact ? 12 : 16,
           ),
-          children: sessions
-              .map(
-                (session) => _TransferSessionSection(
-                  appState: appState,
-                  session: session,
-                  isCompact: isCompact,
-                ),
-              )
-              .toList(growable: false),
+          itemCount: sessions.length,
+          itemBuilder: (context, index) {
+            return _TransferSessionSection(
+              appState: appState,
+              session: sessions[index],
+              isCompact: isCompact,
+            );
+          },
         );
       },
     );
@@ -454,3 +453,4 @@ String _formatEta(TerminalAppState appState, int seconds) {
     params: {'minutes': '$minutes', 'seconds': '$remains'},
   );
 }
+

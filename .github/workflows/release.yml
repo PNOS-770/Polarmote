@@ -24,13 +24,13 @@ jobs:
         run: flutter build windows --release
 
       - name: Package
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Asmote-windows.zip
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Polarmote-windows.zip
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: Asmote-windows.zip
+          path: Polarmote-windows.zip
 
   build-android:
     runs-on: ubuntu-latest
@@ -73,11 +73,11 @@ jobs:
 
       - name: Build Rust Android libraries
         env:
-          ASMOTE_ANDROID_ABIS: arm64-v8a
+          Polarmote_ANDROID_ABIS: arm64-v8a
         run: |
           mkdir -p build/app/generated/rustJniLibs
-          sh native/asmote_native_core/scripts/build_android_libs.sh \
-            --crate-dir "$PWD/native/asmote_native_core" \
+          sh native/Polarmote_native_core/scripts/build_android_libs.sh \
+            --crate-dir "$PWD/native/Polarmote_native_core" \
             --output-dir "$PWD/build/app/generated/rustJniLibs" \
             --ndk-dir "$ANDROID_SDK_ROOT/ndk/27.0.12077973" \
             --profile release \
@@ -85,25 +85,25 @@ jobs:
 
       - name: Free disk space
         run: |
-          rm -rf native/asmote_native_core/target
+          rm -rf native/Polarmote_native_core/target
           rm -rf ~/.cargo/registry
           rm -rf android/.gradle
           df -h /
 
       - name: Build Android APK
         env:
-          ASMOTE_ANDROID_ABIS: arm64-v8a
+          Polarmote_ANDROID_ABIS: arm64-v8a
         run: |
           flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk Asmote-android.apk
+        run: mv build/app/outputs/flutter-apk/app-release.apk Polarmote-android.apk
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: Asmote-android.apk
+          path: Polarmote-android.apk
 
   release:
     needs: [build-windows, build-android]
@@ -121,6 +121,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            windows-build/Asmote-windows.zip
-            android-build/Asmote-android.apk
+            windows-build/Polarmote-windows.zip
+            android-build/Polarmote-android.apk
           generate_release_notes: true

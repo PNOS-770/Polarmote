@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:safe_layout_x/safe_layout_x.dart';
@@ -15,7 +16,7 @@ import '../../../../shared/design_system/design_system.dart';
 import '../../../../shared/utils/secret_encryption.dart';
 import '../../models/file_node.dart';
 import '../../models/host_entry.dart';
-import '../../models/port_forward_entry.dart';
+import '../../models/terminal_adaptive_throttle.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
 import '../../state/terminal_app_state.dart';
@@ -28,9 +29,9 @@ import '../file_viewer/file_viewer_engine.dart';
 import '../file_viewer/file_open_controller.dart';
 import '../file_viewer/terminal_file_viewer_page.dart';
 
-part 'terminal_dialogs_file_edit.dart';
 part 'terminal_dialogs_settings.dart';
-part 'terminal_dialogs_settings_port_forward_templates.dart';
+part 'terminal_dialogs_settings_shortcuts.dart';
+part 'terminal_dialogs_settings_widgets.dart';
 part 'terminal_dialogs_host.dart';
 part 'terminal_dialogs_quick_connect.dart';
 part 'terminal_dialogs_session.dart';
@@ -39,8 +40,6 @@ part 'terminal_dialogs_settings_base.dart';
 enum _FileAction { download, rename, delete }
 
 enum _FilesAction { download, delete }
-
-enum _UnsavedCloseAction { cancel, discard, save }
 
 class _HostKeyDecision {
   const _HostKeyDecision({required this.trust, required this.remember});
@@ -55,42 +54,18 @@ Future<void> showAddTextDialog(
   String hint,
   ValueChanged<String> onSubmit,
 ) async {
-  final controller = TextEditingController();
-  await showDialog<void>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        backgroundColor: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.radiusDialog,
-        ),
-        title: Text(title, style: AppTextStyles.h4),
-        content: AppTextField(
-          controller: controller,
-          hint: hint,
-          autofocus: true,
-        ),
-        actionsPadding: const EdgeInsets.all(AppSpacing.lg),
-        actions: [
-          SecondaryButton(
-            onPressed: () => Navigator.pop(context),
-            label: t(context, AppStrings.values.cancel),
-            size: ButtonSize.medium,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          PrimaryButton(
-            onPressed: () {
-              if (controller.text.trim().isEmpty) return;
-              onSubmit(controller.text.trim());
-              Navigator.pop(context);
-            },
-            label: t(context, AppStrings.values.save),
-            size: ButtonSize.medium,
-          ),
-        ],
-      );
-    },
+  final result = await showInputDialog(
+    context,
+    title: title,
+    hint: hint,
+    confirmText: t(context, AppStrings.values.save),
+    cancelText: t(context, AppStrings.values.cancel),
+    validator: (v) =>
+        (v == null || v.trim().isEmpty) ? ' ' : null,
   );
+  if (result != null && result.trim().isNotEmpty) {
+    onSubmit(result.trim());
+  }
 }
 
 Future<InternalViewerPreparationResult?>
@@ -250,6 +225,14 @@ Future<void> openVisitedFileEntry(
       node,
       maxBytes: isTextPreview ? maxTextStreamPreviewBytes : null,
     );
+    // Find a matching session for saving support
+    TerminalSession? visitedSession;
+    for (final item in appState.sessions.reversed) {
+      if (!item.profile.isLocal && item.profile.id == entry.hostId) {
+        visitedSession = item;
+        break;
+      }
+    }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => TerminalFileViewerPage(
@@ -259,6 +242,9 @@ Future<void> openVisitedFileEntry(
           viewerKey: viewerKey,
           textPreviewTruncated: preparedWithProgress?.truncated ?? false,
           textPreviewMaxBytes: isTextPreview ? maxTextStreamPreviewBytes : 0,
+          onSaveText: visitedSession != null && kind == InternalFileViewerKind.text
+              ? (content) => appState.saveEditableFileText(visitedSession!, node, content)
+              : null,
         ),
       ),
     );
@@ -271,13 +257,6 @@ Future<void> openVisitedFileEntry(
     );
     notifyOpenFailure(type: BannerType.error, message: message);
   }
-}
-
-String _formatRecentVisitedFileTime(DateTime value) {
-  final local = value.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
 }
 
 String _formatRecentHostTime(DateTime value) {
@@ -303,7 +282,7 @@ Future<void> showRecentHostsDialog(
               ? Center(
                   child: Text(
                     t(context, AppStrings.values.noSessions),
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
                   ),
                 )
               : ListView.builder(
@@ -316,9 +295,9 @@ Future<void> showRecentHostsDialog(
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                        borderRadius: BorderRadius.circular(8),
-                        color: const Color(0xFFF9FAFB),
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: AppRadius.radiusLG,
+                        color: AppColors.backgroundGrey,
                       ),
                       child: ListTile(
                         dense: true,
@@ -330,7 +309,7 @@ Future<void> showRecentHostsDialog(
                           host.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
+                          style: AppTextStyles.bodySmall,
                         ),
                         subtitle: Text(
                           subtitle,
@@ -350,7 +329,7 @@ Future<void> showRecentHostsDialog(
                           color:
                               appState.hostSessionStatus(host.id) ==
                                       TerminalStatus.connected
-                                  ? const Color(0xFF16A34A)
+                                  ? AppColors.success
                                   : null,
                         ),
                         onTap: () async {
@@ -375,82 +354,5 @@ Future<void> showRecentHostsDialog(
   );
 }
 
-Future<void> showRecentVisitedFilesDialog(
-  BuildContext context,
-  TerminalAppState appState,
-) async {
-  final recentFiles = appState.recentVisitedFiles(limit: 60);
-  await showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        title: Text(t(context, AppStrings.values.recentVisitedFiles)),
-        content: SizedBox(
-          width: 720,
-          child: recentFiles.isEmpty
-              ? Center(
-                  child: Text(
-                    t(context, AppStrings.values.noRecentVisitedFiles),
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: recentFiles.length,
-                  itemBuilder: (_, index) {
-                    final entry = recentFiles[index];
-                    final subtitle =
-                        '${entry.filePath} · ${_formatRecentVisitedFileTime(entry.lastVisitedAt)}';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                        borderRadius: BorderRadius.circular(8),
-                        color: const Color(0xFFF9FAFB),
-                      ),
-                      child: ListTile(
-                        dense: true,
-                        visualDensity: const VisualDensity(
-                          horizontal: 0,
-                          vertical: -2,
-                        ),
-                        title: Text(
-                          entry.displayName.trim().isEmpty
-                              ? p.basename(entry.filePath)
-                              : entry.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                        subtitle: Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        onTap: () async {
-                          Navigator.of(dialogContext).pop();
-                          if (!context.mounted) return;
-                          await openVisitedFileEntry(context, appState, entry);
-                        },
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          SecondaryButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            label: t(context, AppStrings.values.close),
-            size: ButtonSize.medium,
-          ),
-        ],
-      );
-    },
-  );
-}
 
 

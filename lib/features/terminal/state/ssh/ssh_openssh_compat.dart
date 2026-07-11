@@ -994,3 +994,4 @@ JumpHostEntry? _legacyJumpHostFromConfig(String raw, String fallbackUsername) {
     username: username != fallbackUsername ? username : null,
   );
 }
+

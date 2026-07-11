@@ -74,14 +74,14 @@ fun resolveRustBuildProfile(taskNames: List<String>): String {
 
 fun resolveRustAndroidAbis(): String {
     val fromProject =
-        (findProperty("asmoteRustAbis") as? String)?.trim().orEmpty()
+        (findProperty("PolarmoteRustAbis") as? String)?.trim().orEmpty()
     if (fromProject.isNotEmpty()) return fromProject
-    val fromEnv = System.getenv("ASMOTE_ANDROID_ABIS")?.trim().orEmpty()
+    val fromEnv = System.getenv("Polarmote_ANDROID_ABIS")?.trim().orEmpty()
     if (fromEnv.isNotEmpty()) return fromEnv
     return ""
 }
 
-val rustCoreDir = rootProject.file("../native/asmote_native_core")
+val rustCoreDir = rootProject.file("../native/Polarmote_native_core")
 val rustAndroidJniDir = file("$buildDir/generated/rustJniLibs")
 val rustAndroidAbis = resolveRustAndroidAbis()
 val rustBuildInputs =
@@ -95,7 +95,7 @@ val rustBuildInputs =
     }
 
 android {
-    namespace = "com.example.asmote"
+    namespace = "com.example.Polarmote"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = resolveNdkVersion() ?: flutter.ndkVersion
     val (pubVersionName, pubVersionCode) = resolvePubspecVersionNameAndCode()
@@ -117,7 +117,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.asmote"
+        applicationId = "com.example.Polarmote"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = pubVersionCode
@@ -155,17 +155,17 @@ android {
 
 val prepareRustAndroidLibs by tasks.registering {
     group = "rust"
-    description = "Build asmote_native_core for Android ABIs and copy into jniLibs."
+    description = "Build Polarmote_native_core for Android ABIs and copy into jniLibs."
     inputs.files(rustBuildInputs)
     inputs.property("rustProfile", resolveRustBuildProfile(gradle.startParameter.taskNames))
     inputs.property("rustMinApi", flutter.minSdkVersion)
     inputs.property("rustAbis", rustAndroidAbis)
-    inputs.property("skipRustAndroid", System.getenv("ASMOTE_SKIP_RUST_ANDROID") ?: "")
+    inputs.property("skipRustAndroid", System.getenv("Polarmote_SKIP_RUST_ANDROID") ?: "")
     outputs.dir(rustAndroidJniDir)
 
     doLast {
-        if (System.getenv("ASMOTE_SKIP_RUST_ANDROID") == "1") {
-            logger.lifecycle("Skipping Rust Android build because ASMOTE_SKIP_RUST_ANDROID=1")
+        if (System.getenv("Polarmote_SKIP_RUST_ANDROID") == "1") {
+            logger.lifecycle("Skipping Rust Android build because Polarmote_SKIP_RUST_ANDROID=1")
             return@doLast
         }
 

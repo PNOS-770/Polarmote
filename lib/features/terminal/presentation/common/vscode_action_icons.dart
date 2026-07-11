@@ -96,3 +96,4 @@ Widget buildGroupFolderVscodeIcon({double size = 16}) {
 Widget buildGroupFolderOpenVscodeIcon({double size = 16}) {
   return _buildIcon(_groupFolderOpenIconAsset, size: size);
 }
+

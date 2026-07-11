@@ -21,7 +21,7 @@ Future<void> showQuickConnectDialog(
 
   await showDialog<void>(
     context: context,
-    builder: (context) {
+    builder: (outerContext) {
       return StatefulBuilder(
         builder: (context, setState) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -254,7 +254,7 @@ Future<void> showQuickConnectDialog(
             ),
             actions: [
               SecondaryButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(outerContext),
                 label: t(context, AppStrings.values.cancel),
                 size: ButtonSize.small,
               ),
@@ -277,7 +277,7 @@ Future<void> showQuickConnectDialog(
                       localShellType: localShellType,
                     );
                     unawaited(appState.connectToHost(entry, remember: false));
-                    Navigator.pop(context);
+                    Navigator.pop(outerContext);
                     return;
                   }
                   if (connectionType == ConnectionType.serial) {
@@ -320,7 +320,7 @@ Future<void> showQuickConnectDialog(
                       serialParity: serialParity,
                     );
                     unawaited(appState.connectToHost(entry, remember: false));
-                    Navigator.pop(context);
+                    Navigator.pop(outerContext);
                     return;
                   }
                   final host = hostController.text.trim();
@@ -335,7 +335,7 @@ Future<void> showQuickConnectDialog(
                       password: passwordController.text,
                     ),
                   );
-                  Navigator.pop(context);
+                  Navigator.pop(outerContext);
                 },
                 label: t(context, AppStrings.values.connect),
                 size: ButtonSize.medium,
@@ -440,4 +440,5 @@ Widget _localShellIcon(LocalShellType type) {
       return buildLocalShellBashVscodeIcon(size: 18);
   }
 }
+
 

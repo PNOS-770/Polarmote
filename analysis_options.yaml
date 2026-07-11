@@ -8,7 +8,7 @@ analyzer:
     - third_party/**
     - build/**
     - .dart_tool/**
-    - native/asmote_native_core/target/**
+    - native/Polarmote_native_core/target/**
     - '**/flutter/ephemeral/**'
 
 linter:

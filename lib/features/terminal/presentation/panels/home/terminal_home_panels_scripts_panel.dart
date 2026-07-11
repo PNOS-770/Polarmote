@@ -271,7 +271,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
       scriptId: script.id,
       hostIds: last.hostIds,
       localShellTypes: last.localShellTypes,
-      silentExecution: last.silentExecution,
+      silentExecution: false,
       notifyEnabled: last.notifyEnabled,
       failurePolicy: last.failurePolicy,
       retryPerHost: last.retryPerHost,
@@ -327,8 +327,8 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                         shortcut ?? '',
                         style: TextStyle(
                           color: shortcut == null
-                              ? Colors.grey[500]
-                              : Colors.black87,
+                              ? AppColors.textTertiary
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -342,7 +342,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                             params: {'name': conflictScript.name},
                           ),
                           style: const TextStyle(
-                            color: Colors.red,
+                            color: AppColors.error,
                             fontSize: 12,
                           ),
                         ),
@@ -558,7 +558,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                     query: keyword,
                     baseStyle: TextStyle(
                       fontSize: 12,
-                      color: statusColor ?? Colors.black87,
+                      color: statusColor ?? AppColors.textPrimary,
                     ),
                   ),
                   maxLines: 1,
@@ -727,7 +727,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
         scriptId: script.id,
         hostIds: last.hostIds,
         localShellTypes: last.localShellTypes,
-        silentExecution: last.silentExecution,
+        silentExecution: false,
         notifyEnabled: last.notifyEnabled,
         failurePolicy: last.failurePolicy,
         retryPerHost: last.retryPerHost,
@@ -849,7 +849,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
             );
           },
           child: Container(
-            color: selected ? TerminalUiPalette.accentSelected : null,
+            color: selected ? const Color(0xFFE0E7FF) : null,
             height: 30,
             padding: EdgeInsets.only(left: 10 + depth * 14.0, right: 8),
             child: Row(
@@ -948,9 +948,23 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
       for (final folder in appState.scriptFolders) folder.id: folder,
     };
     final keyword = _scriptKeyword.trim().toLowerCase();
+
+    // Build a canonical-id map: folders with same name under the same parent
+    // are merged into the first folder of that name.
+    final canonicalId = <String, String>{};
+    final nameSeen = <String, Set<String>>{};
+    for (final folder in appState.scriptFolders) {
+      final key = '${folder.parentId.trim()}\n${folder.name}';
+      (nameSeen[key] ??= {}).add(folder.id);
+    }
+    for (final folder in appState.scriptFolders) {
+      final group = nameSeen['${folder.parentId.trim()}\n${folder.name}'] ?? {folder.id};
+      canonicalId[folder.id] = group.first;
+    }
+
     final scriptsByFolder = <String, List<ScriptEntry>>{};
     for (final script in sortedScripts) {
-      final folderId = script.folderId.trim();
+      final folderId = canonicalId[script.folderId.trim()] ?? script.folderId.trim();
       (scriptsByFolder[folderId] ??= <ScriptEntry>[]).add(script);
     }
     for (final list in scriptsByFolder.values) {
@@ -958,7 +972,9 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
     }
     final foldersByParent = <String, List<ScriptFolderEntry>>{};
     for (final folder in appState.scriptFolders) {
-      final parentId = folder.parentId.trim();
+      final cid = canonicalId[folder.id] ?? folder.id;
+      if (cid != folder.id) continue; // skip duplicate-named folders
+      final parentId = canonicalId[folder.parentId.trim()] ?? folder.parentId.trim();
       (foldersByParent[parentId] ??= <ScriptFolderEntry>[]).add(folder);
     }
     for (final list in foldersByParent.values) {
@@ -1064,7 +1080,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                       ? Center(
                           child: Text(
                             t(context, AppStrings.values.noData),
-                            style: TextStyle(color: Colors.grey[600]),
+                            style: AppTextStyles.secondarySmall,
                           ),
                         )
                       : scriptTreeResult.widgets.isEmpty
@@ -1073,7 +1089,7 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                             isSearchActive
                                 ? emptySearchText
                                 : t(context, AppStrings.values.noData),
-                            style: TextStyle(color: Colors.grey[600]),
+                            style: AppTextStyles.secondarySmall,
                           ),
                         )
                       : ListView(
@@ -1613,5 +1629,6 @@ enum _ScriptItemAction {
   removeShortcut,
   delete,
 }
+
 
 

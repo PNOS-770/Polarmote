@@ -1,20 +1,23 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 
+import '../../../../events/event_bus.dart';
 import '../../../../shared/constants/app_string.dart';
-import '../../../../shared/logging/asmote_log.dart';
+
 import '../../models/host_entry.dart';
+import '../../models/session_file_state.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
 import '../../transport/native/native_terminal_pty_bridge.dart';
 import '../../transport/telnet/telnet_session.dart';
 import '../ssh/ssh_openssh_compat.dart';
 import '../terminal_app_state.dart';
+
+part 'terminal_app_state_sessions_reconnect.dart';
 
 final Set<String> _connectedLogSessionIds = <String>{};
 final Map<String, Timer> _autoReconnectTimers = <String, Timer>{};
@@ -98,7 +101,8 @@ extension TerminalAppStateSessions on TerminalAppState {
       tab: tab,
       fileState: SessionFileState(rootPath: '/'),
       transferQueue: [],
-      maxLines: host.maxScrollbackLines ?? 10000,
+      maxLines: terminalBufferSize, // 使用动态的 buffer 大小
+      adaptiveThrottleEnabled: performanceSettings.adaptiveThrottleEnabled,
     );
     session.onCommandSubmitted = (hostId, command) {
       recordCommandHistory(hostId, command);
@@ -109,9 +113,22 @@ extension TerminalAppStateSessions on TerminalAppState {
     sessions.add(session);
     if (activate) {
       activeSessionIndexValue = sessions.length - 1;
+      var stageIndex = terminalStages.indexWhere(
+        (s) => s.id == activeTerminalStageId,
+      );
+      if (stageIndex >= 0 && terminalStages[stageIndex].sessionIds.isEmpty) {
+        // 当前 Stage 为空 → 使用它
+        terminalStages[stageIndex] = terminalStages[stageIndex].copyWith(
+          sessionIds: [session.id],
+          connectedHostIds: [host.id],
+        );
+        switchTerminalStage(terminalStages[stageIndex].id);
+      } else {
+        createTerminalStage(host.name, sessionIds: [session.id], connectedHostIds: [host.id]);
+      }
       ensureTerminalSplitPanes();
       final paneId = activeTerminalSplitPaneId.isEmpty
-          ? terminalSplitPanes.first.id
+          ? (terminalSplitPanes.isEmpty ? 'pane-0' : terminalSplitPanes.first.id)
           : activeTerminalSplitPaneId;
       final paneIndex = terminalSplitPanes.indexWhere(
         (pane) => pane.id == paneId,
@@ -123,8 +140,13 @@ extension TerminalAppStateSessions on TerminalAppState {
         activeTerminalSplitPaneId = paneId;
       }
     }
-    notifyState();
-    syncSshForegroundGuardNow();
+    if (activate) {
+      // Only notify when activating (session is visible in UI).
+      // Background sessions (activate=false) don't need to trigger rebuild
+      // until _connectSession sets their status.
+      notifyState();
+      syncSshForegroundGuardNow();
+    }
     return session;
   }
 
@@ -134,7 +156,9 @@ extension TerminalAppStateSessions on TerminalAppState {
   }) async {
     if (!sessions.contains(session) || session.closedByUser) return;
     session.tab = session.tab.copyWith(status: TerminalStatus.connecting);
-    notifyState();
+    if (!background) {
+      notifyState();
+    }
     syncSshForegroundGuardNow();
     try {
       if (!sessions.contains(session) || session.closedByUser) return;
@@ -190,7 +214,7 @@ extension TerminalAppStateSessions on TerminalAppState {
         return;
       }
 
-      _queueAsmoteTerminalWelcome(session);
+      _queuePolarmoteTerminalWelcome(session);
       session.attachSession(sshSession);
       session.closedByUser = false;
       unawaited(
@@ -203,9 +227,7 @@ extension TerminalAppStateSessions on TerminalAppState {
 
       session.tab = session.tab.copyWith(status: TerminalStatus.connected);
       _stopAutoReconnectLoop(session.id);
-      if (!background && !terminalSplitViewEnabled) {
-        navSection = NavSection.sftp;
-      }
+      eventBus.fire(SessionConnectedEvent(sessionId: session.id));
       _updateHostLastConnected(session.profile.id);
       if (!_connectedLogSessionIds.contains(session.id)) {
         _connectedLogSessionIds.add(session.id);
@@ -220,8 +242,10 @@ extension TerminalAppStateSessions on TerminalAppState {
       }
       startMetricsPolling(session);
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
       if (!sessions.contains(session) || session.closedByUser) {
         return;
@@ -256,7 +280,7 @@ extension TerminalAppStateSessions on TerminalAppState {
     TerminalSession session, {
     bool background = false,
   }) async {
-    AsmoteLog.info('session', 'connecting serial session ${session.id} port=${session.profile.serialPortPath}');
+    
     if (!_isSerialSupportedOnPlatform()) {
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       setError(
@@ -330,10 +354,12 @@ extension TerminalAppStateSessions on TerminalAppState {
         );
       }
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
-      AsmoteLog.error('session', 'serial session ${session.id} failed: $e');
+      
       session.closeConnection();
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       try {
@@ -362,7 +388,7 @@ extension TerminalAppStateSessions on TerminalAppState {
     if (!sessions.contains(session) || session.closedByUser) return;
     final telnetPort = session.profile.telnetPort;
     final host = session.profile.host;
-    AsmoteLog.info('session', 'connecting telnet session ${session.id} $host:$telnetPort');
+    
     addStructuredLog(
       category: TerminalLogCategory.session,
       message: AppStrings.values.connectingToVarVar.resolve(
@@ -399,10 +425,12 @@ extension TerminalAppStateSessions on TerminalAppState {
         );
       }
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
-      AsmoteLog.error('session', 'telnet session ${session.id} $host:$telnetPort failed: $e');
+      
       session.closeConnection();
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       setError(
@@ -428,7 +456,7 @@ extension TerminalAppStateSessions on TerminalAppState {
     TerminalSession session, {
     bool background = false,
   }) async {
-    AsmoteLog.info('session', 'connecting local session ${session.id}');
+    
     if (Platform.isWindows &&
         session.profile.localShellType == LocalShellType.powershellAdmin &&
         !_isWindowsProcessElevated()) {
@@ -505,11 +533,14 @@ extension TerminalAppStateSessions on TerminalAppState {
           notifyListeners: false,
         );
       }
+      startMetricsPolling(session);
       unawaited(runScriptTriggersForSessionConnected(session));
-      notifyState();
-      syncSshForegroundGuardNow();
+      if (!background) {
+        notifyState();
+        syncSshForegroundGuardNow();
+      }
     } catch (e) {
-      AsmoteLog.error('session', 'local session ${session.id} failed: $e');
+      
       session.closeConnection();
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       setError(
@@ -540,6 +571,10 @@ extension TerminalAppStateSessions on TerminalAppState {
           program: program,
           args: args,
           cwd: workingDirectory,
+          env: {
+            'TERM': 'xterm-256color', // 设置终端类型，启用替代屏幕缓冲区等高级特性
+            'COLORTERM': 'truecolor', // 支持真彩色
+          },
           cols: cols.clamp(1, 500).toInt(),
           rows: rows.clamp(1, 500).toInt(),
         ),
@@ -685,22 +720,16 @@ extension TerminalAppStateSessions on TerminalAppState {
     scheduleStateSave();
   }
 
-  void _queueAsmoteTerminalWelcome(TerminalSession session) {
+  void _queuePolarmoteTerminalWelcome(TerminalSession session) {
     if (!sessions.contains(session)) {
       return;
     }
     session.queueStartupBannerBeforePrompt(
-      _buildAsmoteTerminalWelcome(session),
+      _buildPolarmoteTerminalWelcome(session),
     );
-    // Initialize shell integration after a short delay once shell is ready
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (sessions.contains(session) && !session.oscParser.shellIntegrationActive) {
-        session.initShellIntegration();
-      }
-    });
   }
 
-  String _buildAsmoteTerminalWelcome(TerminalSession session) {
+  String _buildPolarmoteTerminalWelcome(TerminalSession session) {
     const accent = '\x1B[38;5;81m';
     const secondary = '\x1B[38;5;111m';
     const emailAccent = '\x1B[38;5;220m';
@@ -725,21 +754,23 @@ extension TerminalAppStateSessions on TerminalAppState {
     return [
       '\r\n',
       accent,
-      '    _    ____  __  __  ___ _____ _____ ',
+      '██████╗  ██████╗ ██╗      █████╗ ██████╗ ███╗   ███╗ ██████╗ ████████╗███████╗',
       '\r\n',
-      '   / \\  / ___||  \\/  |/ _ \\_   _| ____|',
+      '██╔══██╗██╔═══██╗██║     ██╔══██╗██╔══██╗████╗ ████║██╔═══██╗╚══██╔══╝██╔════╝',
       '\r\n',
-      '  / _ \\ \\___ \\| |\\/| | | | || | |  _|  ',
+      '██████╔╝██║   ██║██║     ███████║██████╔╝██╔████╔██║██║   ██║   ██║   █████╗  ',
       '\r\n',
-      ' / ___ \\ ___) | |  | | |_| || | | |___ ',
+      '██╔═══╝ ██║   ██║██║     ██╔══██║██╔══██╗██║╚██╔╝██║██║   ██║   ██║   ██╔══╝  ',
       '\r\n',
-      '/_/   \\_\\____/|_|  |_|\\___/ |_| |_____|',
+      '██║     ╚██████╔╝███████╗██║  ██║██║  ██║██║ ╚═╝ ██║╚██████╔╝   ██║   ███████╗',
+      '\r\n',
+      '╚═╝      ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝    ╚═╝   ╚══════╝',
       '\r\n',
       border,
       '  ------------------------------------------------------------',
       '\r\n',
       secondary,
-      '  ${AppStrings.values.asmoteTerminalReady.resolve(locale.languageCode)}',
+      '  ${AppStrings.values.PolarmoteTerminalReady.resolve(locale.languageCode)}',
       '\r\n',
       neutral,
       '  ${AppStrings.values.sessionLabel.resolve(locale.languageCode)} $title',
@@ -783,8 +814,29 @@ extension TerminalAppStateSessions on TerminalAppState {
 
   Future<void> closeSession(String id) async {
     final index = sessions.indexWhere((s) => s.id == id);
-    if (index == -1) return;
+    if (index == -1) {
+      // session 已不在 sessions 中，只清理 stage 里残留的 session ID
+      for (var si = 0; si < terminalStages.length; si++) {
+        final st = terminalStages[si];
+        if (st.sessionIds.contains(id)) {
+          terminalStages[si] = st.copyWith(
+            sessionIds: st.sessionIds.where((sid) => sid != id).toList(),
+          );
+        }
+      }
+      notifyState(); return;
+    }
     final session = sessions[index];
+    // 先从 stage 移除 hostId，再移除 sessionId（顺序重要，否则 sessionIds 被清除后找不到 stage）
+    for (var si = 0; si < terminalStages.length; si++) {
+      final st = terminalStages[si];
+      if (st.sessionIds.contains(id)) {
+        terminalStages[si] = st.copyWith(
+          sessionIds: st.sessionIds.where((sid) => sid != id).toList(),
+          connectedHostIds: st.connectedHostIds.where((hid) => hid != session.profile.id).toList(),
+        );
+      }
+    }
     _stopAutoReconnectLoop(id);
     session.closedByUser = true;
     session.fileTreeRefreshTimer?.cancel();
@@ -794,6 +846,11 @@ extension TerminalAppStateSessions on TerminalAppState {
     cleanupTransfersForSession(session);
     session.dispose();
     _connectedLogSessionIds.remove(session.id);
+
+    // Clean up thumbnail Image to prevent memory leak
+    terminalThumbnailImages[session.id]?.dispose();
+    terminalThumbnailImages.remove(session.id);
+
     sessions.removeAt(index);
     for (
       var paneIndex = 0;
@@ -807,11 +864,17 @@ extension TerminalAppStateSessions on TerminalAppState {
       }
     }
     if (activeSessionIndexValue >= sessions.length) {
-      activeSessionIndexValue = max(0, sessions.length - 1);
+      activeSessionIndexValue = sessions.isEmpty ? -1 : sessions.length - 1;
     }
-    if (sessions.isNotEmpty &&
-        activeSession != null &&
-        !terminalSplitViewEnabled) {
+    // 如果当前 Stage 已无会话，停留在空 Stage 上，不跳转到其他 Stage
+    final activeStage = terminalStages.where((s) => s.id == activeTerminalStageId).firstOrNull;
+    if (activeStage != null && activeStage.sessionIds.isEmpty) {
+      activeSessionIndexValue = -1;
+      notifyState();
+      syncSshForegroundGuardNow();
+      return;
+    }
+    if (sessions.isNotEmpty && activeSession != null) {
       setActiveTerminalSession(activeSession!.id);
       syncSshForegroundGuardNow();
       return;
@@ -820,87 +883,9 @@ extension TerminalAppStateSessions on TerminalAppState {
     syncSshForegroundGuardNow();
   }
 
-  void _handleSessionClosed(TerminalSession session) {
-    if (session.closedByUser) return;
-    if (!sessions.contains(session)) return;
-    if (session.tab.status == TerminalStatus.disconnected) return;
-    session.closeConnection();
-    session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
-    session.fileTreeRefreshTimer?.cancel();
-    session.fileTreeRefreshTimer = null;
-    stopMetricsPolling(session);
-    _connectedLogSessionIds.remove(session.id);
-    notifyState();
-    syncSshForegroundGuardNow();
-    if (autoReconnect && session.profile.isSsh) {
-      _startAutoReconnectLoop(session);
-    }
-  }
-
-  void _startAutoReconnectLoop(TerminalSession session) {
-    if (!autoReconnect) return;
-    if (!sessions.contains(session)) return;
-    if (_autoReconnectTimers.containsKey(session.id)) return;
-    unawaited(_runAutoReconnectAttempt(session));
-    _autoReconnectTimers[session.id] = Timer.periodic(
-      _autoReconnectInterval,
-      (_) => unawaited(_runAutoReconnectAttempt(session)),
-    );
-  }
-
-  void _stopAutoReconnectLoop(String sessionId) {
-    _autoReconnectTimers.remove(sessionId)?.cancel();
-    _reconnectingSessionIds.remove(sessionId);
-  }
-
-  Future<void> _runAutoReconnectAttempt(TerminalSession session) async {
-    if (!sessions.contains(session)) {
-      _stopAutoReconnectLoop(session.id);
-      return;
-    }
-    if (!autoReconnect) {
-      _stopAutoReconnectLoop(session.id);
-      return;
-    }
-    if (session.tab.status == TerminalStatus.connected ||
-        session.tab.status == TerminalStatus.connecting ||
-        session.tab.status == TerminalStatus.reconnecting) {
-      return;
-    }
-    try {
-      await reconnectSession(session);
-    } catch (_) {
-      // Ignore single attempt errors, periodic loop will retry.
-    }
-  }
-
   void setActiveSession(int index) {
     if (index < 0 || index >= sessions.length) return;
     setActiveTerminalSession(sessions[index].id);
-  }
-
-  void resumeAutoReconnectOnForeground() {
-    if (!autoReconnect) return;
-    var reconnectCount = 0;
-    for (final session in sessions) {
-      if (session.closedByUser) continue;
-      if (!session.profile.isSsh) continue;
-      final status = session.tab.status;
-      if (status == TerminalStatus.disconnected) {
-        reconnectCount += 1;
-        unawaited(reconnectSession(session));
-      }
-    }
-    if (reconnectCount > 0) {
-      addStructuredLog(
-        category: TerminalLogCategory.session,
-        message: AppStrings.values.sshResumeReconnectCountVar.resolve(
-          locale.languageCode,
-          params: {'count': '$reconnectCount'},
-        ),
-        notifyListeners: false,
-      );
-    }
   }
 
   bool _isSerialSupportedOnPlatform() {
@@ -1060,3 +1045,5 @@ _SshConnectionFailureInfo _classifySshConnectionFailure({
     allowAutoReconnect: true,
   );
 }
+
+

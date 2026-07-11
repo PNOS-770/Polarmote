@@ -6,11 +6,12 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:xterm/xterm.dart';
 
-import '../../../shared/logging/asmote_log.dart';
-import 'file_node.dart';
+
 import 'host_entry.dart';
 import 'osc_parser.dart';
+import 'session_file_state.dart';
 import 'terminal_tab.dart';
+import 'terminal_adaptive_throttle.dart';
 import 'transfer_task.dart';
 import '../transport/native/native_terminal_pty_bridge.dart';
 import '../transport/telnet/telnet_session.dart';
@@ -23,11 +24,26 @@ class TerminalSession {
     required this.tab,
     required this.fileState,
     required this.transferQueue,
-    int maxLines = 10000,
-  })  : terminal = Terminal(maxLines: maxLines.clamp(1000, 100000)) {
+    int maxLines = 5000, // 降低默认值从 10000 到 5000
+    bool adaptiveThrottleEnabled = true,
+  })  : terminal = Terminal(
+          maxLines: maxLines.clamp(1000, 50000),
+          reflowEnabled: false,
+          sgrWheelEncoding: profile.connectionType == ConnectionType.local
+              ? SgrWheelEncoding.windowsTerminal
+              : SgrWheelEncoding.xterm,
+        ),
+        _adaptiveThrottle = TerminalAdaptiveThrottle(
+          sessionId: id,
+          enabled: adaptiveThrottleEnabled,
+          onLevelChanged: (oldLevel, newLevel, reason) {
+            // 级别变化回调会在这里处理 UI 通知
+            // 当前只记录日志（日志在 TerminalAdaptiveThrottle 中已处理）
+          },
+        ) {
     terminal.onOutput = _handleTerminalOutput;
     terminal.onResize = resizeTerminal;
-    terminal.resize(120, 34);
+    terminal.resize(160, 50); // 增加默认尺寸以支持 TUI 程序（OpenCode 推荐最小 140x40）
   }
 
   final String id;
@@ -46,6 +62,7 @@ class TerminalSession {
   String? currentTransferBatchId;
   final Map<String, DateTime> transferBatchCreatedAt = {};
   final Map<String, bool> transferBatchPreparing = {};
+  DateTime? lastUserInputTime;
   final Map<String, String?> transferBatchPreparingLabel = {};
   final Map<String, int> transferBatchScanningScanned = {};
   final Map<String, int> transferBatchScanningFiles = {};
@@ -77,6 +94,18 @@ class TerminalSession {
   Timer? fileTreeRefreshTimer;
   bool closedByUser = false;
   bool _closedNotified = false;
+  bool _isClosing = false;
+  bool _backgroundMode = false;
+
+  static const Duration _backgroundFlushInterval = Duration(milliseconds: 500);
+
+  void setBackgroundMode(bool value) {
+    if (_backgroundMode == value) return;
+    _backgroundMode = value;
+    if (!value) {
+      _flushOutputBuffer();
+    }
+  }
   void Function()? onSessionClosed;
   void Function(String sessionId, List<int> bytes)? onOutputBytes;
   Timer? metricsTimer;
@@ -99,8 +128,26 @@ class TerminalSession {
   int? lastDiskReadBytes;
   int? lastDiskWriteBytes;
   DateTime? lastDiskAt;
+  final List<SpeedSample> uploadSpeedHistory = [];
+  final List<SpeedSample> downloadSpeedHistory = [];
+  
+  // 输出限流相关
+  final List<List<int>> _outputBuffer = [];
+  Timer? _outputFlushTimer;
+  int _outputBufferSize = 0;
+  int _droppedBytesCount = 0;
+  DateTime? _lastDropWarning;
+  
+  // 自适应限流器（在构造函数中初始化）
+  late final TerminalAdaptiveThrottle _adaptiveThrottle;
+  
+  final List<double> cpuHistory = [];
+  final List<double> memHistory = [];
+  final List<double> netRxHistory = [];
+  final List<double> netTxHistory = [];
 
   SSHClient? client;
+  SSHClient? metricsClient;
   SSHSession? session;
   SftpClient? sftp;
   NativeTerminalPtySession? localPtySession;
@@ -112,22 +159,13 @@ class TerminalSession {
   StreamSubscription<List<int>>? _byteChannelOutputSub;
   void Function(List<int> bytes)? _byteChannelInputWriter;
   void Function()? _byteChannelCloser;
-  String _byteChannelInputName = 'transport:stdin';
   final StringBuffer _inputLineBuffer = StringBuffer();
 
   StreamSubscription? _stdoutSub;
   StreamSubscription? _stderrSub;
-  int _byteLogSeq = 0;
   int? _lastResizeCols;
   int? _lastResizeRows;
 
-  static const int _maxLogBytes = 256;
-  static const bool _byteLogEnabled = bool.fromEnvironment(
-    'ASMOTE_TERMINAL_BYTE_LOG',
-  );
-  static const bool _resizeLogEnabled = bool.fromEnvironment(
-    'ASMOTE_TERMINAL_RESIZE_LOG',
-  );
   static const Duration _windowsCmdWelcomeDelay = Duration(milliseconds: 200);
   static final RegExp _ansiEscapeRegExp = RegExp(r'\x1B\[[0-9;?]*[ -/]*[@-~]');
   static final RegExp _oscEscapeRegExp = RegExp(
@@ -144,16 +182,6 @@ class TerminalSession {
   DateTime get outputLastAt => _lastOutputAt;
 
   final OscParser oscParser = OscParser();
-
-  /// Sends shell integration initialization commands to enable OSC 133 markers.
-  void initShellIntegration() {
-    final esc = '\x1B';
-    sendInput(
-      "export PS0='\\[${esc}]133;B\\a\\]'\n"
-      "export PROMPT_COMMAND='printf \"${esc}]133;C;\$?\\a${esc}]133;A\\a\"'\n",
-      trackForHistory: false,
-    );
-  }
 
   void attachSession(SSHSession sshSession) {
     session = sshSession;
@@ -175,9 +203,116 @@ class TerminalSession {
     }
     _lastOutputAt = DateTime.now();
     onOutputBytes?.call(id, data);
-    _logBytes(direction: 'OUT', channel: channel, bytes: data);
     _injectStartupBannerBeforePromptIfNeeded(data);
-    _writeToTerminal(data);
+    
+    // 使用批处理和限流写入终端
+    _bufferOutput(data);
+  }
+  
+  void _bufferOutput(List<int> bytes) {
+    final maxBufferLimit = _adaptiveThrottle.currentBufferSize * 64; // 上限是当前缓冲区的64倍
+    
+    if (_outputBufferSize > maxBufferLimit) {
+      final droppedBytes = bytes.length;
+      _droppedBytesCount += droppedBytes;
+      
+      // 记录到自适应限流器
+      _adaptiveThrottle.recordOutput(
+        bytesWritten: 0,
+        bytesDropped: droppedBytes,
+        bufferSize: _outputBufferSize,
+      );
+      
+      final now = DateTime.now();
+      if (_lastDropWarning == null || now.difference(_lastDropWarning!) > const Duration(seconds: 5)) {
+        _lastDropWarning = now;
+        debugPrint('[$id] Output buffer overflow (level: ${_adaptiveThrottle.currentLevel.name}), dropped $_droppedBytesCount bytes. Adaptive throttle active.');
+      }
+      return;
+    }
+
+    const smallDataThreshold = 256;
+    final isSmall = bytes.length < smallDataThreshold;
+    final flushInterval = _backgroundMode
+        ? _backgroundFlushInterval
+        : _adaptiveThrottle.currentFlushInterval;
+    
+    if (isSmall && _outputBuffer.isEmpty && !_backgroundMode) {
+      _writeToTerminal(Uint8List.fromList(bytes));
+      _outputFlushTimer ??= Timer.periodic(
+        flushInterval,
+        (_) => _flushOutputBuffer(),
+      );
+      
+      // 记录成功输出
+      _adaptiveThrottle.recordOutput(
+        bytesWritten: bytes.length,
+        bytesDropped: 0,
+        bufferSize: _outputBufferSize,
+      );
+      return;
+    }
+
+    _outputBuffer.add(bytes);
+    _outputBufferSize += bytes.length;
+
+    // 实时反馈缓冲压力给限流器
+    _adaptiveThrottle.recordPendingBuffer(_outputBufferSize);
+
+    final maxBufferSize = _adaptiveThrottle.currentBufferSize;
+    if (_outputBufferSize >= maxBufferSize || _outputFlushTimer == null) {
+      _flushOutputBuffer();
+    }
+
+    _outputFlushTimer ??= Timer.periodic(
+      flushInterval,
+      (_) => _flushOutputBuffer(),
+    );
+  }
+  
+  void _flushOutputBuffer() {
+    if (_outputBuffer.isEmpty) {
+      _adaptiveThrottle.recordIdleTick();
+      return;
+    }
+    
+    final bytesToWrite = _outputBufferSize;
+    
+    try {
+      // 合并所有缓冲的数据
+      final totalLength = _outputBufferSize;
+      final merged = Uint8List(totalLength);
+      var offset = 0;
+      for (final chunk in _outputBuffer) {
+        merged.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
+      }
+      
+      // 清空缓冲区
+      _outputBuffer.clear();
+      _outputBufferSize = 0;
+      
+      // 写入终端
+      _writeToTerminal(merged);
+      
+      // 记录成功输出
+      _adaptiveThrottle.recordOutput(
+        bytesWritten: bytesToWrite,
+        bytesDropped: 0,
+        bufferSize: 0,
+      );
+    } catch (e) {
+      
+      _outputBuffer.clear();
+      _outputBufferSize = 0;
+      
+      // 记录失败（触发降级）
+      _adaptiveThrottle.recordOutput(
+        bytesWritten: 0,
+        bytesDropped: bytesToWrite,
+        bufferSize: 0,
+      );
+    }
   }
 
   void attachLocalPtySession(NativeTerminalPtySession ptySession) {
@@ -187,7 +322,6 @@ class TerminalSession {
     final cmdLikeLocalShell = _isWindowsCmdLikeLocalSession();
     ptySession.onOutputBytes = (bytes) {
       onOutputBytes?.call(id, bytes);
-      _logBytes(direction: 'OUT', channel: 'pty:stdout', bytes: bytes);
       if (cmdLikeLocalShell) {
         _scheduleWindowsCmdDelayedBannerOnFirstOutputIfNeeded();
       } else {
@@ -213,7 +347,6 @@ class TerminalSession {
     _safeCall(() => _byteChannelCloser?.call());
     _byteChannelInputWriter = writeInputBytes;
     _byteChannelCloser = close;
-    _byteChannelInputName = inputChannelName;
     _closedNotified = false;
     _byteChannelOutputSub = output.listen(
       (data) => _onOutputBytes(data, channel: outputChannelName),
@@ -250,7 +383,7 @@ class TerminalSession {
         try {
           pty.write('\r');
       } catch (e) {
-        AsmoteLog.warn('terminal_session', '[$id] pty write failed: $e');
+        
         localPtySession = null;
       }
       }
@@ -261,17 +394,39 @@ class TerminalSession {
   }
 
   void dispose() {
+    // 先清理 terminal 回调，防止在清理过程中触发
+    terminal.onOutput = null;
+    terminal.onResize = null;
+    
+    // 清理输出定时器和缓冲区
+    _outputFlushTimer?.cancel();
+    _outputFlushTimer = null;
+    _outputBuffer.clear();
+    _outputBufferSize = 0;
+    
     closeConnection();
     fileState.dispose();
     transferCleanupTimer?.cancel();
     transferCleanupTimer = null;
+    
+    
   }
 
   void closeConnection() {
+    // 防止重复调用
+    if (_isClosing) return;
+    _isClosing = true;
+    
+    // 刷新并清理输出缓冲区
+    _outputFlushTimer?.cancel();
+    _outputFlushTimer = null;
+    _flushOutputBuffer(); // 最后刷新一次
+    
     final currentStdoutSub = _stdoutSub;
     final currentStderrSub = _stderrSub;
     final currentSession = session;
     final currentClient = client;
+    final currentMetricsClient = metricsClient;
     final currentSftp = sftp;
     final currentLocalPtySession = localPtySession;
     final currentByteChannelOutputSub = _byteChannelOutputSub;
@@ -282,12 +437,12 @@ class TerminalSession {
     _stderrSub = null;
     session = null;
     client = null;
+    metricsClient = null;
     sftp = null;
     localPtySession = null;
     _byteChannelOutputSub = null;
     _byteChannelInputWriter = null;
     _byteChannelCloser = null;
-    _byteChannelInputName = 'transport:stdin';
     onLocalPtyExit = null;
     _pendingStartupBanner = null;
     _startupPromptProbeBuffer = '';
@@ -298,6 +453,7 @@ class TerminalSession {
     _safeCall(() => currentStderrSub?.cancel());
     _safeCall(() => currentSession?.close());
     _safeCall(() => currentClient?.close());
+    _safeCall(() => currentMetricsClient?.close());
     _safeCall(() => currentSftp?.close());
     _safeCall(() => currentByteChannelOutputSub?.cancel());
     _safeCall(() => currentByteChannelCloser?.call());
@@ -313,7 +469,7 @@ class TerminalSession {
     metricsTimer = null;
     fileTreeRefreshTimer?.cancel();
     fileTreeRefreshTimer = null;
-    AsmoteLog.info('terminal_session', '[$id] connection closed');
+    
   }
 
   void _notifyClosed() {
@@ -409,7 +565,6 @@ class TerminalSession {
     final sshSession = session;
     if (sshSession != null) {
       try {
-        _logBytes(direction: 'IN', channel: 'ssh:stdin', bytes: bytes);
         sshSession.write(bytes);
         return;
       } catch (_) {
@@ -419,7 +574,6 @@ class TerminalSession {
     final pty = localPtySession;
     if (pty != null) {
       try {
-        _logBytes(direction: 'IN', channel: 'pty:stdin', bytes: bytes);
         pty.write(data);
         return;
       } catch (_) {
@@ -429,14 +583,9 @@ class TerminalSession {
     final writer = _byteChannelInputWriter;
     if (writer != null) {
       try {
-        _logBytes(
-          direction: 'IN',
-          channel: _byteChannelInputName,
-          bytes: bytes,
-        );
         writer(bytes);
       } catch (e) {
-        AsmoteLog.warn('terminal_session', '[$id] byte channel write failed: $e');
+        
         _byteChannelInputWriter = null;
         _safeCall(() => _byteChannelCloser?.call());
         _byteChannelCloser = null;
@@ -445,11 +594,10 @@ class TerminalSession {
     final telnet = telnetSession;
     if (telnet != null) {
       try {
-        _logBytes(direction: 'IN', channel: 'telnet:stdin', bytes: bytes);
         telnet.send(bytes);
         return;
       } catch (e) {
-        AsmoteLog.warn('terminal_session', '[$id] telnet write failed: $e');
+        
         telnetSession = null;
       }
     }
@@ -521,47 +669,16 @@ class TerminalSession {
     onCommandSubmitted?.call(profile.id, command);
   }
 
-  void _logBytes({
-    required String direction,
-    required String channel,
-    required List<int> bytes,
-  }) {
-    if (!_byteLogEnabled || bytes.isEmpty) {
-      return;
-    }
-    _byteLogSeq += 1;
-    final previewLen = bytes.length > _maxLogBytes
-        ? _maxLogBytes
-        : bytes.length;
-    final preview = bytes.sublist(0, previewLen);
-    final hex = preview
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join(' ');
-    final text = _escapeBytes(preview);
-    final more = bytes.length > previewLen
-        ? ' ...(+${bytes.length - previewLen} bytes)'
-        : '';
-    AsmoteLog.debug(
-      'terminal_session',
-      '[$id][#$_byteLogSeq][$direction][$channel] len=${bytes.length}',
-    );
-    AsmoteLog.debug(
-      'terminal_session',
-      '[$id][#$_byteLogSeq][$direction][$channel] hex=$hex$more',
-    );
-    AsmoteLog.debug(
-      'terminal_session',
-      '[$id][#$_byteLogSeq][$direction][$channel] txt="$text"$more',
-    );
-  }
-
   void _writeToTerminal(List<int> bytes) {
     if (bytes.isEmpty) {
       return;
     }
     var text = _decodeOutputBytes(bytes);
     text = oscParser.process(text);
+    final sw = Stopwatch()..start();
     terminal.write(text);
+    sw.stop();
+    _adaptiveThrottle.recordProcessingTime(sw.elapsed);
   }
 
   void _applyPendingResizeToSsh(SSHSession sshSession) {
@@ -573,7 +690,7 @@ class TerminalSession {
     try {
       sshSession.resizeTerminal(cols, rows, 0, 0);
       } catch (e) {
-        AsmoteLog.warn('terminal_session', '[$id] ssh write failed: $e');
+        
         session = null;
       }
   }
@@ -599,34 +716,6 @@ class TerminalSession {
     }
   }
 
-  String _escapeBytes(List<int> bytes) {
-    final sb = StringBuffer();
-    for (final b in bytes) {
-      switch (b) {
-        case 0x1b:
-          sb.write(r'\e');
-        case 0x0d:
-          sb.write(r'\r');
-        case 0x0a:
-          sb.write(r'\n');
-        case 0x09:
-          sb.write(r'\t');
-        case 0x5c:
-          sb.write(r'\\');
-        case 0x22:
-          sb.write(r'\"');
-        default:
-          if (b >= 0x20 && b <= 0x7e) {
-            sb.writeCharCode(b);
-          } else {
-            sb.write(r'\x');
-            sb.write(b.toRadixString(16).padLeft(2, '0'));
-          }
-      }
-    }
-    return sb.toString();
-  }
-
   void resizeTerminal(int cols, int rows, int pixelWidth, int pixelHeight) {
     final safeCols = cols.clamp(1, 500).toInt();
     final safeRows = rows.clamp(1, 500).toInt();
@@ -635,9 +724,6 @@ class TerminalSession {
     }
     _lastResizeCols = safeCols;
     _lastResizeRows = safeRows;
-    if (_resizeLogEnabled) {
-      AsmoteLog.debug('terminal_session', '[$id] resize cols=$safeCols rows=$safeRows');
-    }
     final sshSession = session;
     if (sshSession != null) {
       try {
@@ -656,50 +742,21 @@ class TerminalSession {
     }
     telnetSession?.resize(safeCols, safeRows);
   }
-}
-
-class SessionFileState {
-  SessionFileState({required this.rootPath}) : currentPath = rootPath;
-
-  String rootPath;
-  String currentPath;
-  String? homePath;
-  String? forwardPath;
-  final List<String> backStack = [];
-  final List<String> forwardStack = [];
-  final Map<String, List<FileNode>> directories = {};
-  final Map<String, double> scrollOffsets = {};
-  final Set<String> expanded = {};
-  final Set<String> selected = {};
-  final Set<String> loading = {};
-  int version = 0;
-  final ValueNotifier<int> selectionVersion = ValueNotifier(0);
-
-  void bumpSelection() {
-    selectionVersion.value += 1;
+  
+  /// 获取自适应限流诊断信息
+  Map<String, dynamic> getAdaptiveThrottleDiagnostics() {
+    return _adaptiveThrottle.getDiagnostics();
+  }
+  
+  /// 重置自适应限流器（用于故障恢复）
+  void resetAdaptiveThrottle() {
+    _adaptiveThrottle.reset();
+    
   }
 
-  void dispose() {
-    selectionVersion.dispose();
+  /// 更新自适应限流启用状态
+  void setAdaptiveThrottleEnabled(bool value) {
+    _adaptiveThrottle.enabled = value;
   }
 }
 
-class ScriptRunRecord {
-  const ScriptRunRecord({
-    required this.id,
-    required this.scriptId,
-    required this.scriptName,
-    required this.sessionIds,
-    required this.createdAt,
-    required this.successCount,
-    required this.totalCount,
-  });
-
-  final String id;
-  final String scriptId;
-  final String scriptName;
-  final List<String> sessionIds;
-  final DateTime createdAt;
-  final int successCount;
-  final int totalCount;
-}

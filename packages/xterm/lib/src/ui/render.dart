@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math' show max;
 import 'dart:ui';
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:xterm/src/core/buffer/cell_offset.dart';
 import 'package:xterm/src/core/buffer/range.dart';
@@ -44,6 +46,7 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
         _alwaysShowCursor = alwaysShowCursor,
         _onEditableRect = onEditableRect,
         _composingText = composingText,
+        _editableRectScheduled = false,
         _painter = TerminalPainter(
           theme: theme,
           textStyle: textStyle,
@@ -127,6 +130,36 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
   }
 
   bool _alwaysShowCursor;
+  bool _editableRectScheduled;
+  Timer? _cursorBlinkTimer;
+  bool _cursorBlinkVisible = true;
+  set cursorBlinkVisible(bool value) {
+    if (value == _cursorBlinkVisible) return;
+    _cursorBlinkVisible = value;
+    markNeedsPaint();
+  }
+  void _startCursorBlink() {
+    _stopCursorBlink();
+    _cursorBlinkTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      _cursorBlinkVisible = !_cursorBlinkVisible;
+      markNeedsPaint();
+    });
+  }
+  void _stopCursorBlink() {
+    _cursorBlinkTimer?.cancel();
+    _cursorBlinkTimer = null;
+    if (!_cursorBlinkVisible) {
+      _cursorBlinkVisible = true;
+      markNeedsPaint();
+    }
+  }
+  void _updateCursorBlink() {
+    if (_terminal.cursorBlinkMode && _focusNode.hasFocus) {
+      _startCursorBlink();
+    } else {
+      _stopCursorBlink();
+    }
+  }
   set alwaysShowCursor(bool value) {
     if (value == _alwaysShowCursor) return;
     _alwaysShowCursor = value;
@@ -159,10 +192,12 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
   }
 
   void _onFocusChange() {
+    _updateCursorBlink();
     markNeedsPaint();
   }
 
   void _onTerminalChange() {
+    _updateCursorBlink();
     markNeedsLayout();
   }
 
@@ -182,10 +217,12 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
     _terminal.addListener(_onTerminalChange);
     _controller.addListener(_onControllerUpdate);
     _focusNode.addListener(_onFocusChange);
+    _updateCursorBlink();
   }
 
   @override
   void detach() {
+    _stopCursorBlink();
     super.detach();
     _offset.removeListener(_onScroll);
     _terminal.removeListener(_onTerminalChange);
@@ -216,7 +253,15 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
       _offset.correctBy(_maxScrollExtent - _scrollOffset);
     }
 
-    _notifyEditableRect();
+    if (!_editableRectScheduled) {
+      _editableRectScheduled = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _editableRectScheduled = false;
+        if (attached) {
+          _notifyEditableRect();
+        }
+      });
+    }
   }
 
   /// Total height of the terminal in pixels. Includes scrollback buffer.
@@ -367,6 +412,9 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
   }
 
   bool get _shouldShowCursor {
+    if (_terminal.cursorBlinkMode) {
+      return (_terminal.cursorVisibleMode || _alwaysShowCursor || _isComposingText) && _cursorBlinkVisible;
+    }
     return _terminal.cursorVisibleMode || _alwaysShowCursor || _isComposingText;
   }
 
@@ -397,7 +445,9 @@ class RenderTerminal extends RenderBox with RelayoutWhenSystemFontsChangeMixin {
   @override
   void paint(PaintingContext context, Offset offset) {
     _paint(context, offset);
-    context.setWillChangeHint();
+    if (_terminal.cursorBlinkMode) {
+      context.setWillChangeHint();
+    }
   }
 
   void _paint(PaintingContext context, Offset offset) {

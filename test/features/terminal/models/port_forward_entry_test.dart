@@ -1,4 +1,4 @@
-import 'package:asmote/features/terminal/models/port_forward_entry.dart';
+import 'package:Polarmote/features/terminal/models/port_forward_entry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

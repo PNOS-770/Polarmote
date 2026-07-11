@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +17,7 @@ import '../../../../shared/design_system/design_system.dart';
 import '../../models/file_node.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
+import '../../models/transfer_task.dart';
 import '../../state/terminal_app_state.dart';
 import '../common/terminal_formatters.dart';
 import '../common/terminal_localization.dart';
@@ -26,7 +26,6 @@ import '../dialogs/terminal_dialogs.dart';
 import '../file_viewer/file_open_controller.dart';
 import 'file_icon_resolver.dart';
 import '../panels/terminal_home_panels.dart';
-
 part 'terminal_file_tree_sections.dart';
 
 const _remoteFileTreeDragLocalDataTag = 'terminal.remote_file_tree_drag';
@@ -36,6 +35,7 @@ const _fileTreePermissionsColWidth = 120.0;
 const _fileTreeSizeColWidth = 88.0;
 const _fileTreeOwnerColWidth = 88.0;
 const _fileTreeGroupColWidth = 88.0;
+const _fileTreeTransferColWidth = 80.0;
 const _fileTreeColumnGapWidth = 10.0;
 const _fileTreeLeadingWidth = 51.0;
 const _fileTreeTrailingWidth = 6.0;
@@ -50,7 +50,9 @@ const _fileTreeColumnsContentWidth =
     _fileTreeColumnGapWidth +
     _fileTreeOwnerColWidth +
     _fileTreeColumnGapWidth +
-    _fileTreeGroupColWidth;
+    _fileTreeGroupColWidth +
+    _fileTreeColumnGapWidth +
+    _fileTreeTransferColWidth;
 
 class _FileTreeColumnLayout {
   const _FileTreeColumnLayout({
@@ -59,10 +61,12 @@ class _FileTreeColumnLayout {
     required this.permissionsWidth,
     required this.ownerWidth,
     required this.groupWidth,
+    required this.transferWidth,
     required this.gapAfterSize,
     required this.gapAfterModified,
     required this.gapAfterPermissions,
     required this.gapAfterOwner,
+    required this.gapAfterGroup,
   });
 
   final double sizeWidth;
@@ -71,15 +75,18 @@ class _FileTreeColumnLayout {
   final double permissionsWidth;
   final double ownerWidth;
   final double groupWidth;
+  final double transferWidth;
   final double gapAfterSize;
   final double gapAfterModified;
   final double gapAfterPermissions;
   final double gapAfterOwner;
+  final double gapAfterGroup;
 
   bool get hasModified => modifiedWidth > 0;
   bool get hasPermissions => permissionsWidth > 0;
   bool get hasOwner => ownerWidth > 0;
   bool get hasGroup => groupWidth > 0;
+  bool get hasTransfer => transferWidth > 0;
 }
 
 _FileTreeColumnLayout _computeFileTreeColumnLayout(double maxWidth) {
@@ -89,10 +96,12 @@ _FileTreeColumnLayout _computeFileTreeColumnLayout(double maxWidth) {
     permissionsWidth: _fileTreePermissionsColWidth,
     ownerWidth: _fileTreeOwnerColWidth,
     groupWidth: _fileTreeGroupColWidth,
+    transferWidth: _fileTreeTransferColWidth,
     gapAfterSize: _fileTreeColumnGapWidth,
     gapAfterModified: _fileTreeColumnGapWidth,
     gapAfterPermissions: _fileTreeColumnGapWidth,
     gapAfterOwner: _fileTreeColumnGapWidth,
+    gapAfterGroup: _fileTreeColumnGapWidth,
   );
 }
 
@@ -100,6 +109,7 @@ enum _ModifiedSortOrder { none, desc, asc }
 
 class FileTree extends StatefulWidget {
   const FileTree({
+    super.key,
     required this.appState,
     required this.session,
     required this.showHidden,
@@ -114,7 +124,7 @@ class FileTree extends StatefulWidget {
 }
 
 class FileTreeState extends State<FileTree> {
-  static const double _rowHeight = 32;
+  static const double _rowHeight = 26;
   static const double _listVerticalPadding = 0;
   final ScrollController _scrollController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
@@ -123,6 +133,7 @@ class FileTreeState extends State<FileTree> {
   PointerRoute? _globalPointerRoute;
   _ModifiedSortOrder _modifiedSortOrder = _ModifiedSortOrder.none;
   String _nameFilterQuery = '';
+  bool _sftpInitAttempted = false;
 
   bool _isMultiSelectPressed() {
     return HardwareKeyboard.instance.isControlPressed ||
@@ -226,113 +237,6 @@ class FileTreeState extends State<FileTree> {
     return operation != DropOperation.none &&
         operation != DropOperation.forbidden &&
         operation != DropOperation.userCancelled;
-  }
-
-  Future<void> _uploadFromSystemPicker(
-    TerminalAppState appState,
-    TerminalSession session,
-    String rootPath,
-  ) async {
-    try {
-      final files = await openFiles();
-      final (localPaths, cleanupTempPaths) = await _resolveUploadLocalPaths(
-        files,
-      );
-      if (localPaths.isEmpty) {
-        return;
-      }
-      final targetDir = session.fileState.currentPath.isNotEmpty
-          ? session.fileState.currentPath
-          : rootPath;
-      try {
-        await appState.uploadFiles(session, localPaths, targetDir);
-      } finally {
-        unawaited(_cleanupTempUploadFiles(cleanupTempPaths));
-      }
-    } catch (error) {
-      appState.setError(
-        AppStrings.values.failedToOpenLocalFileVar.resolve(
-          appState.locale.languageCode,
-          params: {'error': '$error'},
-        ),
-      );
-    }
-  }
-
-  Future<(List<String>, List<String>)> _resolveUploadLocalPaths(
-    List<XFile> files,
-  ) async {
-    final localPaths = <String>{};
-    final cleanupTempPaths = <String>[];
-    if (files.isEmpty) {
-      return (<String>[], <String>[]);
-    }
-
-    final tempRoot = Directory(
-      p.join(Directory.systemTemp.path, 'asmote-mobile-upload-cache'),
-    );
-
-    for (final file in files) {
-      final path = file.path.trim();
-      if (path.isNotEmpty) {
-        final type = await FileSystemEntity.type(path);
-        if (type != FileSystemEntityType.notFound) {
-          localPaths.add(path);
-          continue;
-        }
-      }
-
-      if (!await tempRoot.exists()) {
-        await tempRoot.create(recursive: true);
-      }
-      final fallbackName = file.name.trim().isEmpty
-          ? 'upload-${DateTime.now().microsecondsSinceEpoch}'
-          : file.name.trim();
-      final tempPath = await _allocateUniqueFilePath(
-        tempRoot.path,
-        fallbackName,
-      );
-      final sink = File(tempPath).openWrite();
-      try {
-        await for (final chunk in file.openRead()) {
-          sink.add(chunk);
-        }
-      } finally {
-        await sink.close();
-      }
-      localPaths.add(tempPath);
-      cleanupTempPaths.add(tempPath);
-    }
-
-    return (localPaths.toList(growable: false), cleanupTempPaths);
-  }
-
-  Future<String> _allocateUniqueFilePath(
-    String directory,
-    String fileName,
-  ) async {
-    final safeName = fileName.isEmpty ? 'upload-file' : fileName;
-    final stem = p.basenameWithoutExtension(safeName);
-    final ext = p.extension(safeName);
-    var candidate = p.join(directory, safeName);
-    var index = 1;
-    while (await FileSystemEntity.type(candidate) !=
-        FileSystemEntityType.notFound) {
-      candidate = p.join(directory, '$stem ($index)$ext');
-      index += 1;
-    }
-    return candidate;
-  }
-
-  Future<void> _cleanupTempUploadFiles(List<String> paths) async {
-    for (final path in paths) {
-      try {
-        final file = File(path);
-        if (await file.exists()) {
-          await file.delete();
-        }
-      } catch (_) {}
-    }
   }
 
   Future<bool> _waitForDrop(DragSession session) async {
@@ -462,6 +366,17 @@ class FileTreeState extends State<FileTree> {
     });
   }
 
+  List<TreeViewNode<FileNode>> _buildFileTreeNodes(
+    TerminalSession session,
+    List<FileNode> entries,
+  ) {
+    return entries.map((fileNode) => TreeViewNode<FileNode>(
+      key: fileNode.path,
+      label: fileNode.name,
+      value: fileNode,
+    )).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = widget.appState;
@@ -488,7 +403,8 @@ class FileTreeState extends State<FileTree> {
         ? (session.fileState.homePath == null &&
               session.fileState.directories.isEmpty)
         : session.sftp == null;
-    if (needsFileTreeInit) {
+    if (needsFileTreeInit && !_sftpInitAttempted) {
+      _sftpInitAttempted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         unawaited(appState.ensureSftpReady(session));
       });
@@ -506,6 +422,13 @@ class FileTreeState extends State<FileTree> {
     final nodes = session.fileState.directories[currentPath];
     if (nodes == null) {
       return const Center(child: CircularProgressIndicator());
+    }
+    final transferTasks = <String, TransferTask>{};
+    for (final task in session.transferQueue) {
+      final remotePath = task.direction == TransferDirection.download
+          ? task.sourcePath
+          : task.destinationPath;
+      if (remotePath != null) transferTasks[remotePath] = task;
     }
     final entries = _sortEntries(
       nodes.where((node) {
@@ -537,6 +460,7 @@ class FileTreeState extends State<FileTree> {
           }
         },
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             FileTreeHeader(
               session: session,
@@ -563,11 +487,12 @@ class FileTreeState extends State<FileTree> {
                   _nameFilterQuery = value;
                 });
               },
-              onUploadFromSystem: () => unawaited(
-                _uploadFromSystemPicker(appState, session, rootPath),
-              ),
               onPathSubmitted: (value) =>
                   unawaited(appState.navigateToPath(session, value)),
+              onGoHome: () {
+                final home = session.fileState.homePath ?? session.fileState.rootPath;
+                unawaited(appState.navigateToPath(session, home));
+              },
             ),
             Expanded(
               child: LayoutBuilder(
@@ -585,43 +510,32 @@ class FileTreeState extends State<FileTree> {
                   final columnLayout = _computeFileTreeColumnLayout(
                     constraints.maxWidth,
                   );
-                  if (entries.isEmpty) {
-                    return Center(
-                      child: Text(
-                        l(appState, AppStrings.values.noMatchingFiles),
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    );
-                  }
-                  final listView = ListView.builder(
-                    key: _listKey,
+                  final treeViewRoots = _buildFileTreeNodes(session, entries);
+                  final treeView = TreeView<FileNode>(
+                    roots: treeViewRoots,
+                    showCheckboxes: false,
+                    indentWidth: 0,
+                    shrinkWrap: false,
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: _listVerticalPadding,
-                    ),
-                    itemCount: entries.length,
-                    itemExtent: _rowHeight,
-                    addAutomaticKeepAlives: false,
-                    addSemanticIndexes: false,
-                    cacheExtent: 600,
-                    itemBuilder: (context, index) {
-                      final node = entries[index];
+                    emptyHint: l(appState, AppStrings.values.noMatchingFiles),
+                    itemBuilder: (context, node, state, depth) {
+                      final fileNode = node.value!;
                       final isDesktop = isDesktopPlatform();
                       final row = _FileNodeSelectableRow(
                         session: session,
-                        node: node,
+                        node: fileNode,
                         filterQuery: _nameFilterQuery,
                         rowHeight: _rowHeight,
-                        depth: 0,
-                        isExpanded: false,
-                        showExpand: false,
+                        depth: depth,
+                        isExpanded: state.isExpanded,
+                        showExpand: !state.isLeaf,
                         columnLayout: columnLayout,
-                        onToggle: null,
+                        onToggle: state.onToggleExpand,
                         onSelect: () => appState.toggleFileSelection(
                           session,
-                          node.path,
+                          fileNode.path,
                           multi: _isMultiSelectPressed(),
-                          isDirectory: node.isDirectory,
+                          isDirectory: fileNode.isDirectory,
                         ),
                         onOpen: () {
                           unawaited(
@@ -629,7 +543,7 @@ class FileTreeState extends State<FileTree> {
                               context,
                               appState,
                               session,
-                              node,
+                              fileNode,
                             ),
                           );
                         },
@@ -641,9 +555,9 @@ class FileTreeState extends State<FileTree> {
                           final selectedPaths = session.fileState.selected;
                           final menuNodes =
                               selectedNodes.length > 1 &&
-                                  selectedPaths.contains(node.path)
-                              ? selectedNodes
-                              : <FileNode>[node];
+                                      selectedPaths.contains(fileNode.path)
+                                  ? selectedNodes
+                                  : <FileNode>[fileNode];
                           if (menuNodes.length > 1) {
                             unawaited(
                               showFilesMenu(
@@ -661,31 +575,33 @@ class FileTreeState extends State<FileTree> {
                               context,
                               appState,
                               session,
-                              node,
+                              fileNode,
                               position,
                             ),
                           );
                         },
+                        transferTask: transferTasks[fileNode.path],
                       );
                       if (!isDesktop || session.profile.isLocal) {
                         return KeyedSubtree(
-                          key: ValueKey<String>('row-${node.path}'),
+                          key: ValueKey<String>('row-${fileNode.path}'),
                           child: row,
                         );
                       }
                       return DragItemWidget(
-                        key: ValueKey<String>('drag-${node.path}'),
+                        key: ValueKey<String>('drag-${fileNode.path}'),
                         dragItemProvider: (request) async {
+                          final selectedPaths = session.fileState.selected;
                           final selectedNodes = _selectedNodesForEntries(
                             session,
                             entries,
                           );
-                          final selectedPaths = session.fileState.selected;
                           final activeSelection =
                               selectedNodes.length > 1 &&
-                                  selectedPaths.contains(node.path)
-                              ? selectedNodes
-                              : <FileNode>[node];
+                                      selectedPaths.contains(fileNode.path)
+                                  ? selectedNodes
+                                  : <FileNode>[fileNode];
+
                           if (activeSelection.length > 1) {
                             final folderName =
                                 '${session.tab.title.replaceAll(RegExp(r'\s+'), '_')}-selection';
@@ -716,12 +632,13 @@ class FileTreeState extends State<FileTree> {
                           }
 
                           final item = DragItem(
-                            suggestedName: node.name,
+                            suggestedName: fileNode.name,
                             localData: _remoteFileTreeDragLocalDataTag,
                           );
-                          if (node.isDirectory) {
+
+                          if (fileNode.isDirectory) {
                             final folderPath = await appState
-                                .prepareDesktopDropFolder(node.name);
+                                .prepareDesktopDropFolder(fileNode.name);
                             item.add(Formats.fileUri(Uri.file(folderPath)));
                             unawaited(() async {
                               final accepted = await _waitForDrop(
@@ -735,36 +652,39 @@ class FileTreeState extends State<FileTree> {
                               }
                               await appState.downloadDirectoryToLocal(
                                 session,
-                                node.path,
+                                fileNode.path,
                                 folderPath,
                               );
                             }());
                           } else {
                             final filePath = await appState
-                                .prepareDesktopDropFile(node.name);
+                                .prepareDesktopDropFile(fileNode.name);
                             item.add(Formats.fileUri(Uri.file(filePath)));
                             unawaited(() async {
                               final accepted = await _waitForDrop(
                                 request.session,
                               );
                               if (!accepted) {
-                                unawaited(appState.cleanupDragFile(filePath));
+                                unawaited(
+                                  appState.cleanupDragFile(filePath),
+                                );
                                 return;
                               }
                               await appState.downloadFileToLocal(
                                 session,
-                                node.path,
+                                fileNode.path,
                                 filePath,
-                                displayName: node.name,
+                                displayName: fileNode.name,
                               );
                             }());
                           }
+
                           return item;
                         },
                         allowedOperations: () => [DropOperation.copy],
                         child: DraggableWidget(
                           child: KeyedSubtree(
-                            key: ValueKey<String>('row-${node.path}'),
+                            key: ValueKey<String>('row-${fileNode.path}'),
                             child: row,
                           ),
                         ),
@@ -783,16 +703,23 @@ class FileTreeState extends State<FileTree> {
                           : const NeverScrollableScrollPhysics(),
                       child: SizedBox(
                         width: contentWidth,
-                        child: Column(
-                          children: [
-                            _FileTreeColumnsHeader(
-                              appState: appState,
-                              columnLayout: columnLayout,
-                              modifiedSortOrder: _modifiedSortOrder,
-                              onToggleModifiedSort: _toggleModifiedSort,
-                            ),
-                            Expanded(child: listView),
-                          ],
+                        child: ClipRect(
+                          child: Column(
+                            children: [
+                              _FileTreeColumnsHeader(
+                                appState: appState,
+                                columnLayout: columnLayout,
+                                modifiedSortOrder: _modifiedSortOrder,
+                                onToggleModifiedSort: _toggleModifiedSort,
+                              ),
+                              Expanded(
+                                child: KeyedSubtree(
+                                  key: _listKey,
+                                  child: treeView,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -806,3 +733,6 @@ class FileTreeState extends State<FileTree> {
     );
   }
 }
+
+
+

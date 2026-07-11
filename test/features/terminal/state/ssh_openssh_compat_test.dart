@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:asmote/features/terminal/models/host_entry.dart';
-import 'package:asmote/features/terminal/state/ssh/ssh_openssh_compat.dart';
+import 'package:Polarmote/features/terminal/models/host_entry.dart';
+import 'package:Polarmote/features/terminal/state/ssh/ssh_openssh_compat.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,7 +12,7 @@ void main() {
     'applyOpenSshConfigToHost maps Host directives into HostEntry',
     () async {
       final tempDir = await Directory.systemTemp.createTemp(
-        'asmote-ssh-config-',
+        'Polarmote-ssh-config-',
       );
       addTearDown(() async {
         if (await tempDir.exists()) {
@@ -80,7 +80,7 @@ Host prod
     'checkOpenSshKnownHostFingerprint trusts matching entry and rejects mismatch',
     () async {
       final tempDir = await Directory.systemTemp.createTemp(
-        'asmote-known-hosts-',
+        'Polarmote-known-hosts-',
       );
       addTearDown(() async {
         if (await tempDir.exists()) {

@@ -2,12 +2,16 @@ class EscapeEmitter {
   const EscapeEmitter();
 
   String primaryDeviceAttributes() {
-    return '\x1b[?1;2c';
+    // VT400 with multiple capabilities including mouse reporting (95)
+    // 1=132cols, 2=printer, 6=color, 7=ansi locator, 15=polyglot,
+    // 22=color, 29=window positioning, 95=mouse reporting
+    return '\x1b[?1;2;6;7;15;22;29;95c';
   }
 
   String secondaryDeviceAttributes() {
+    // xterm model 0, version 400 (matches modern xterm)
     const model = 0;
-    const version = 0;
+    const version = 400;
     return '\x1b[>$model;$version;0c';
   }
 

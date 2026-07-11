@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:asmote/features/terminal/state/terminal_app_state.dart';
+import 'package:Polarmote/features/terminal/state/terminal_app_state.dart';
 
 Future<TerminalAppState> _newCleanState() async {
   final state = TerminalAppState();
@@ -25,7 +25,7 @@ void main() {
     addTearDown(appState.dispose);
 
     final tempDir = await Directory.systemTemp.createTemp(
-      'asmote-import-tolerance',
+      'Polarmote-import-tolerance',
     );
     addTearDown(() => tempDir.delete(recursive: true));
     final importFile = File('${tempDir.path}/config.json');
@@ -98,7 +98,7 @@ void main() {
     addTearDown(appState.dispose);
 
     final tempDir = await Directory.systemTemp.createTemp(
-      'asmote-import-malformed',
+      'Polarmote-import-malformed',
     );
     addTearDown(() => tempDir.delete(recursive: true));
     final importFile = File('${tempDir.path}/broken.json');

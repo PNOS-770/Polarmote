@@ -16,7 +16,7 @@
 -keep class io.flutter.plugins.** { *; }
 
 # Keep your app's main classes
--keep class com.example.asmote.** { *; }
+-keep class com.example.Polarmote.** { *; }
 
 # Google Play Core 相关规则 - 解决 R8 缺失类错误
 -dontwarn com.google.android.play.core.**

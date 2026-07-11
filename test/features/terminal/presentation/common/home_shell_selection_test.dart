@@ -1,5 +1,5 @@
-import 'package:asmote/features/terminal/presentation/common/home_shell_selection.dart';
-import 'package:asmote/features/terminal/state/terminal_app_state.dart';
+import 'package:Polarmote/features/terminal/presentation/common/home_shell_selection.dart';
+import 'package:Polarmote/features/terminal/state/terminal_app_state.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 

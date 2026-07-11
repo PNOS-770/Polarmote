@@ -58,13 +58,25 @@ final _keyNames = <LogicalKeyboardKey, String>{
   LogicalKeyboardKey.delete: 'Delete',
   LogicalKeyboardKey.space: 'Space',
   LogicalKeyboardKey.arrowLeft: 'Left',
-  LogicalKeyboardKey.arrowRight: 'Right',
+ LogicalKeyboardKey.arrowRight: 'Right',
   LogicalKeyboardKey.arrowUp: 'Up',
   LogicalKeyboardKey.arrowDown: 'Down',
   LogicalKeyboardKey.home: 'Home',
   LogicalKeyboardKey.end: 'End',
   LogicalKeyboardKey.pageUp: 'PageUp',
   LogicalKeyboardKey.pageDown: 'PageDown',
+  LogicalKeyboardKey.comma: 'Comma',
+  LogicalKeyboardKey.period: 'Period',
+  LogicalKeyboardKey.semicolon: 'Semicolon',
+  LogicalKeyboardKey.quote: 'Quote',
+  LogicalKeyboardKey.bracketLeft: 'BracketLeft',
+  LogicalKeyboardKey.bracketRight: 'BracketRight',
+  LogicalKeyboardKey.backslash: 'Backslash',
+  LogicalKeyboardKey.slash: 'Slash',
+  LogicalKeyboardKey.minus: 'Minus',
+  LogicalKeyboardKey.equal: 'Equal',
+  LogicalKeyboardKey.backquote: 'Backquote',
+  LogicalKeyboardKey.intlBackslash: 'IntlBackslash',
 };
 
 String? shortcutKeyName(LogicalKeyboardKey key) => _keyNames[key];
@@ -75,3 +87,4 @@ LogicalKeyboardKey? parseShortcutKeyName(String name) {
   }
   return null;
 }
+

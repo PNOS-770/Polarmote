@@ -1,5 +1,15 @@
 import '../models/transfer_task.dart';
 
+class SpeedSample {
+  const SpeedSample({
+    required this.timestamp,
+    required this.bytesPerSec,
+  });
+
+  final DateTime timestamp;
+  final double bytesPerSec;
+}
+
 class SharedSessionDiscoveryView {
   const SharedSessionDiscoveryView({
     required this.deviceName,
@@ -93,6 +103,8 @@ class SessionTransferSummary {
     required this.runningTotalJobs,
     required this.nativeBusySessions,
     required this.nativeTotalSessions,
+    this.uploadSpeedHistory = const [],
+    this.downloadSpeedHistory = const [],
   });
 
   final bool preparing;
@@ -108,6 +120,8 @@ class SessionTransferSummary {
   final int runningTotalJobs;
   final int nativeBusySessions;
   final int nativeTotalSessions;
+  final List<SpeedSample> uploadSpeedHistory;
+  final List<SpeedSample> downloadSpeedHistory;
 
   bool get hasTransferTasks =>
       uploadQueues.isNotEmpty || downloadQueues.isNotEmpty;
@@ -161,3 +175,34 @@ class InternalViewerStreamPreparationResult {
   final Future<InternalViewerPreparationResult?> completion;
   final void Function() cancel;
 }
+
+/// 终端性能设置
+class TerminalPerformanceSettings {
+  const TerminalPerformanceSettings({
+    this.adaptiveThrottleEnabled = true,
+  });
+
+  /// 是否启用自适应限流
+  final bool adaptiveThrottleEnabled;
+
+  TerminalPerformanceSettings copyWith({
+    bool? adaptiveThrottleEnabled,
+  }) {
+    return TerminalPerformanceSettings(
+      adaptiveThrottleEnabled: adaptiveThrottleEnabled ?? this.adaptiveThrottleEnabled,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'adaptiveThrottleEnabled': adaptiveThrottleEnabled,
+    };
+  }
+
+  factory TerminalPerformanceSettings.fromJson(Map<String, dynamic> json) {
+    return TerminalPerformanceSettings(
+      adaptiveThrottleEnabled: json['adaptiveThrottleEnabled'] as bool? ?? true,
+    );
+  }
+}
+

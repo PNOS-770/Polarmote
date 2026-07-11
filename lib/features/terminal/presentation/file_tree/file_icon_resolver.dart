@@ -460,3 +460,4 @@ class FileIconResolver {
     return _execExt.contains(ext);
   }
 }
+

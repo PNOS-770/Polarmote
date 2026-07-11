@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../../../shared/constants/app_string.dart';
+import '../../../../../shared/design_system/design_system.dart';
 import '../../../state/terminal_app_state_models.dart';
 
 class AudioFileViewer extends StatefulWidget {
@@ -41,6 +43,9 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
   int? _downloadTotalBytes;
   Duration _bufferPosition = Duration.zero;
   Duration _mediaDuration = Duration.zero;
+
+  String get _localeCode =>
+      (Localizations.maybeLocaleOf(context)?.languageCode ?? 'en').toLowerCase();
 
   @override
   void initState() {
@@ -170,7 +175,7 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
         _pendingOpen = true;
         _scheduleRetry();
       } else {
-        _error ??= 'File not found';
+        _error ??= AppStrings.values.fileNotFound.resolve(_localeCode);
       }
       if (mounted) {
         setState(() {});
@@ -290,12 +295,15 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
   String _playableProgressText() {
     final durationMs = _mediaDuration.inMilliseconds;
     if (durationMs <= 0) {
-      return 'Playable: preparing...';
+      return AppStrings.values.playablePreparing.resolve(_localeCode);
     }
     final playableMs = _bufferPosition.inMilliseconds.clamp(0, durationMs);
     final ratio = (playableMs / durationMs).clamp(0.0, 1.0);
-    return 'Playable: ${_formatDuration(Duration(milliseconds: playableMs))}'
-        '/${_formatDuration(_mediaDuration)} ${(ratio * 100).toStringAsFixed(1)}%';
+    return AppStrings.values.playableProgressVar.resolve(_localeCode, params: {
+      'position': _formatDuration(Duration(milliseconds: playableMs)),
+      'duration': _formatDuration(_mediaDuration),
+      'percent': '${(ratio * 100).toStringAsFixed(1)}%',
+    });
   }
 
   @override
@@ -303,7 +311,9 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
     final title = p.basename(widget.filePath);
     final hasRemoteProgress = widget.downloadProgressStream != null;
     if (_error != null) {
-      return Center(child: Text('Failed to load audio: $_error'));
+      return Center(
+        child: Text(AppStrings.values.failedToLoadAudioVar.resolve(_localeCode, params: {'error': _error!})),
+      );
     }
     return Center(
       child: ConstrainedBox(
@@ -321,30 +331,20 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.h5,
                 ),
                 if (hasRemoteProgress) ...[
                   const SizedBox(height: 8),
                   Text(
                     _playableProgressText(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF5F6E7E),
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     _downloadDone
-                        ? 'Downloaded: ${_progressText()} (complete)'
-                        : 'Downloaded: ${_progressText()}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF7C8794),
-                    ),
+                        ? AppStrings.values.downloadedProgressCompleteVar.resolve(_localeCode, params: {'progress': _progressText()})
+                        : AppStrings.values.downloadedProgressVar.resolve(_localeCode, params: {'progress': _progressText()}),
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
                   ),
                 ],
                 if (_opening || !_opened) ...[
@@ -359,17 +359,17 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
                 Wrap(
                   spacing: 10,
                   children: [
-                    FilledButton.tonal(
+                    SecondaryButton(
                       onPressed: _opened ? () => _player.play() : null,
-                      child: const Text('Play'),
+                      label: AppStrings.values.play.resolve(_localeCode),
                     ),
-                    FilledButton.tonal(
+                    SecondaryButton(
                       onPressed: _opened ? () => _player.pause() : null,
-                      child: const Text('Pause'),
+                      label: AppStrings.values.pauseAudio.resolve(_localeCode),
                     ),
-                    FilledButton.tonal(
+                    SecondaryButton(
                       onPressed: _opened ? () => _player.stop() : null,
-                      child: const Text('Stop'),
+                      label: AppStrings.values.stopAudio.resolve(_localeCode),
                     ),
                   ],
                 ),
@@ -381,3 +381,4 @@ class _AudioFileViewerState extends State<AudioFileViewer> {
     );
   }
 }
+

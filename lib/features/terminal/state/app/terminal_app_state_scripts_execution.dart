@@ -142,8 +142,8 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
         targetId: host.id,
         targetName: host.name,
         success: false,
-        detail: 'Asmote is not running as Administrator. '
-            'Restart Asmote as Administrator to run scripts with PowerShell (Admin).',
+        detail: 'Polarmote is not running as Administrator. '
+            'Restart Polarmote as Administrator to run scripts with PowerShell (Admin).',
       );
     }
 
@@ -675,7 +675,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     final prefix = _markerPrefix(markerToken);
     final buffer = StringBuffer();
     buffer.writeln('set +e');
-    buffer.writeln('_ASMOTE_FAILED=0');
+    buffer.writeln('_Polarmote_FAILED=0');
     for (var i = 0; i < steps.length; i++) {
       final step = steps[i];
       final index = i + 1;
@@ -683,11 +683,11 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
         case ScriptStepCondition.always:
           _writePosixStep(buffer, prefix, index, step);
         case ScriptStepCondition.onSuccess:
-          buffer.writeln('if [ "\$_ASMOTE_FAILED" -eq 0 ]; then');
+          buffer.writeln('if [ "\$_Polarmote_FAILED" -eq 0 ]; then');
           _writePosixStep(buffer, prefix, index, step, indent: true);
           buffer.writeln('fi');
         case ScriptStepCondition.onFailure:
-          buffer.writeln('if [ "\$_ASMOTE_FAILED" -ne 0 ]; then');
+          buffer.writeln('if [ "\$_Polarmote_FAILED" -ne 0 ]; then');
           _writePosixStep(buffer, prefix, index, step, indent: true);
           buffer.writeln('fi');
       }
@@ -706,9 +706,9 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     buffer.writeln(
       "${indentStr}printf '$prefix:END:$index:%s\\n' \"\$rc\"",
     );
-    buffer.writeln('${indentStr}if [ "\$rc" -ne 0 ]; then _ASMOTE_FAILED=1; fi');
+    buffer.writeln('${indentStr}if [ "\$rc" -ne 0 ]; then _Polarmote_FAILED=1; fi');
     if (!step.allowFailure) {
-      buffer.writeln('${indentStr}if [ "\$_ASMOTE_FAILED" -eq 0 ] && [ "\$rc" -ne 0 ]; then exit "\$rc"; fi');
+      buffer.writeln('${indentStr}if [ "\$_Polarmote_FAILED" -eq 0 ] && [ "\$rc" -ne 0 ]; then exit "\$rc"; fi');
     }
   }
 
@@ -717,7 +717,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     final buffer = StringBuffer();
     buffer.writeln('@echo off');
     buffer.writeln('setlocal EnableExtensions DisableDelayedExpansion');
-    buffer.writeln('set "ASMOTE_FAILED=0"');
+    buffer.writeln('set "Polarmote_FAILED=0"');
     for (var i = 0; i < steps.length; i++) {
       final step = steps[i];
       final index = i + 1;
@@ -725,11 +725,11 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
         case ScriptStepCondition.always:
           _writeCmdStep(buffer, prefix, index, step);
         case ScriptStepCondition.onSuccess:
-          buffer.writeln('if not "%ASMOTE_FAILED%"=="1" (');
+          buffer.writeln('if not "%Polarmote_FAILED%"=="1" (');
           _writeCmdStep(buffer, prefix, index, step, indent: true);
           buffer.writeln(')');
         case ScriptStepCondition.onFailure:
-          buffer.writeln('if "%ASMOTE_FAILED%"=="1" (');
+          buffer.writeln('if "%Polarmote_FAILED%"=="1" (');
           _writeCmdStep(buffer, prefix, index, step, indent: true);
           buffer.writeln(')');
       }
@@ -749,11 +749,11 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     for (final line in normalized.split('\n')) {
       buffer.writeln('$i$line');
     }
-    buffer.writeln('${i}set "ASMOTE_RC=!ERRORLEVEL!"');
-    buffer.writeln('${i}@echo $prefix:END:$index:!ASMOTE_RC!');
-    buffer.writeln('${i}if not "!ASMOTE_RC!"=="0" set "ASMOTE_FAILED=1"');
+    buffer.writeln('${i}set "Polarmote_RC=!ERRORLEVEL!"');
+    buffer.writeln('${i}@echo $prefix:END:$index:!Polarmote_RC!');
+    buffer.writeln('${i}if not "!Polarmote_RC!"=="0" set "Polarmote_FAILED=1"');
     if (!step.allowFailure) {
-      buffer.writeln('${i}if "!ASMOTE_FAILED!"=="0" if not "!ASMOTE_RC!"=="0" exit /b !ASMOTE_RC!');
+      buffer.writeln('${i}if "!Polarmote_FAILED!"=="0" if not "!Polarmote_RC!"=="0" exit /b !Polarmote_RC!');
     }
   }
 
@@ -761,7 +761,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     final prefix = _markerPrefix(markerToken);
     final buffer = StringBuffer();
     buffer.writeln(r"$ErrorActionPreference = 'Continue'");
-    buffer.writeln(r'$asmoteFailed = $false');
+    buffer.writeln(r'$PolarmoteFailed = $false');
     for (var i = 0; i < steps.length; i++) {
       final step = steps[i];
       final index = i + 1;
@@ -769,11 +769,11 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
         case ScriptStepCondition.always:
           _writePowerShellStep(buffer, prefix, index, step);
         case ScriptStepCondition.onSuccess:
-          buffer.writeln('if (-not \$asmoteFailed) {');
+          buffer.writeln('if (-not \$PolarmoteFailed) {');
           _writePowerShellStep(buffer, prefix, index, step, indent: true);
           buffer.writeln('}');
         case ScriptStepCondition.onFailure:
-          buffer.writeln('if (\$asmoteFailed) {');
+          buffer.writeln('if (\$PolarmoteFailed) {');
           _writePowerShellStep(buffer, prefix, index, step, indent: true);
           buffer.writeln('}');
       }
@@ -789,18 +789,18 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
       '${i}Write-Output "$prefix:START:$index:${step.kind.name}"',
     );
     buffer.writeln(
-      "${i}\$asmoteCommand = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('$encodedCommand'))",
+      "${i}\$PolarmoteCommand = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('$encodedCommand'))",
     );
-    buffer.writeln('${i}Invoke-Expression \$asmoteCommand');
+    buffer.writeln('${i}Invoke-Expression \$PolarmoteCommand');
     buffer.writeln(
-      '${i}\$asmoteRc = if (\$null -eq \$LASTEXITCODE) { if (\$?) { 0 } else { 1 } } else { [int]\$LASTEXITCODE }',
+      '${i}\$PolarmoteRc = if (\$null -eq \$LASTEXITCODE) { if (\$?) { 0 } else { 1 } } else { [int]\$LASTEXITCODE }',
     );
     buffer.writeln(
-      '${i}Write-Output "$prefix:END:$index:\$asmoteRc"',
+      '${i}Write-Output "$prefix:END:$index:\$PolarmoteRc"',
     );
-    buffer.writeln('${i}if (\$asmoteRc -ne 0) { \$asmoteFailed = \$true }');
+    buffer.writeln('${i}if (\$PolarmoteRc -ne 0) { \$PolarmoteFailed = \$true }');
     if (!step.allowFailure) {
-      buffer.writeln('${i}if ((-not \$asmoteFailed) -and (\$asmoteRc -ne 0)) { exit \$asmoteRc }');
+      buffer.writeln('${i}if ((-not \$PolarmoteFailed) -and (\$PolarmoteRc -ne 0)) { exit \$PolarmoteRc }');
     }
   }
 
@@ -947,7 +947,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
       locale.languageCode,
       params: {'success': '$executed', 'failed': '$failed'},
     );
-    await AsmoteSystemNotifications.showScriptResult(
+    await PolarmoteSystemNotifications.showScriptResult(
       title: title,
       body: summary,
       failed: hasFailure,
@@ -1290,3 +1290,5 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     return null;
   }
 }
+
+

@@ -7,7 +7,6 @@ import '../../../models/host_entry.dart';
 import '../transport_factory.dart';
 import '../transport_provider.dart';
 import 'native_transfer_bridge.dart';
-
 class NativeTransport implements TransportProvider {
   NativeTransport({
     required HostEntry profile,
@@ -126,7 +125,7 @@ class NativeTransport implements TransportProvider {
     void Function(int bytes)? onProgress,
   }) async* {
     final tempDir = await Directory.systemTemp.createTemp(
-      'asmote-native-stream',
+      'Polarmote-native-stream',
     );
     final baseName = p.basename(remotePath);
     final safeName = baseName.isEmpty ? 'download.bin' : baseName;
@@ -147,7 +146,7 @@ class NativeTransport implements TransportProvider {
       unawaited(() async {
         try {
           await tempDir.delete(recursive: true);
-        } catch (_) {}
+        } catch (e) {  }
       }());
     }
   }
@@ -168,3 +167,6 @@ class NativeTransport implements TransportProvider {
     );
   }
 }
+
+
+

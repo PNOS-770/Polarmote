@@ -114,7 +114,7 @@ Future<void> showAllScriptHistoryDialog(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(
                         l(appState, AppStrings.values.noData),
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: AppTextStyles.secondarySmall,
                       ),
                     )
                   else
@@ -124,8 +124,8 @@ Future<void> showAllScriptHistoryDialog(
                         itemBuilder: (context, index) {
                           final item = filtered[index];
                           final color = item.success
-                              ? Colors.green.shade700
-                              : Colors.red.shade700;
+                              ? AppColors.success
+                              : AppColors.error;
                           final scriptName = item.scriptName.isEmpty
                               ? item.scriptId
                               : item.scriptName;
@@ -224,3 +224,4 @@ TerminalStatus? _hostSessionStatus(TerminalAppState appState, String hostId) {
   }
   return status;
 }
+

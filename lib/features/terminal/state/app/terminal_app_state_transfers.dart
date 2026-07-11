@@ -379,20 +379,28 @@ extension TerminalAppStateTransfers on TerminalAppState {
         : set.downloadRuntime;
   }
 
-  TransferFacade _transferFacadeFor(
+  Future<TransferFacade> _transferFacadeFor(
     TerminalSession session, {
     TransferDirection? direction,
-  }) {
+  }) async {
     if (session.profile.isLocal) {
       throw StateError(
         AppStrings.values.sftpNotReady.resolve(locale.languageCode),
       );
     }
+    var profile = session.profile;
+    if (profile.authType == AuthType.password &&
+        (profile.password ?? '').isEmpty) {
+      final stored = await readHostSecret(profile.id);
+      if (stored != null && (stored.password ?? '').isNotEmpty) {
+        profile = profile.copyWith(password: stored.password);
+      }
+    }
     final transferDirection = direction ?? TransferDirection.download;
     final options = _effectiveTransferRuntimeOptions();
     return TransferFacade(
       _transferTransportFactory.create(
-        profile: session.profile,
+        profile: profile,
         options: options,
       ),
       direction: transferDirection,

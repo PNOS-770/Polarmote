@@ -172,3 +172,4 @@ String formatPathError(
   }
   return '$operation failed: $reason$pathText$detailText';
 }
+

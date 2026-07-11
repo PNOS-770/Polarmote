@@ -1,6 +1,6 @@
-import 'package:asmote/features/terminal/models/host_entry.dart';
-import 'package:asmote/features/terminal/models/script_entry.dart';
-import 'package:asmote/features/terminal/models/script_schedule_entry.dart';
+import 'package:Polarmote/features/terminal/models/host_entry.dart';
+import 'package:Polarmote/features/terminal/models/script_entry.dart';
+import 'package:Polarmote/features/terminal/models/script_schedule_entry.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

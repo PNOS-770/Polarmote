@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../../../../shared/logging/asmote_log.dart';
+
 import '../../models/terminal_session.dart';
 
 class TelnetSession {
@@ -25,7 +25,7 @@ class TelnetSession {
 
   Future<void> connect() async {
     try {
-      AsmoteLog.info('telnet', 'connecting to $host:$port');
+      
       _socket = await Socket.connect(
         host,
         port,
@@ -38,7 +38,7 @@ class TelnetSession {
         onDone: _handleClose,
       );
       _readyCompleter.complete();
-      AsmoteLog.info('telnet', 'connected to $host:$port');
+      
     } catch (e) {
       _readyCompleter.completeError(e);
       rethrow;
@@ -52,13 +52,13 @@ class TelnetSession {
 
   void _onError(Object error) {
     if (_closed) return;
-    AsmoteLog.warn('telnet', 'telnet error: $error');
+    
   }
 
   void _handleClose() {
     if (_closed) return;
     _closed = true;
-    AsmoteLog.info('telnet', 'connection closed $host:$port');
+    
     session.onSessionClosed?.call();
   }
 
@@ -71,7 +71,7 @@ class TelnetSession {
 
   void resize(int width, int height) {
     if (_closed || _socket == null) return;
-    AsmoteLog.debug('telnet', 'resize $host:$port cols=$width rows=$height');
+    
     try {
       final buf = BytesBuilder();
       buf.add([0xFF, 0xFA, 0x1F]);
@@ -89,7 +89,7 @@ class TelnetSession {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
-    AsmoteLog.info('telnet', 'closing $host:$port');
+    
     try {
       await _subscription?.cancel();
       _subscription = null;
@@ -106,3 +106,6 @@ class TelnetSession {
     }
   }
 }
+
+
+

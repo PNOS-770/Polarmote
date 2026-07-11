@@ -21,6 +21,9 @@ class TerminalPainter {
   /// Size of each character in the terminal.
   late var _cellSize = _measureCharSize();
 
+  /// Reusable cell data holder to avoid allocations during painting.
+  final _cellData = CellData.empty();
+
   /// The cached for cells in the terminal. Should be cleared when the same
   /// cell no longer produces the same visual output. For example, when
   /// [_textStyle] is changed, or when the system font changes.
@@ -92,33 +95,44 @@ class TerminalPainter {
     required TerminalCursorType cursorType,
     bool hasFocus = true,
   }) {
-    final paint = Paint()
-      ..color = _theme.cursor
-      ..strokeWidth = 1;
-
     if (!hasFocus) {
-      paint.style = PaintingStyle.stroke;
+      final paint = Paint()
+        ..color = _theme.cursor
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke;
       canvas.drawRect(offset & _cellSize, paint);
       return;
     }
 
     switch (cursorType) {
-      case TerminalCursorType.block:
-        paint.style = PaintingStyle.fill;
+      case TerminalCursorType.block: {
+        final paint = Paint()
+          ..color = _theme.cursor
+          ..style = PaintingStyle.fill;
         canvas.drawRect(offset & _cellSize, paint);
-        return;
-      case TerminalCursorType.underline:
-        return canvas.drawLine(
-          Offset(offset.dx, _cellSize.height - 1),
-          Offset(offset.dx + _cellSize.width, _cellSize.height - 1),
+      }
+      case TerminalCursorType.underline: {
+        final paint = Paint()
+          ..color = _theme.cursor
+          ..strokeWidth = 2;
+        final y = offset.dy + _cellSize.height - 2;
+        canvas.drawLine(
+          Offset(offset.dx, y),
+          Offset(offset.dx + _cellSize.width, y),
           paint,
         );
-      case TerminalCursorType.verticalBar:
-        return canvas.drawLine(
-          Offset(offset.dx, 0),
-          Offset(offset.dx, _cellSize.height),
+      }
+      case TerminalCursorType.verticalBar: {
+        final paint = Paint()
+          ..color = _theme.cursor
+          ..strokeWidth = 2;
+        final x = offset.dx + 1;
+        canvas.drawLine(
+          Offset(x, offset.dy),
+          Offset(x, offset.dy + _cellSize.height),
           paint,
         );
+      }
     }
   }
 
@@ -144,16 +158,15 @@ class TerminalPainter {
     Offset offset,
     BufferLine line,
   ) {
-    final cellData = CellData.empty();
     final cellWidth = _cellSize.width;
 
     for (var i = 0; i < line.length; i++) {
-      line.getCellData(i, cellData);
+      line.getCellData(i, _cellData);
 
-      final charWidth = cellData.content >> CellContent.widthShift;
+      final charWidth = _cellData.content >> CellContent.widthShift;
       final cellOffset = offset.translate(i * cellWidth, 0);
 
-      paintCell(canvas, cellOffset, cellData);
+      paintCell(canvas, cellOffset, _cellData);
 
       if (charWidth == 2) {
         i++;

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:asmote/features/terminal/presentation/dialogs/terminal_dialogs.dart';
-import 'package:asmote/features/terminal/state/terminal_app_state.dart';
+import 'package:Polarmote/features/terminal/presentation/dialogs/terminal_dialogs.dart';
+import 'package:Polarmote/features/terminal/state/terminal_app_state.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

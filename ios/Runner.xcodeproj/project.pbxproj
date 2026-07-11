@@ -230,18 +230,18 @@
 			files = (
 			);
 			inputPaths = (
-				"$(PROJECT_DIR)/../native/asmote_native_core/Cargo.toml",
-				"$(PROJECT_DIR)/../native/asmote_native_core/Cargo.lock",
-				"$(PROJECT_DIR)/../native/asmote_native_core/src",
-				"$(PROJECT_DIR)/../native/asmote_native_core/scripts/build_ios_lib.sh",
+				"$(PROJECT_DIR)/../native/Polarmote_native_core/Cargo.toml",
+				"$(PROJECT_DIR)/../native/Polarmote_native_core/Cargo.lock",
+				"$(PROJECT_DIR)/../native/Polarmote_native_core/src",
+				"$(PROJECT_DIR)/../native/Polarmote_native_core/scripts/build_ios_lib.sh",
 			);
 			name = "Build Rust Native Core";
 			outputPaths = (
-				"$(PROJECT_DIR)/Flutter/asmote_native/$(CONFIGURATION)/$(SDK_NAME)/libasmote_native_core.a",
+				"$(PROJECT_DIR)/Flutter/Polarmote_native/$(CONFIGURATION)/$(SDK_NAME)/libPolarmote_native_core.a",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"${PROJECT_DIR}/../native/asmote_native_core/scripts/build_ios_lib.sh\" \"${CONFIGURATION}\" \"${SDK_NAME}\" \"${PROJECT_DIR}\"";
+			shellScript = "/bin/sh \"${PROJECT_DIR}/../native/Polarmote_native_core/scripts/build_ios_lib.sh\" \"${CONFIGURATION}\" \"${SDK_NAME}\" \"${PROJECT_DIR}\"";
 		};
 		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -389,8 +389,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = "$(inherited) -force_load $(PROJECT_DIR)/Flutter/asmote_native/$(CONFIGURATION)/$(SDK_NAME)/libasmote_native_core.a";
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.asmote;
+				OTHER_LDFLAGS = "$(inherited) -force_load $(PROJECT_DIR)/Flutter/Polarmote_native/$(CONFIGURATION)/$(SDK_NAME)/libPolarmote_native_core.a";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.Polarmote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -406,7 +406,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.asmote.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.Polarmote.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -423,7 +423,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.asmote.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.Polarmote.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
@@ -438,7 +438,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.asmote.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.Polarmote.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
@@ -569,8 +569,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = "$(inherited) -force_load $(PROJECT_DIR)/Flutter/asmote_native/$(CONFIGURATION)/$(SDK_NAME)/libasmote_native_core.a";
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.asmote;
+				OTHER_LDFLAGS = "$(inherited) -force_load $(PROJECT_DIR)/Flutter/Polarmote_native/$(CONFIGURATION)/$(SDK_NAME)/libPolarmote_native_core.a";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.Polarmote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -592,8 +592,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = "$(inherited) -force_load $(PROJECT_DIR)/Flutter/asmote_native/$(CONFIGURATION)/$(SDK_NAME)/libasmote_native_core.a";
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.asmote;
+				OTHER_LDFLAGS = "$(inherited) -force_load $(PROJECT_DIR)/Flutter/Polarmote_native/$(CONFIGURATION)/$(SDK_NAME)/libPolarmote_native_core.a";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.Polarmote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

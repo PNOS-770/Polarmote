@@ -24,7 +24,7 @@ class _AppStringValues {
 
   final addScript = const AppText(en: 'Add script', zh: '添加脚本');
   final add = const AppText(en: 'Add', zh: '新增');
-  final asmoteTerminal = const AppText(en: 'Asmote Terminal', zh: 'Asmote 终端');
+  final PolarmoteTerminal = const AppText(en: 'Polarmote Terminal', zh: 'Polarmote 终端');
   final auth = const AppText(en: 'Auth:', zh: '认证方式：');
   final autoReconnect = const AppText(en: 'Auto reconnect', zh: '自动重连');
   final androidKeepSshAliveInBackground = const AppText(
@@ -104,6 +104,8 @@ class _AppStringValues {
   final enterPath = const AppText(en: 'Enter path', zh: '输入路径');
   final failed = const AppText(en: 'Failed', zh: '失败');
   final filePreview = const AppText(en: 'File Preview', zh: '文件预览');
+  final preparePreview = const AppText(en: 'Prepare preview', zh: '准备文件预览');
+  final openLocalFile = const AppText(en: 'Open local file', zh: '打开本地文件');
   final loadingFilePreview = const AppText(
     en: 'Loading file preview...',
     zh: '正在加载文件预览...',
@@ -191,8 +193,8 @@ class _AppStringValues {
     zh: 'PowerShell（管理员）',
   );
   final localShellPowerShellAdminHint = const AppText(
-    en: 'Runs elevated PowerShell; Asmote must be launched as Administrator.',
-    zh: '以管理员权限运行 PowerShell；需要管理员身份启动 Asmote。',
+    en: 'Runs elevated PowerShell; Polarmote must be launched as Administrator.',
+    zh: '以管理员权限运行 PowerShell；需要管理员身份启动 Polarmote。',
   );
   final localShellCommandPrompt = const AppText(
     en: 'Command Prompt',
@@ -217,8 +219,8 @@ class _AppStringValues {
     zh: '当前平台不支持本地会话。',
   );
   final localTerminalAdminRequiresElevation = const AppText(
-    en: 'Admin PowerShell requires launching Asmote as Administrator.',
-    zh: '管理员 PowerShell 需要以管理员身份启动 Asmote。',
+    en: 'Admin PowerShell requires launching Polarmote as Administrator.',
+    zh: '管理员 PowerShell 需要以管理员身份启动 Polarmote。',
   );
   final localTerminalUseSshOnIos = const AppText(
     en: 'iOS does not support local terminal. Please use SSH session.',
@@ -228,6 +230,7 @@ class _AppStringValues {
     en: 'Failed to start local session: {error}',
     zh: '启动本地会话失败: {error}',
   );
+  final localTerminalStatusLabel = const AppText(en: 'Local Terminal', zh: '本地终端');
   final serialTerminal = const AppText(en: 'Serial Session', zh: '串口会话');
   final serialTerminalHint = const AppText(
     en: 'Connect directly to a local serial device (COM/tty).',
@@ -339,9 +342,7 @@ class _AppStringValues {
   final logLevelBegin = const AppText(en: 'BEGIN', zh: '开始');
   final logLevelEnd = const AppText(en: 'END', zh: '结束');
   final logErrorVar = const AppText(en: 'Error: {message}', zh: '错误：{message}');
-  final logVerbosityAll = const AppText(en: 'All logs', zh: '全部');
-  final logVerbosityImportant = const AppText(en: 'Important only', zh: '重要');
-  final logVerbosityErrorsOnly = const AppText(en: 'Errors only', zh: '仅错误');
+  final operations = const AppText(en: 'Operation History', zh: '操作记录');
   final logKeyboardRecoveryTriggered = const AppText(
     en: 'Keyboard recovery triggered',
     zh: '已触发键盘恢复',
@@ -539,7 +540,6 @@ class _AppStringValues {
   final renameTab = const AppText(en: 'Rename Tab', zh: '重命名标签');
   final save = const AppText(en: 'Save', zh: '保存');
   final send = const AppText(en: 'Send', zh: '发送');
-  final saveAndConnect = const AppText(en: 'Save & Connect', zh: '保存并连接');
   final scripts = const AppText(en: 'Scripts', zh: '脚本');
   final search = const AppText(en: 'Search', zh: '搜索');
   final sortBy = const AppText(en: 'Sort by', zh: '排序方式');
@@ -887,6 +887,7 @@ class _AppStringValues {
   final uploads = const AppText(en: 'Uploads', zh: '上传');
   final username = const AppText(en: 'Username', zh: '用户名');
   final size = const AppText(en: 'Size', zh: '大小');
+  final showThumbnailBackground = const AppText(en: 'Show thumbnail background', zh: '缩略图背景显示');
   final applyAndClose = const AppText(en: 'Apply & Close', zh: '应用并关闭');
   final splitGrid8 = const AppText(en: 'Eight-grid split', zh: '八方格分屏');
   final splitGrid16 = const AppText(
@@ -1178,6 +1179,15 @@ class _AppStringValues {
   final reset = const AppText(en: 'Reset', zh: '重置');
   final clearAll = const AppText(en: 'Clear All', zh: '取消全选');
   final openInSystem = const AppText(en: 'Open In System', zh: '系统打开');
+  final fileEditTitle = const AppText(
+    en: 'Edit · {name}',
+    zh: '编辑 · {name}',
+  );
+  final fileEditUnsavedMarker = const AppText(en: ' *', zh: ' *');
+  final fileEditLoadFailed = const AppText(
+    en: 'Failed to load file content',
+    zh: '加载文件内容失败',
+  );
   final openFolder = const AppText(en: 'Open Folder', zh: '打开文件夹');
   final todayVar = const AppText(en: 'Today ({count})', zh: '今天（{count}）');
   final searchScriptName = const AppText(en: 'Search script name', zh: '搜索脚本名');
@@ -1237,8 +1247,36 @@ class _AppStringValues {
     zh: '多行命令替换',
   );
   final scriptBulkInputHint = const AppText(
-    en: 'One command per line; empty lines are ignored',
-    zh: '每行一条命令，空行自动忽略',
+    en: 'Each line is one command. Click line number to merge consecutive lines into one multi-line command',
+    zh: '每行一条命令。点击行号区域，连续标记的行将合并为一条多行命令',
+  );
+  final scriptBulkDelimiterHint = const AppText(
+    en: 'Each line is one command by default. Use delimiters to mark multi-line commands.',
+    zh: '默认每行一条命令。使用分隔符标记多行命令。',
+  );
+  final scriptBulkDelimiterExample = const AppText(
+    en: 'Wrap multi-line commands with --- or === or >>>',
+    zh: '用 --- 或 === 或 >>> 包围多行命令',
+  );
+  final scriptBulkExampleDemo = const AppText(
+    en: 'Example: echo "A"  →  ---  →  docker run \\  →  --name test  →  ---  →  echo "B"  →  Result: 3 commands',
+    zh: '示例：echo "A"  →  ---  →  docker run \\  →  --name test  →  ---  →  echo "B"  →  结果：3条命令',
+  );
+  final scriptBulkInputPlaceholder = const AppText(
+    en: 'Paste commands here...',
+    zh: '粘贴命令到这里...',
+  );
+  final scriptBulkWillAppendVar = const AppText(
+    en: 'Will append {count} commands:',
+    zh: '将追加 {count} 条命令：',
+  );
+  final scriptBulkMultiLineVar = const AppText(
+    en: '{count} lines',
+    zh: '{count} 行',
+  );
+  final scriptBulkSplitCount = const AppText(
+    en: '{count} commands, edit freely before append',
+    zh: '{count} 条命令，确认前可自由编辑',
   );
   final append = const AppText(en: 'Append', zh: '追加');
   final replaceAction = const AppText(en: 'Replace', zh: '替换');
@@ -1532,10 +1570,12 @@ class _AppStringValues {
   final terminalThemeLight = const AppText(en: 'Light (White on Black)', zh: '亮色（白底黑字）');
   final terminalThemeCustom = const AppText(en: 'Custom theme', zh: '自定义主题');
   final terminalAppearance = const AppText(en: 'Terminal appearance', zh: '终端外观');
+  final terminalCursorStyle = const AppText(en: 'Cursor style', zh: '光标样式');
+  final terminalCursorBlock = const AppText(en: 'Block', zh: '矩形');
+  final terminalCursorVerticalBar = const AppText(en: 'Vertical bar', zh: '竖线');
+  final terminalCursorUnderline = const AppText(en: 'Underline', zh: '下划线');
   final maxScrollbackLines = const AppText(en: 'Scrollback lines', zh: '滚动行数');
   final terminalBlockSelect = const AppText(en: 'Block selection (Alt+drag)', zh: '块选择（Alt+拖拽）');
-  final commandPalette = const AppText(en: 'Command palette', zh: '命令面板');
-  final commandPaletteHint = const AppText(en: 'Type a command...', zh: '输入命令...');
   final searchRegex = const AppText(en: 'Regex', zh: '正则');
   final searchCaseSensitive = const AppText(en: 'Case sensitive', zh: '大小写');
   final keybinding = const AppText(en: 'Keybinding', zh: '快捷键');
@@ -1567,13 +1607,13 @@ class _AppStringValues {
   final versionReadFailedVar = const AppText(en: 'Version info read failed: {error}', zh: '版本信息读取失败：{error}');
   final transferEngineUnavailable = const AppText(en: 'Transfer engine unavailable', zh: '传输引擎不可用');
   final transferEngineReady = const AppText(en: 'Transfer engine ready', zh: '传输引擎就绪');
-  final asmoteTerminalReady = const AppText(en: 'Asmote Terminal Ready', zh: 'Asmote 终端就绪');
+  final PolarmoteTerminalReady = const AppText(en: 'Polarmote Terminal Ready', zh: 'Polarmote 终端就绪');
   final sessionLabel = const AppText(en: 'Session:', zh: '会话：');
   final modeLabel = const AppText(en: 'Mode:', zh: '模式：');
   final timeLabel = const AppText(en: 'Time:', zh: '时间：');
   final contactLabel = const AppText(en: 'Contact:', zh: '联系：');
   final contactEmail = const AppText(en: '2116520372@qq.com', zh: '2116520372@qq.com');
-  final thanksForUsing = const AppText(en: 'Thank you for using Asmote.', zh: '感谢使用 Asmote。');
+  final thanksForUsing = const AppText(en: 'Thank you for using Polarmote.', zh: '感谢使用 Polarmote。');
   final contactQuestion = const AppText(
     en: 'If you have any questions, please contact this email.',
     zh: '如有任何问题，请通过此邮箱联系我们。',
@@ -1606,14 +1646,16 @@ class _AppStringValues {
   final broadcast = const AppText(en: 'Broadcast', zh: '广播');
   final showFileTree = const AppText(en: 'Show file tree for this terminal', zh: '显示此终端的文件树');
   final noSessionsAvailableConnect = const AppText(en: 'No sessions available', zh: '暂无可连接会话');
-  final connectSessionToPane = const AppText(en: 'Connect a session to this pane', zh: '选择要连接到此窗格的会话');
-  final commandPaletteNewSession = const AppText(en: 'New session', zh: '新建会话');
-  final commandPaletteSettings = const AppText(en: 'Settings', zh: '设置');
-  final commandPaletteSftp = const AppText(en: 'SFTP', zh: '文件传输 (SFTP)');
-  final commandPaletteScripts = const AppText(en: 'Scripts', zh: '脚本');
-  final commandPaletteSplitRight = const AppText(en: 'Split right', zh: '向右拆分');
-  final commandPaletteSplitDown = const AppText(en: 'Split down', zh: '向下拆分');
-  final commandPaletteSearch = const AppText(en: 'Search output', zh: '查找输出');
+  final connectSessionToPane = const AppText(en: 'Connect a session to this pane', zh: '选择要连接到此工作区的会话');
+  final stageManager = const AppText(en: 'Stage Manager', zh: 'Stage Manager');
+  final newStage = const AppText(en: 'New', zh: '新建');
+  final renameStage = const AppText(en: 'Rename Stage', zh: '重命名 Stage');
+  final deleteStage = const AppText(en: 'Delete Stage', zh: '删除 Stage');
+  final stageCountVar = const AppText(en: '{count} stages', zh: '{count} 个工作区');
+  final stageName = const AppText(en: 'Stage name', zh: 'Stage 名称');
+  final createStageTitle = const AppText(en: 'Create New Stage', zh: '创建新 Stage');
+  final renameStageTitle = const AppText(en: 'Rename Stage', zh: '重命名 Stage');
+  final enterStageName = const AppText(en: 'Enter stage name', zh: '输入 Stage 名称');
   final activeStatus = const AppText(en: 'Active', zh: '活跃');
   final setActive = const AppText(en: 'Set Active', zh: '设为活跃');
   final newCustomTheme = const AppText(en: '+ New custom theme', zh: '+ 新建自定义主题');
@@ -1684,8 +1726,21 @@ class _AppStringValues {
   final shortcutPreset = const AppText(en: 'Shortcut preset', zh: '快捷键预设');
   final shortcutSplitMaximize = const AppText(en: 'Maximize / Restore pane', zh: '最大化 / 还原窗格');
   final shortcutSplitBroadcast = const AppText(en: 'Toggle input broadcast', zh: '切换输入广播');
-  final shortcutSplitPrev = const AppText(en: 'Switch to previous pane', zh: '切换到上一个窗格');
-  final shortcutSplitNext = const AppText(en: 'Switch to next pane', zh: '切换到下一个窗格');
+  final shortcutNewSession = const AppText(en: 'New session', zh: '新建会话');
+  final shortcutQuickConnect = const AppText(en: 'Quick connect', zh: '快速连接');
+  final shortcutCloseSession = const AppText(en: 'Close current workspace', zh: '关闭当前工作区');
+  final shortcutCloseAllSessions = const AppText(en: 'Close all sessions', zh: '关闭所有会话');
+  final shortcutPreviousStage = const AppText(en: 'Previous stage', zh: '上一个工作区');
+  final shortcutNextStage = const AppText(en: 'Next stage', zh: '下一个工作区');
+  final shortcutNewScript = const AppText(en: 'New script', zh: '新建脚本');
+  final shortcutRunScript = const AppText(en: 'Run script', zh: '运行脚本');
+  final shortcutScriptList = const AppText(en: 'Script list', zh: '脚本列表');
+  final shortcutScriptMonitor = const AppText(en: 'Script monitor', zh: '脚本监控');
+  final shortcutTransferManager = const AppText(en: 'Transfer manager', zh: '传输管理器');
+  final shortcutPortForwarding = const AppText(en: 'Port forwarding', zh: '端口转发');
+  final shortcutLanScan = const AppText(en: 'LAN scan', zh: '局域网扫描');
+  final shortcutLogViewer = const AppText(en: 'Log viewer', zh: '日志查看器');
+  final shortcutOpenSettings = const AppText(en: 'Settings', zh: '设置');
   final shortcutConflictTitle = const AppText(en: 'Shortcut conflict', zh: '快捷键冲突');
   final shortcutConflictMessage = const AppText(
     en: 'The following shortcuts are in conflict:',
@@ -1724,6 +1779,11 @@ class _AppStringValues {
   final shortcutGroupSearch = const AppText(en: 'Search', zh: '搜索');
   final shortcutGroupPanes = const AppText(en: 'Panes', zh: '窗格');
   final shortcutGroupSelection = const AppText(en: 'Selection', zh: '选择');
+  final shortcutGroupSessions = const AppText(en: 'Sessions', zh: '会话');
+  final shortcutGroupScripts = const AppText(en: 'Scripts', zh: '脚本');
+  final shortcutGroupFiles = const AppText(en: 'Files', zh: '文件');
+  final shortcutGroupTools = const AppText(en: 'Tools', zh: '工具');
+  final shortcutGroupSettings = const AppText(en: 'Settings', zh: '设置');
   final tunnelConnections = const AppText(en: 'Conn {connections}', zh: '连接 {connections}');
   final tunnelChannels = const AppText(en: 'Tunnel {channels}', zh: '隧道 {channels}');
   final timeAgoSeconds = const AppText(en: '{count}s ago', zh: '{count}秒前');
@@ -1732,6 +1792,86 @@ class _AppStringValues {
   final timeAgoDays = const AppText(en: '{count}d ago', zh: '{count}天前');
   final fontFamilyHint = const AppText(en: 'monospace', zh: '等宽字体');
   final imageFiles = const AppText(en: 'Images', zh: '图片');
+
+  // First launch / startup gate
+  final firstLaunchRequirements = const AppText(en: 'First Launch Requirements', zh: '首次启动授权');
+  final firstLaunchDesc = const AppText(
+    en: 'You must complete all required permissions on first launch:\n'
+        '1. Notification permission\n'
+        '2. File access permission\n'
+        '3. Disable battery optimization for this app\n\n'
+        'If not completed, the app will exit immediately.',
+    zh: '首次启动必须完成以下授权后才能进入：\n'
+        '1. 通知权限\n'
+        '2. 文件访问权限\n'
+        '3. 关闭本应用省电优化\n\n'
+        '若未完成，将直接退出应用。',
+  );
+  final exitApp = const AppText(en: 'Exit', zh: '退出应用');
+  final continueLabel = const AppText(en: 'Continue', zh: '继续');
+  final checkingFirstLaunchPermissions = const AppText(
+    en: 'Checking first-launch permissions...',
+    zh: '正在检查首次启动授权...',
+  );
+  final checkingBatteryOptimization = const AppText(
+    en: 'Checking battery optimization policy...',
+    zh: '正在检查省电策略...',
+  );
+  final batteryOptimization = const AppText(
+    en: 'Battery Optimization',
+    zh: '省电优化',
+  );
+  final disableBatteryOptimization = const AppText(
+    en: 'Disable Battery Optimization',
+    zh: '关闭省电优化',
+  );
+  final disableBatteryOptimizationDesc = const AppText(
+    en: 'Battery optimization is still enabled.\n'
+        'It is recommended to set this app to "Unrestricted" in system settings for better background performance.\n'
+        'You can skip this and change it later in system settings.',
+    zh: '系统仍未关闭本应用省电优化。\n'
+        '建议前往系统设置将本应用设为"不受限制/无限制"以获得更好的后台性能。\n'
+        '您可以跳过此步骤，稍后在系统设置中修改。',
+  );
+  final openSettings = const AppText(en: 'Open Settings', zh: '前往设置');
+  final checkAgain = const AppText(en: 'Check Again', zh: '继续检查');
+  final afterSettingsTapCheckAgain = const AppText(
+    en: 'After finishing settings, tap "Continue" to proceed.',
+    zh: '完成设置后，点击"继续"进入应用。',
+  );
+  final requirementsNotMetExiting = const AppText(
+    en: 'Requirements not met. Exiting...',
+    zh: '授权未完成，应用即将退出...',
+  );
+  final preparingFirstLaunchChecks = const AppText(
+    en: 'Preparing first-launch checks...',
+    zh: '首次启动初始化中，请稍候...',
+  );
+
+  // Viewer strings
+  final unsupportedViewerType = const AppText(en: 'Unsupported internal viewer type.', zh: '不支持此文件类型');
+  final failedToLoadAudioVar = const AppText(en: 'Failed to load audio: {error}', zh: '音频加载失败：{error}');
+  final play = const AppText(en: 'Play', zh: '播放');
+  final pauseAudio = const AppText(en: 'Pause', zh: '暂停');
+  final stopAudio = const AppText(en: 'Stop', zh: '停止');
+  final saveFailed = const AppText(en: 'Save failed', zh: '保存失败');
+  final saveFailedVar = const AppText(en: 'Save failed: {error}', zh: '保存失败：{error}');
+  final saveLabel = const AppText(en: 'Save', zh: '保存');
+  final openFailedVar = const AppText(en: 'Open failed: {error}', zh: '打开失败：{error}');
+  final failedToLoadImageVar = const AppText(en: 'Failed to load image: {error}', zh: '图片加载失败：{error}');
+  final downloadCompleted = const AppText(en: 'Downloaded', zh: '已下载');
+  final downloadingLabel = const AppText(en: 'Downloading', zh: '下载中');
+  final openInSystemTooltip = const AppText(en: 'Open in system', zh: '系统打开');
+  final playablePreparing = const AppText(en: 'Playable: preparing...', zh: '可播放：准备中...');
+  final playableProgressVar = const AppText(en: 'Playable: {position}/{duration} {percent}', zh: '可播放：{position}/{duration} {percent}');
+  final downloadedProgressCompleteVar = const AppText(en: 'Downloaded: {progress} (complete)', zh: '已下载：{progress}（完成）');
+  final downloadedProgressVar = const AppText(en: 'Downloaded: {progress}', zh: '已下载：{progress}');
+  final fileNotFound = const AppText(en: 'File not found', zh: '文件未找到');
+  final readOnly = const AppText(en: 'Read-only', zh: '只读');
+  final modifiedLabel = const AppText(en: 'Modified', zh: '已修改');
+  final savingLabel = const AppText(en: 'Saving...', zh: '保存中...');
+  final savedLabel = const AppText(en: 'Saved', zh: '已保存');
+  final previewTruncatedVar = const AppText(en: 'Preview is truncated. Editing is disabled. Showing first {size}KB.', zh: '预览已截断，无法编辑。仅显示前 {size}KB。');
 
   // Step config
   final stepConfig = const AppText(en: 'Step config', zh: '步骤配置');
@@ -1813,8 +1953,6 @@ class _AppStringValues {
   final scriptFindReplace = const AppText(en: 'Find && replace', zh: '查找替换');
   final scriptFindText = const AppText(en: 'Find', zh: '查找');
   final scriptReplaceText = const AppText(en: 'Replace with', zh: '替换为');
-  final scriptBulkDelimiter = const AppText(en: 'Line delimiter', zh: '行分隔符');
-  final scriptBulkDelimiterHint = const AppText(en: 'Leave empty for separate steps', zh: '留空则每行作为独立步骤');
 
   // ── Script editor hints ──
   final scriptReferenceHint = const AppText(
@@ -1864,8 +2002,207 @@ class _AppStringValues {
     zh: '此命令已运行较长时间',
   );
   final commandQueue = const AppText(en: 'Command Queue', zh: '命令队列');
+  
+  // ── Performance & Memory Settings ──
+  final performanceSettings = const AppText(en: 'Performance Settings', zh: '性能设置');
+  final memoryMode = const AppText(en: 'Memory Mode', zh: '内存模式');
+  final memoryModeLow = const AppText(en: 'Low Memory', zh: '低内存模式');
+  final memoryModeMedium = const AppText(en: 'Balanced', zh: '均衡模式');
+  final memoryModeHigh = const AppText(en: 'High Performance', zh: '高性能模式');
+  final memoryModeCustom = const AppText(en: 'Custom', zh: '自定义');
+  
+  final memoryModeLowDesc = const AppText(
+    en: 'Minimum memory usage (2000 lines buffer)',
+    zh: '最小内存占用（2000 行缓冲）',
+  );
+  final memoryModeMediumDesc = const AppText(
+    en: 'Balanced performance and memory (5000 lines buffer)',
+    zh: '均衡性能和内存（5000 行缓冲）',
+  );
+  final memoryModeHighDesc = const AppText(
+    en: 'Maximum scrollback history (10000 lines buffer)',
+    zh: '最大回滚历史（10000 行缓冲）',
+  );
+  final memoryModeCustomDesc = const AppText(
+    en: 'Customize buffer size manually',
+    zh: '手动自定义缓冲区大小',
+  );
+  
+  final terminalBufferSize = const AppText(en: 'Terminal Buffer Size', zh: '终端缓冲区大小');
+  final terminalBufferSizeHint = const AppText(
+    en: 'Number of lines to keep in scrollback buffer',
+    zh: '回滚缓冲区保留的行数',
+  );
+  final terminalBufferSizeLines = const AppText(en: '{count} lines', zh: '{count} 行');
+  final stageCardSize = const AppText(en: 'Stage Card Size', zh: 'Stage 卡片大小');
+  final stageCardWidth = const AppText(en: 'Card width', zh: '卡片宽度');
+  final stageCardAspect = const AppText(en: 'Aspect ratio', zh: '宽高比');
+  
+  final smartMemoryManagement = const AppText(en: 'Smart Memory Management', zh: '智能内存管理');
+  final smartMemoryManagementDesc = const AppText(
+    en: 'Automatically reduce buffer size when memory is low',
+    zh: '当内存不足时自动降低缓冲区大小',
+  );
+  
+  final estimatedMemoryUsage = const AppText(en: 'Estimated Memory Usage', zh: '预估内存占用');
+  final perTerminal = const AppText(en: 'per terminal', zh: '每个终端');
+  final memoryUsageVarVar = const AppText(
+    en: '~{size} per terminal\n{total} for {count} terminals',
+    zh: '每个终端约 {size}\n{count} 个终端共 {total}',
+  );
+
+  // Command Bar
+  final commandBarSessions = const AppText(en: 'Sessions', zh: '会话');
+  final commandBarScripts = const AppText(en: 'Scripts', zh: '脚本');
+  final commandBarTransfer = const AppText(en: 'Transfer', zh: '传输');
+  final commandBarTools = const AppText(en: 'Tools', zh: '工具');
+  final lanScan = const AppText(en: 'LAN Scan', zh: '局域网扫描');
+  final commandBarSettings = const AppText(en: 'Settings', zh: '设置');
+  final commandBarMore = const AppText(en: 'More', zh: '更多');
+
+  final commandBarNewSession = const AppText(en: 'New Session', zh: '新建会话');
+  final commandBarQuickConnect = const AppText(en: 'Quick Connect', zh: '快速连接');
+  final commandBarDuplicateSession = const AppText(en: 'Duplicate Session', zh: '复制会话');
+  final commandBarCloseSession = const AppText(en: 'Close Session', zh: '关闭会话');
+  final commandBarCloseAllSessions = const AppText(en: 'Close All Sessions', zh: '关闭所有会话');
+  final commandBarShowAllSessions = const AppText(en: 'Show All Sessions', zh: '显示所有会话');
+
+  final commandBarRunScript = const AppText(en: 'Run Script', zh: '运行脚本');
+  final commandBarNewScript = const AppText(en: 'New Script', zh: '新建脚本');
+  final commandBarManageScripts = const AppText(en: 'Manage Scripts', zh: '管理脚本');
+
+  final commandBarUploadFile = const AppText(en: 'Upload File', zh: '上传文件');
+  final commandBarDownloadFile = const AppText(en: 'Download File', zh: '下载文件');
+  final commandBarSftpBrowser = const AppText(en: 'SFTP Browser', zh: 'SFTP 浏览器');
+  final commandBarTransferManager = const AppText(en: 'Transfer Manager', zh: '传输管理');
+
+  final commandBarPortForward = const AppText(en: 'Port Forward', zh: '端口转发');
+  final commandBarSearchLogs = const AppText(en: 'Search Logs', zh: '搜索日志');
+
+
+  final commandBarPreferences = const AppText(en: 'Preferences', zh: '偏好设置');
+  final commandBarKeyboardShortcuts = const AppText(en: 'Keyboard Shortcuts', zh: '键盘快捷键');
+  final commandBarAppearance = const AppText(en: 'Appearance', zh: '外观');
+
+  final commandBarCloseCurrentWorkspace = const AppText(en: 'Close Current Workspace Session', zh: '关闭当前工作区会话');
+  final commandBarScriptList = const AppText(en: 'Script List', zh: '脚本列表');
+  final commandBarScriptMonitor = const AppText(en: 'Script Monitor', zh: '脚本监控');
+  final ungrouped = const AppText(en: 'Ungrouped', zh: '未分组');
+
+  final collapseSidebar = const AppText(en: 'Collapse sidebar', zh: '折叠侧边栏');
+
+  final cpu = const AppText(en: 'CPU', zh: 'CPU');
+  final mem = const AppText(en: 'MEM', zh: '内存');
+
+  // LAN Scan
+  final lanScanTitle = const AppText(en: 'LAN Scan', zh: '局域网扫描');
+  final lanScanStart = const AppText(en: 'Start Scan', zh: '开始扫描');
+  final lanScanStop = const AppText(en: 'Stop', zh: '停止');
+  final lanScanning = const AppText(en: 'Scanning...', zh: '扫描中...');
+  final lanScanResultCount = const AppText(en: 'Found {count} device(s)', zh: '找到 {count} 个设备');
+  final lanScanNoResults = const AppText(en: 'No devices found', zh: '未发现设备');
+  final lanScanIp = const AppText(en: 'IP', zh: 'IP');
+  final lanScanMac = const AppText(en: 'MAC', zh: 'MAC');
+  final lanScanHostname = const AppText(en: 'Hostname', zh: '主机名');
+  final lanScanStatus = const AppText(en: 'Status', zh: '状态');
+  final lanScanAddToTree = const AppText(en: 'Add to session tree', zh: '加入会话树');
+  final lanScanAdded = const AppText(en: 'Added', zh: '已添加');
+  final lanScanConnectable = const AppText(en: 'Connectable', zh: '可连接');
+  final lanScanNotConnectable = const AppText(en: 'Not connectable', zh: '不可连接');
+
+  // Port Forwarding
+  final portForwardingSocks = const AppText(en: 'SOCKS', zh: 'SOCKS');
+  final portForwardingLocal = const AppText(en: 'Local', zh: '本地');
+  final portForwardingReverse = const AppText(en: 'Reverse', zh: '反向');
+  final portForwardingBoundPort = const AppText(en: 'Running :{port}', zh: '运行中 :{port}');
+  
+  // Adaptive Throttle (Performance)
+  final performanceAdaptiveThrottle = const AppText(en: 'Performance', zh: '性能');
+  final adaptiveThrottle = const AppText(en: 'Adaptive Throttle', zh: '自适应限流');
+  final adaptiveThrottleEnabled = const AppText(en: 'Enable adaptive throttle', zh: '启用自适应限流');
+  final adaptiveThrottleDescription = const AppText(
+    en: 'Automatically adjusts terminal output rate to prevent crashes',
+    zh: '自动调整终端输出速率以防止崩溃',
+  );
+  
+  // Throttle Levels
+  final throttleLevelNormal = const AppText(en: 'Normal', zh: '正常');
+  final throttleLevelModerate = const AppText(en: 'Moderate', zh: '中等压力');
+  final throttleLevelHigh = const AppText(en: 'High', zh: '高压力');
+  final throttleLevelCritical = const AppText(en: 'Critical', zh: '严重压力');
+  
+  // Throttle Status
+  final throttleStatusNormal = const AppText(en: 'Performance: Normal', zh: '性能：正常');
+  final throttleStatusModerate = const AppText(en: 'Performance: Moderate load', zh: '性能：中等负载');
+  final throttleStatusHigh = const AppText(en: 'Performance: High load', zh: '性能：高负载');
+  final throttleStatusCritical = const AppText(en: 'Performance: Critical load', zh: '性能：严重负载');
+  
+  // Throttle Notifications
+  final throttleDowngradedTitle = const AppText(en: 'Performance Adjusted', zh: '性能已调整');
+  final throttleDowngradedMessage = const AppText(
+    en: 'High output rate detected. Reduced to {level} to maintain stability.',
+    zh: '检测到高速输出。已降级至{level}以保持稳定。',
+  );
+  final throttleRecoveredTitle = const AppText(en: 'Performance Recovered', zh: '性能已恢复');
+  final throttleRecoveredMessage = const AppText(
+    en: 'Output rate normalized. Restored to {level}.',
+    zh: '输出速率恢复正常。已恢复至{level}。',
+  );
+  
+  // Performance Metrics
+  final performanceFlushInterval = const AppText(en: 'Refresh Rate', zh: '刷新率');
+  final performanceBufferSize = const AppText(en: 'Buffer Size', zh: '缓冲区大小');
+  final performanceDropRate = const AppText(en: 'Drop Rate', zh: '丢包率');
+  final performanceThroughput = const AppText(en: 'Throughput', zh: '吞吐量');
+  final performanceResetThrottle = const AppText(en: 'Reset Throttle', zh: '重置限流器');
+  final performanceResetConfirm = const AppText(
+    en: 'Reset adaptive throttle to normal level?',
+    zh: '将自适应限流器重置为正常级别？',
+  );
+  final millisecondsAbbreviation = const AppText(en: 'ms', zh: '毫秒');
+  final kilobytesAbbreviation = const AppText(en: 'KB', zh: 'KB');
+  final clearVisitedFiles = const AppText(
+    en: 'Clear All',
+    zh: '清空全部',
+  );
+  final clearVisitedFilesConfirm = const AppText(
+    en: 'Clear all visited files?',
+    zh: '清空所有历史访问文件？',
+  );
+  final clearVisitedFilesHint = const AppText(
+    en: 'This will remove all recently visited files from the list.',
+    zh: '这将从列表中移除所有历史访问文件。',
+  );
+  final shortcutAlreadyUsed = const AppText(
+    en: '"{key}" is already assigned to "{action}". Using it will reset "{action}" to its default key.',
+    zh: '"{key}" 已分配给 "{action}"。使用此快捷键会将 "{action}" 重置为默认值。',
+  );
+  final navigateToAction = const AppText(
+    en: 'Go to {action}',
+    zh: '转到 {action}',
+  );
+  final shortcutConflictBanner = const AppText(
+    en: 'Conflicting shortcuts detected, auto-resolving...',
+    zh: '检测到冲突快捷键，正在自动重置...',
+  );
+  final shortcutConflictResolved = const AppText(
+    en: 'Conflicting shortcuts have been reset to defaults',
+    zh: '冲突快捷键已自动重置为默认值',
+  );
+
+  // Stage / Workspace
+  final workspace = const AppText(en: 'Workspace', zh: '工作区');
+  final stageBackgroundImage = const AppText(en: 'Background Image', zh: '背景图片');
+  final noStageSessions = const AppText(en: 'Not connected', zh: '未连接');
+  final stageOverview = const AppText(en: 'Stage Overview', zh: 'Stage 概览');
+  final clickToConnect = const AppText(en: 'Click to connect', zh: '点击连接');
+  final noStageDescription = const AppText(en: 'No stages yet. A new stage will be created automatically when you connect.', zh: '暂无 Stage，新建连接后将自动创建');
+  final addStage = const AppText(en: 'Add Stage', zh: '新建 Stage');
+  final previousStage = const AppText(en: 'Previous stage', zh: '上一个工作区');
+  final nextStage = const AppText(en: 'Next stage', zh: '下一个工作区');
 }
 
 class AppStrings {
   static const values = _AppStringValues();
 }
+

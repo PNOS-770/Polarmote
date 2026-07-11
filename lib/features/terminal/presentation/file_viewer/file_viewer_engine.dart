@@ -194,3 +194,4 @@ class InternalFileViewerEngine {
     return InternalFileViewerKind.unsupported;
   }
 }
+

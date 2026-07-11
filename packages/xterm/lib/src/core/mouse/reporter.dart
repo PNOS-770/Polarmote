@@ -2,14 +2,16 @@ import 'package:xterm/src/core/buffer/cell_offset.dart';
 import 'package:xterm/src/core/mouse/mode.dart';
 import 'package:xterm/src/core/mouse/button.dart';
 import 'package:xterm/src/core/mouse/button_state.dart';
+import 'package:xterm/src/core/platform.dart';
 
 abstract class MouseReporter {
   static String report(
     TerminalMouseButton button,
     TerminalMouseButtonState state,
     CellOffset position,
-    MouseReportMode reportMode,
-  ) {
+    MouseReportMode reportMode, {
+    SgrWheelEncoding wheelEncoding = SgrWheelEncoding.windowsTerminal,
+  }) {
     // x and y offsets have to be incremented by 1 as the offset if 0-based,
     // The position has to be reported using 1-based coordinates.
     final x = position.x + 1;
@@ -35,7 +37,11 @@ abstract class MouseReporter {
             : String.fromCharCode(32 + y + 1);
         return "\x1b[M$btn$col$row";
       case MouseReportMode.sgr:
-        final buttonID = button.id;
+        final buttonID = button.isWheel
+            ? (wheelEncoding == SgrWheelEncoding.windowsTerminal
+                ? 0x40 | (button.id & 0x01)
+                : button.id)
+            : button.id;
         final upDown = state == TerminalMouseButtonState.down ? 'M' : 'm';
         return "\x1b[<$buttonID;$x;$y$upDown";
       case MouseReportMode.urxvt:

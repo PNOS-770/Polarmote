@@ -1,10 +1,10 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(Asmote LANGUAGES CXX)
+project(Polarmote LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "Asmote")
+set(BINARY_NAME "Polarmote")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -52,6 +52,32 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
 
+# Build Rust native core
+set(RUST_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../native/Polarmote_native_core")
+set(RUST_BUILD_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build_rust.cmake")
+set(RUST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/rust_output")
+
+# Always build Rust core
+add_custom_target(build_rust_core ALL
+  COMMAND ${CMAKE_COMMAND}
+    -DCrateDir=${RUST_CORE_DIR}
+    -DOutputDir=${RUST_OUTPUT_DIR}
+    -DConfig=$<CONFIG>
+    -DPlatform=windows
+    -P ${RUST_BUILD_SCRIPT}
+  COMMENT "Building Rust native core..."
+  VERBATIM
+)
+
+# Copy Rust DLL to output directory after building
+add_custom_command(TARGET build_rust_core POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${BINARY_NAME}>"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${RUST_OUTPUT_DIR}/Polarmote_native_core.dll"
+    "$<TARGET_FILE_DIR:${BINARY_NAME}>/Polarmote_native_core.dll"
+  COMMENT "Copying Rust native core DLL..."
+)
+
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
@@ -63,7 +89,7 @@ set(SUPER_NATIVE_PRECOMPILED_SCRIPT
   "${CMAKE_CURRENT_SOURCE_DIR}/ensure_super_native_precompiled.cmake")
 add_custom_target(ensure_super_native_precompiled ALL
   COMMAND ${CMAKE_COMMAND}
-    -DASMOTE_ROOT_DIR:PATH=${CMAKE_CURRENT_SOURCE_DIR}/..
+    -DPolarmote_ROOT_DIR:PATH=${CMAKE_CURRENT_SOURCE_DIR}/..
     -DBUILD_DIR:PATH=${CMAKE_BINARY_DIR}
     -P ${SUPER_NATIVE_PRECOMPILED_SCRIPT}
   VERBATIM
@@ -131,24 +157,34 @@ install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 
 # Build and copy the Rust transfer core.
-set(RUST_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../native/asmote_native_core")
+set(RUST_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../native/Polarmote_native_core")
 set(RUST_BUILD_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build_rust.cmake")
+set(RUST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/rust_output")
+
+# Copy Rust DLL to install directory
+install(FILES "${RUST_OUTPUT_DIR}/Polarmote_native_core.dll"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
+# Legacy: Keep the install-time build as fallback
 install(CODE "
-  if(CMAKE_INSTALL_CONFIG_NAME MATCHES \"Debug\")
-    set(_config Debug)
-  else()
-    set(_config Release)
-  endif()
-  execute_process(
-    COMMAND \${CMAKE_COMMAND}
-      -DCrateDir=${RUST_CORE_DIR}
-      -DOutputDir=${INSTALL_BUNDLE_LIB_DIR}
-      -DConfig=\${_config}
-      -DPlatform=windows
-      -P ${RUST_BUILD_SCRIPT}
-    RESULT_VARIABLE _rust_build_rc
-  )
-  if(NOT _rust_build_rc EQUAL 0)
-    message(FATAL_ERROR \"Failed to build Rust transfer core (exit code: \${_rust_build_rc})\")
+  if(NOT EXISTS \"${INSTALL_BUNDLE_LIB_DIR}/Polarmote_native_core.dll\")
+    if(CMAKE_INSTALL_CONFIG_NAME MATCHES \"Debug\")
+      set(_config Debug)
+    else()
+      set(_config Release)
+    endif()
+    execute_process(
+      COMMAND \${CMAKE_COMMAND}
+        -DCrateDir=${RUST_CORE_DIR}
+        -DOutputDir=${INSTALL_BUNDLE_LIB_DIR}
+        -DConfig=\${_config}
+        -DPlatform=windows
+        -P ${RUST_BUILD_SCRIPT}
+      RESULT_VARIABLE _rust_build_rc
+    )
+    if(NOT _rust_build_rc EQUAL 0)
+      message(FATAL_ERROR \"Failed to build Rust transfer core (exit code: \${_rust_build_rc})\")
+    endif()
   endif()
   " COMPONENT Runtime)

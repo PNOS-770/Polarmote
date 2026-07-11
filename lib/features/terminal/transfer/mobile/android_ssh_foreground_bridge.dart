@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 class AndroidSshForegroundBridge {
   AndroidSshForegroundBridge._();
 
-  static const MethodChannel _channel = MethodChannel('asmote/ssh_foreground');
+  static const MethodChannel _channel = MethodChannel('Polarmote/ssh_foreground');
 
   static Future<void> start({String? title}) async {
     if (!Platform.isAndroid) {
@@ -37,3 +37,4 @@ class AndroidSshForegroundBridge {
     });
   }
 }
+

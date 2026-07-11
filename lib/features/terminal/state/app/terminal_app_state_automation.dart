@@ -11,6 +11,8 @@ import '../terminal_app_state.dart';
 
 final Expando<Map<String, DateTime>> _scriptTriggerCooldownStore =
     Expando<Map<String, DateTime>>('script-trigger-cooldown');
+final Expando<Set<String>> _activeTriggerKeys =
+    Expando<Set<String>>('active-trigger-keys');
 
 extension TerminalAppStateAutomation on TerminalAppState {
   List<ScriptFolderEntry> scriptFoldersByParent(String parentId) {
@@ -61,7 +63,6 @@ extension TerminalAppStateAutomation on TerminalAppState {
     } else {
       scriptFolders.add(normalized);
     }
-    cleanupAutomationCollections();
     scheduleStateSave();
     notifyState();
   }
@@ -93,7 +94,6 @@ extension TerminalAppStateAutomation on TerminalAppState {
         updatedAt: DateTime.now(),
       );
     }
-    cleanupAutomationCollections();
     scheduleStateSave();
     notifyState();
   }
@@ -170,7 +170,6 @@ extension TerminalAppStateAutomation on TerminalAppState {
     } else {
       scriptWorkflows.add(normalized);
     }
-    cleanupAutomationCollections();
     scheduleStateSave();
     notifyState();
   }
@@ -381,43 +380,67 @@ extension TerminalAppStateAutomation on TerminalAppState {
     ScriptTriggerEntry trigger,
     TerminalSession session,
   ) async {
+    final String key;
     if (trigger.executeAsMacro || session.profile.isSerial) {
-      await runScriptAsMacroOnSession(
-        scriptId: trigger.scriptId,
-        session: session,
+      key = 'macro:${trigger.scriptId}:${session.id}';
+    } else if (session.profile.isLocal) {
+      key = 'local:${trigger.scriptId}:${session.profile.localShellType.name}';
+    } else if (session.profile.isSsh) {
+      key = 'ssh:${trigger.scriptId}:${session.profile.id}';
+    } else {
+      key = 'other:${trigger.scriptId}:${session.id}';
+    }
+
+    final activeKeys = _activeTriggerKeys[this] ??= <String>{};
+    if (!activeKeys.add(key)) {
+      addStructuredLog(
+        category: TerminalLogCategory.script,
+        message: '[TriggerSkip] $key already running, skipping duplicate',
+        notifyListeners: false,
       );
       return;
     }
-    if (session.profile.isLocal) {
-      await runScriptOnTargets(
-        scriptId: trigger.scriptId,
-        hostIds: const <String>[],
-        localShellTypes: <LocalShellType>[session.profile.localShellType],
-        silentExecution: trigger.silentExecution,
-        failurePolicy: trigger.failurePolicy,
-        retryPerHost: trigger.retryPerHost,
-        maxConcurrency: trigger.maxConcurrency,
+    try {
+      if (trigger.executeAsMacro || session.profile.isSerial) {
+        await runScriptAsMacroOnSession(
+          scriptId: trigger.scriptId,
+          session: session,
+        );
+        return;
+      }
+      if (session.profile.isLocal) {
+        await runScriptOnTargets(
+          scriptId: trigger.scriptId,
+          hostIds: const <String>[],
+          localShellTypes: <LocalShellType>[session.profile.localShellType],
+          silentExecution: trigger.silentExecution,
+          failurePolicy: trigger.failurePolicy,
+          retryPerHost: trigger.retryPerHost,
+          maxConcurrency: trigger.maxConcurrency,
+        );
+        return;
+      }
+      if (session.profile.isSsh) {
+        await runScriptOnTargets(
+          scriptId: trigger.scriptId,
+          hostIds: <String>[session.profile.id],
+          localShellTypes: const <LocalShellType>[],
+          silentExecution: trigger.silentExecution,
+          failurePolicy: trigger.failurePolicy,
+          retryPerHost: trigger.retryPerHost,
+          maxConcurrency: trigger.maxConcurrency,
+        );
+        return;
+      }
+      setError(
+        AppStrings.values.scriptExecutionFailedVarVar.resolve(
+          locale.languageCode,
+          params: {'name': trigger.name, 'detail': 'Unsupported connection type'},
+        ),
       );
-      return;
+    } finally {
+      activeKeys.remove(key);
     }
-    if (session.profile.isSsh) {
-      await runScriptOnTargets(
-        scriptId: trigger.scriptId,
-        hostIds: <String>[session.profile.id],
-        localShellTypes: const <LocalShellType>[],
-        silentExecution: trigger.silentExecution,
-        failurePolicy: trigger.failurePolicy,
-        retryPerHost: trigger.retryPerHost,
-        maxConcurrency: trigger.maxConcurrency,
-      );
-      return;
-    }
-    setError(
-      AppStrings.values.scriptExecutionFailedVarVar.resolve(
-        locale.languageCode,
-        params: {'name': trigger.name, 'detail': 'Unsupported connection type'},
-      ),
-    );
   }
 
   void _logScriptTriggerHit({
@@ -445,3 +468,4 @@ extension TerminalAppStateAutomation on TerminalAppState {
     );
   }
 }
+

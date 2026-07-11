@@ -18,82 +18,82 @@ import '../common/compact_more_menu_button.dart';
 import '../common/terminal_localization.dart';
 import '../../../../shared/design_system/design_system.dart';
 import '../common/terminal_ui_palette.dart';
-import '../dialogs/terminal_dialogs.dart';
-import '../file_tree/terminal_file_tree.dart';
-import '../session_tree/server_dashboard_panel.dart';
-import '../transfers/terminal_transfer_panel.dart';
+import '../common/host_tree_row.dart';
+import '../modal_panels/modal_panel_base.dart';
+
+import '../dialogs/script_editor_dialog.dart';
+export '../dialogs/script_editor_dialog.dart';
 
 part 'home/terminal_home_panels_scripts_panel.dart';
 part 'home/terminal_home_panels_log_panel.dart';
 part 'home/terminal_home_panels_scripts_run.dart';
 part 'home/terminal_home_panels_scripts_ops.dart';
 
-class LeftPanelList extends StatelessWidget {
-  const LeftPanelList({super.key, this.isCompact = false});
+/// 脚本面板弹窗（脚本列表 + 监控 + 管理）
+class _ScriptsModalPanel extends StatefulWidget {
+  const _ScriptsModalPanel({required this.appState});
 
-  final bool isCompact;
+  final TerminalAppState appState;
 
   @override
+  State<_ScriptsModalPanel> createState() => _ScriptsModalPanelState();
+}
+
+class _ScriptsModalPanelState extends State<_ScriptsModalPanel> {
+  @override
   Widget build(BuildContext context) {
-    final section = context.select<TerminalAppState, NavSection>(
-      (state) => state.navSection,
+    final appState = widget.appState;
+    return ModalPanelBase(
+      title: l(appState, AppStrings.values.scripts),
+      width: 800,
+      height: 600,
+      actions: [
+        Consumer<TerminalAppState>(
+          builder: (context, state, _) => IconButton(
+            icon: Icon(
+              state.showScriptMonitorInline
+                  ? Icons.arrow_back
+                  : Icons.monitor_heart_outlined,
+            ),
+            iconSize: 20,
+            tooltip: l(appState, AppStrings.values.scriptMonitor),
+            onPressed: () {
+              state.toggleScriptMonitorInline();
+            },
+          ),
+        ),
+        Consumer<TerminalAppState>(
+          builder: (context, state, _) => IconButton(
+            icon: Icon(
+              state.scriptMultiSelectActive
+                  ? Icons.checklist
+                  : Icons.checklist_outlined,
+            ),
+            iconSize: 20,
+            tooltip: l(appState, AppStrings.values.selectMultiple),
+            onPressed: () => state.triggerScriptMultiSelect(),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          iconSize: 20,
+          tooltip: l(appState, AppStrings.values.addScript),
+          onPressed: () => showScriptEditorDialog(context, appState),
+        ),
+      ],
+      child: _ScriptsPanel(appState: appState, isCompact: false),
     );
-    return switch (section) {
-      NavSection.sessions => const ServerDashboardPanel(),
-      NavSection.sftp => Selector<TerminalAppState, FileTreeSelection>(
-        selector: (context, state) {
-          final session = state.activeSession;
-          return FileTreeSelection(
-            session: session,
-            sessionId: session?.id ?? '',
-            status: session?.tab.status,
-            fileVersion: session?.fileState.version ?? 0,
-            rootPath: session?.fileState.rootPath ?? '',
-            showHidden: state.showHiddenFiles,
-          );
-        },
-        shouldRebuild: (prev, next) => prev != next,
-        builder: (context, selection, child) {
-          final state = Provider.of<TerminalAppState>(context, listen: false);
-          return FileTree(
-            appState: state,
-            session: selection.session,
-            showHidden: selection.showHidden,
-          );
-        },
-      ),
-      NavSection.transfers => Consumer<TerminalAppState>(
-        builder: (context, state, child) {
-          return TransferPanel(appState: state, isCompact: isCompact);
-        },
-      ),
-      NavSection.scripts => Consumer<TerminalAppState>(
-        builder: (context, state, child) {
-          return _ScriptsPanel(appState: state, isCompact: isCompact);
-        },
-      ),
-      NavSection.settings => Consumer<TerminalAppState>(
-        builder: (context, state, child) {
-          return TerminalSettingsPanel(appState: state, embedded: true);
-        },
-      ),
-    };
   }
 }
 
-String panelTitle(TerminalAppState appState) {
-  if (appState.navSection == NavSection.sessions) {
-    return l(appState, AppStrings.values.sessions);
-  }
-  if (appState.navSection == NavSection.sftp) {
-    return l(appState, AppStrings.values.fileTree);
-  }
-  return switch (appState.navSection) {
-    NavSection.transfers => l(appState, AppStrings.values.transfers),
-    NavSection.scripts => l(appState, AppStrings.values.scripts),
-    NavSection.settings => l(appState, AppStrings.values.settings),
-    _ => l(appState, AppStrings.values.panel),
-  };
+/// 显示脚本面板弹窗
+Future<void> showScriptsPanelDialog(BuildContext context, TerminalAppState appState) {
+  return showDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: AppColors.overlay,
+    builder: (context) => _ScriptsModalPanel(appState: appState),
+  );
 }
 
 class FileTreeSelection {
@@ -144,19 +144,20 @@ class PlaceholderPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(description, style: TextStyle(color: Colors.grey[600])),
-          const SizedBox(height: 16),
-          PrimaryButton(onPressed: onAction, label: actionLabel),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(title, style: AppTextStyles.h5),
+            const SizedBox(height: 8),
+            Text(description, style: AppTextStyles.secondary),
+            const SizedBox(height: 16),
+            PrimaryButton(onPressed: onAction, label: actionLabel),
+          ],
+        ),
       ),
     );
   }
 }
+

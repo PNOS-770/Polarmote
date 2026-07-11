@@ -1,6 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:xterm/core.dart';
-import 'package:xterm/src/ui/infinite_scroll_view.dart';
 
 /// Handles scrolling gestures in the alternate screen buffer. In alternate
 /// screen buffer, the terminal don't have a scrollback buffer, instead, the
@@ -11,7 +11,6 @@ class TerminalScrollGestureHandler extends StatefulWidget {
     super.key,
     required this.terminal,
     required this.getCellOffset,
-    required this.getLineHeight,
     this.simulateScroll = true,
     required this.child,
   });
@@ -20,9 +19,6 @@ class TerminalScrollGestureHandler extends StatefulWidget {
 
   /// Returns the cell offset for the pixel offset.
   final CellOffset Function(Offset) getCellOffset;
-
-  /// Returns the pixel height of lines in the terminal.
-  final double Function() getLineHeight;
 
   /// Whether to simulate scroll events in the terminal when the application
   /// doesn't declare it supports mouse wheel events. true by default as it
@@ -38,22 +34,19 @@ class TerminalScrollGestureHandler extends StatefulWidget {
 
 class _TerminalScrollGestureHandlerState
     extends State<TerminalScrollGestureHandler> {
-  /// Whether the application is in alternate screen buffer. If false, then this
-  /// widget does nothing.
-  var isAltBuffer = false;
+  /// Whether to intercept scroll events. True when the terminal app has
+  /// requested mouse reporting (mouseMode != none), matching the behavior of
+  /// Windows Terminal and other desktop terminals.
+  var _interceptScroll = false;
 
-  /// The variable that tracks the line offset in last scroll event. Used to
-  /// determine how many the scroll events should be sent to the terminal.
-  var lastLineOffset = 0;
-
-  /// This variable tracks the last offset where the scroll gesture started.
-  /// Used to calculate the cell offset of the terminal mouse event.
+  /// Tracks the last pointer position in local coordinates for mouse event
+  /// coordinate calculation.
   var lastPointerPosition = Offset.zero;
 
   @override
   void initState() {
     widget.terminal.addListener(_onTerminalUpdated);
-    isAltBuffer = widget.terminal.isUsingAltBuffer;
+    _interceptScroll = _shouldIntercept(widget.terminal);
     super.initState();
   }
 
@@ -68,14 +61,19 @@ class _TerminalScrollGestureHandlerState
     if (oldWidget.terminal != widget.terminal) {
       oldWidget.terminal.removeListener(_onTerminalUpdated);
       widget.terminal.addListener(_onTerminalUpdated);
-      isAltBuffer = widget.terminal.isUsingAltBuffer;
+      _interceptScroll = _shouldIntercept(widget.terminal);
     }
     super.didUpdateWidget(oldWidget);
   }
 
+  bool _shouldIntercept(Terminal terminal) {
+    return terminal.mouseMode != MouseMode.none || terminal.isUsingAltBuffer;
+  }
+
   void _onTerminalUpdated() {
-    if (isAltBuffer != widget.terminal.isUsingAltBuffer) {
-      isAltBuffer = widget.terminal.isUsingAltBuffer;
+    final shouldIntercept = _shouldIntercept(widget.terminal);
+    if (_interceptScroll != shouldIntercept) {
+      _interceptScroll = shouldIntercept;
       setState(() {});
     }
   }
@@ -99,35 +97,28 @@ class _TerminalScrollGestureHandlerState
     }
   }
 
-  void _onScroll(double offset) {
-    final currentLineOffset = offset ~/ widget.getLineHeight();
-
-    final delta = currentLineOffset - lastLineOffset;
-
-    for (var i = 0; i < delta.abs(); i++) {
-      _sendScrollEvent(delta < 0);
-    }
-
-    lastLineOffset = currentLineOffset;
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (!isAltBuffer) {
+    if (!_interceptScroll) {
       return widget.child;
     }
 
+    // 当应用启用了鼠标报告模式时，截获滚轮事件并转换为 SGR 鼠标序列
     return Listener(
       onPointerSignal: (event) {
-        lastPointerPosition = event.position;
+        if (event is PointerScrollEvent) {
+          lastPointerPosition = event.localPosition;
+          final scrollDelta = event.scrollDelta.dy;
+          // 每次滚轮事件发送一次按键
+          if (scrollDelta.abs() > 1) {
+            _sendScrollEvent(scrollDelta < 0);
+          }
+        }
       },
       onPointerDown: (event) {
-        lastPointerPosition = event.position;
+        lastPointerPosition = event.localPosition;
       },
-      child: InfiniteScrollView(
-        onScroll: _onScroll,
-        child: widget.child,
-      ),
+      child: widget.child,
     );
   }
 }

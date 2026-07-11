@@ -29,7 +29,7 @@ String formatLoad(double? value) {
 
 String formatRate(double? bytesPerSec) {
   if (bytesPerSec == null || bytesPerSec.isNaN) return '--';
-  if (bytesPerSec < 1024) return '${bytesPerSec.toStringAsFixed(0)}B/s';
+  if (bytesPerSec < 1024) return '${bytesPerSec.toStringAsFixed(1)}B/s';
   if (bytesPerSec < 1024 * 1024) {
     return '${(bytesPerSec / 1024).toStringAsFixed(1)}KB/s';
   }
@@ -38,3 +38,4 @@ String formatRate(double? bytesPerSec) {
   }
   return '${(bytesPerSec / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB/s';
 }
+

@@ -125,8 +125,9 @@ class Buffer {
       _cursorX++;
     }
 
-    if (cellWidth == 2) {
-      writeChar(0);
+    if (cellWidth == 2 && _cursorX < viewWidth) {
+      line.setCell(_cursorX, 0, 0, terminal.cursor);
+      _cursorX++;
     }
   }
 

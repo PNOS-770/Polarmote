@@ -74,6 +74,7 @@ class ClickMouseHandler implements TerminalMouseHandler {
             event.buttonState,
             event.position,
             event.state.mouseReportMode,
+            wheelEncoding: event.state.sgrWheelEncoding,
           );
         }
         return null;
@@ -108,6 +109,7 @@ class UpDownMouseHandler implements TerminalMouseHandler {
           event.buttonState,
           event.position,
           event.state.mouseReportMode,
+          wheelEncoding: event.state.sgrWheelEncoding,
         );
     }
   }

@@ -7,8 +7,6 @@ import 'dart:math';
 import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../../../shared/logging/asmote_log.dart';
-
 part 'native_transfer_bridge_internal.dart';
 
 class NativeTransferException implements Exception {
@@ -806,3 +804,4 @@ class NativeTransferBridge {
     return jsonEncode(config.toJson());
   }
 }
+

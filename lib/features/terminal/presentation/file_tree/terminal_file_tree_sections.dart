@@ -48,7 +48,7 @@ class _FileTreeColumnsHeader extends StatelessWidget {
     }
 
     return Container(
-      height: 28,
+      height: 24,
       padding: const EdgeInsets.fromLTRB(
         _fileTreeLeadingWidth,
         0,
@@ -135,6 +135,19 @@ class _FileTreeColumnsHeader extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                if (columnLayout.gapAfterGroup > 0)
+                  SizedBox(width: columnLayout.gapAfterGroup),
+                if (columnLayout.hasTransfer)
+                  SizedBox(
+                    width: columnLayout.transferWidth,
+                    child: Text(
+                      l(appState, AppStrings.values.transfers),
+                      style: textStyle,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -158,8 +171,8 @@ class FileTreeHeader extends StatefulWidget {
     required this.onCreateFolder,
     required this.onToggleShowHidden,
     required this.onSearchChanged,
-    required this.onUploadFromSystem,
     required this.onPathSubmitted,
+    required this.onGoHome,
   });
 
   final TerminalSession session;
@@ -174,8 +187,8 @@ class FileTreeHeader extends StatefulWidget {
   final VoidCallback onCreateFolder;
   final VoidCallback onToggleShowHidden;
   final ValueChanged<String> onSearchChanged;
-  final VoidCallback onUploadFromSystem;
   final ValueChanged<String> onPathSubmitted;
+  final VoidCallback onGoHome;
 
   @override
   State<FileTreeHeader> createState() => FileTreeHeaderState();
@@ -248,14 +261,14 @@ class FileTreeHeaderState extends State<FileTreeHeader> {
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: borderColor),
               ),
-              child: Icon(icon, size: 16, color: iconColor),
+              child: Icon(icon, size: 14, color: iconColor),
             ),
           ),
         ),
@@ -263,128 +276,117 @@ class FileTreeHeaderState extends State<FileTreeHeader> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      padding: const EdgeInsets.fromLTRB(10, 4, 10, 4),
       decoration: const BoxDecoration(
         color: TerminalUiPalette.panelBackground,
         border: Border(bottom: BorderSide(color: TerminalUiPalette.border)),
       ),
-      child: Column(
-        children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                toolbarIconButton(
-                  onPressed: widget.canGoBack ? widget.onGoBack : null,
-                  icon: Icons.arrow_back,
-                  semanticsLabel: l(appState, AppStrings.values.back),
-                ),
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.canGoForward ? widget.onGoForward : null,
-                  icon: Icons.arrow_forward,
-                  semanticsLabel: l(appState, AppStrings.values.forward),
-                ),
-                const SizedBox(width: 6),
-                toolbarIconButton(
-                  onPressed: widget.onCreateFile,
-                  icon: Icons.note_add_outlined,
-                  semanticsLabel: l(appState, AppStrings.values.newFile),
-                ),
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.onCreateFolder,
-                  icon: Icons.create_new_folder_outlined,
-                  semanticsLabel: l(appState, AppStrings.values.newFolder),
-                ),
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.onToggleShowHidden,
-                  icon: widget.showHiddenFiles
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  semanticsLabel: l(
-                    appState,
-                    AppStrings.values.showHiddenFiles,
-                  ),
-                  active: widget.showHiddenFiles,
-                ),
-                if (!isDesktopPlatform()) ...[
-                  const SizedBox(width: 2),
-                  toolbarIconButton(
-                    onPressed: widget.onUploadFromSystem,
-                    icon: Icons.upload_file_outlined,
-                    semanticsLabel: l(appState, AppStrings.values.uploads),
-                  ),
-                ],
-                const SizedBox(width: 2),
-                toolbarIconButton(
-                  onPressed: widget.onRefresh,
-                  icon: Icons.refresh,
-                  semanticsLabel: l(appState, AppStrings.values.refresh),
-                ),
-              ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            toolbarIconButton(
+              onPressed: widget.onGoHome,
+              icon: Icons.home_outlined,
+              semanticsLabel: 'Home',
             ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 34,
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              style: const TextStyle(
-                fontSize: 12,
-                color: TerminalUiPalette.textPrimary,
-                fontWeight: FontWeight.w500,
+            const SizedBox(width: 4),
+            toolbarIconButton(
+              onPressed: widget.canGoBack ? widget.onGoBack : null,
+              icon: Icons.arrow_back,
+              semanticsLabel: l(appState, AppStrings.values.back),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.canGoForward ? widget.onGoForward : null,
+              icon: Icons.arrow_forward,
+              semanticsLabel: l(appState, AppStrings.values.forward),
+            ),
+            const SizedBox(width: 4),
+            toolbarIconButton(
+              onPressed: widget.onCreateFile,
+              icon: Icons.note_add_outlined,
+              semanticsLabel: l(appState, AppStrings.values.newFile),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onCreateFolder,
+              icon: Icons.create_new_folder_outlined,
+              semanticsLabel: l(appState, AppStrings.values.newFolder),
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onToggleShowHidden,
+              icon: widget.showHiddenFiles
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              semanticsLabel: l(
+                appState,
+                AppStrings.values.showHiddenFiles,
               ),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: l(appState, AppStrings.values.enterPath),
-                hintStyle: const TextStyle(
-                  color: TerminalUiPalette.textSecondary,
+              active: widget.showHiddenFiles,
+            ),
+            const SizedBox(width: 2),
+            toolbarIconButton(
+              onPressed: widget.onRefresh,
+              icon: Icons.refresh,
+              semanticsLabel: l(appState, AppStrings.values.refresh),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 200,
+              height: 28,
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                style: const TextStyle(
                   fontSize: 12,
+                  color: TerminalUiPalette.textPrimary,
                 ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  size: 16,
-                  color: TerminalUiPalette.textSecondary,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: TerminalUiPalette.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: TerminalUiPalette.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: TerminalUiPalette.accent,
-                    width: 1.2,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: l(appState, AppStrings.values.enterPath),
+                  hintStyle: const TextStyle(
+                    color: TerminalUiPalette.textSecondary,
+                    fontSize: 12,
                   ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 14,
+                    color: TerminalUiPalette.textSecondary,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: TerminalUiPalette.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(color: TerminalUiPalette.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: const BorderSide(
+                      color: TerminalUiPalette.accent,
+                      width: 1.2,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  filled: true,
+                  fillColor: TerminalUiPalette.cardBackground,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                filled: true,
-                fillColor: TerminalUiPalette.cardBackground,
+                onChanged: (value) {
+                  widget.onSearchChanged(value.trim());
+                },
+                onSubmitted: (value) {
+                  widget.onPathSubmitted(value);
+                },
               ),
-              onChanged: (value) {
-                widget.onSearchChanged(value.trim());
-              },
-              onSubmitted: (value) {
-                final trimmed = value.trim();
-                if (trimmed.isEmpty) {
-                  _controller.text = _currentPath();
-                  return;
-                }
-                widget.onPathSubmitted(trimmed);
-              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -403,6 +405,7 @@ class _FileNodeRow extends StatefulWidget {
     required this.onOpen,
     this.onToggle,
     this.onOpenMenu,
+    this.transferTask,
   });
 
   final FileNode node;
@@ -416,6 +419,7 @@ class _FileNodeRow extends StatefulWidget {
   final VoidCallback onOpen;
   final VoidCallback? onToggle;
   final ValueChanged<Offset>? onOpenMenu;
+  final TransferTask? transferTask;
 
   @override
   State<_FileNodeRow> createState() => _FileNodeRowState();
@@ -464,6 +468,66 @@ class _FileNodeRowState extends State<_FileNodeRow> {
     if (groupId == null) return '-';
     if (groupId == 0) return 'root (0)';
     return groupId.toString();
+  }
+
+  Widget _buildTransferCell() {
+    final task = widget.transferTask;
+    if (task == null) return const SizedBox.shrink();
+
+    final progress = task.progress;
+    switch (task.status) {
+      case TransferStatus.running:
+      case TransferStatus.queued:
+        return Center(
+          child: Stack(
+            alignment: Alignment.centerRight,
+            children: [
+              SizedBox(
+                width: _fileTreeTransferColWidth - 4,
+                height: 14,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: progress > 0 ? progress : null,
+                    backgroundColor: TerminalUiPalette.border,
+                    valueColor: const AlwaysStoppedAnimation(
+                      TerminalUiPalette.accent,
+                    ),
+                    minHeight: 14,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 2),
+                child: Text(
+                  '${(progress * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case TransferStatus.completed:
+        return const Center(
+          child: Icon(Icons.check_circle, size: 14, color: Colors.green),
+        );
+      case TransferStatus.failed:
+        return const Center(
+          child: Icon(Icons.error, size: 14, color: Colors.red),
+        );
+      case TransferStatus.paused:
+        return const Center(
+          child: Icon(Icons.pause_circle, size: 14, color: Colors.orange),
+        );
+      case TransferStatus.canceled:
+        return const Center(
+          child: Icon(Icons.cancel, size: 14, color: Colors.grey),
+        );
+    }
   }
 
   @override
@@ -708,6 +772,13 @@ class _FileNodeRowState extends State<_FileNodeRow> {
                             ),
                           ),
                         ),
+                      if (widget.columnLayout.gapAfterGroup > 0)
+                        SizedBox(width: widget.columnLayout.gapAfterGroup),
+                      if (widget.columnLayout.hasTransfer)
+                        SizedBox(
+                          width: widget.columnLayout.transferWidth,
+                          child: _buildTransferCell(),
+                        ),
                     ],
                   ),
                 ),
@@ -744,6 +815,7 @@ class _FileNodeSelectableRow extends StatefulWidget {
     required this.onOpen,
     this.onToggle,
     this.onOpenMenu,
+    this.transferTask,
   });
 
   final TerminalSession session;
@@ -758,6 +830,7 @@ class _FileNodeSelectableRow extends StatefulWidget {
   final VoidCallback onOpen;
   final VoidCallback? onToggle;
   final ValueChanged<Offset>? onOpenMenu;
+  final TransferTask? transferTask;
 
   @override
   State<_FileNodeSelectableRow> createState() => _FileNodeSelectableRowState();
@@ -825,6 +898,7 @@ class _FileNodeSelectableRowState extends State<_FileNodeSelectableRow> {
         onSelect: widget.onSelect,
         onOpen: widget.onOpen,
         onOpenMenu: widget.onOpenMenu,
+        transferTask: widget.transferTask,
       ),
     );
   }
@@ -1344,3 +1418,7 @@ class _FileDropTargetState extends State<_FileDropTarget> {
     );
   }
 }
+
+
+
+

@@ -7,7 +7,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../../shared/logging/asmote_log.dart';
+
 
 class NativeTerminalPtyException implements Exception {
   const NativeTerminalPtyException(this.message);
@@ -270,30 +270,30 @@ class _NativePtyBindings {
   _NativePtyBindings._(DynamicLibrary dylib, {required this.loadedFrom})
     : _isSupportedFn = dylib
           .lookupFunction<_PtySupportedNative, _PtySupportedDart>(
-            'asmote_pty_is_supported',
+            'Polarmote_pty_is_supported',
           ),
       _spawnFn = dylib.lookupFunction<_PtySpawnNative, _PtySpawnDart>(
-        'asmote_pty_spawn',
+        'Polarmote_pty_spawn',
       ),
       _writeFn = dylib.lookupFunction<_PtyWriteNative, _PtyWriteDart>(
-        'asmote_pty_write',
+        'Polarmote_pty_write',
       ),
       _resizeFn = dylib.lookupFunction<_PtyResizeNative, _PtyResizeDart>(
-        'asmote_pty_resize',
+        'Polarmote_pty_resize',
       ),
       _pollFn = dylib.lookupFunction<_PtyPollNative, _PtyPollDart>(
-        'asmote_pty_poll',
+        'Polarmote_pty_poll',
       ),
       _closeFn = dylib.lookupFunction<_PtyCloseNative, _PtyCloseDart>(
-        'asmote_pty_close',
+        'Polarmote_pty_close',
       ),
       _freeCStringFn = dylib
           .lookupFunction<_FreeCStringNative, _FreeCStringDart>(
-            'asmote_free_c_string',
+            'Polarmote_free_c_string',
           ) {
     try {
       _buildInfoFn = dylib.lookupFunction<_BuildInfoNative, _BuildInfoDart>(
-        'asmote_build_info',
+        'Polarmote_build_info',
       );
     } catch (_) {
       _buildInfoFn = null;
@@ -317,7 +317,7 @@ class _NativePtyBindings {
   String? get buildInfo => _cachedBuildInfo;
 
   static _NativePtyBindings? tryLoad() {
-    if (Platform.environment['ASMOTE_DISABLE_NATIVE_TERMINAL_PTY'] == '1') {
+    if (Platform.environment['Polarmote_DISABLE_NATIVE_TERMINAL_PTY'] == '1') {
       return null;
     }
     final opened = _openLibrary();
@@ -330,7 +330,7 @@ class _NativePtyBindings {
         loadedFrom: opened.source,
       );
       if (kDebugMode) {
-        AsmoteLog.info('native_pty', 'loaded from ${bindings.loadedFrom}');
+        
       }
       return bindings;
     } catch (_) {
@@ -455,13 +455,13 @@ class _NativePtyBindings {
 
   static String? _libraryFileName() {
     if (Platform.isWindows) {
-      return 'asmote_native_core.dll';
+      return 'Polarmote_native_core.dll';
     }
     if (Platform.isLinux || Platform.isAndroid) {
-      return 'libasmote_native_core.so';
+      return 'libPolarmote_native_core.so';
     }
     if (Platform.isMacOS) {
-      return 'libasmote_native_core.dylib';
+      return 'libPolarmote_native_core.dylib';
     }
     return null;
   }
@@ -476,7 +476,7 @@ class _NativePtyBindings {
       yield p.join(
         root,
         'native',
-        'asmote_native_core',
+        'Polarmote_native_core',
         'target',
         'release',
         fileName,
@@ -484,7 +484,7 @@ class _NativePtyBindings {
       yield p.join(
         root,
         'native',
-        'asmote_native_core',
+        'Polarmote_native_core',
         'target',
         'debug',
         fileName,
@@ -611,3 +611,4 @@ typedef _FreeCStringDart = void Function(Pointer<Int8> ptr);
 
 typedef _BuildInfoNative = Pointer<Utf8> Function();
 typedef _BuildInfoDart = Pointer<Utf8> Function();
+

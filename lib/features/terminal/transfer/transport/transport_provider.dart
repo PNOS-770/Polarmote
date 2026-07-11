@@ -36,3 +36,4 @@ abstract class TransportProvider {
 
   Future<int?> probeRemoteFileSize(String remotePath);
 }
+

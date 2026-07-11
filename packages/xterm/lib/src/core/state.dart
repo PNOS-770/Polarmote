@@ -1,5 +1,6 @@
 import 'package:xterm/src/core/cursor.dart';
 import 'package:xterm/src/core/mouse/mode.dart';
+import 'package:xterm/src/core/platform.dart';
 
 abstract class TerminalState {
   int get viewWidth;
@@ -41,4 +42,7 @@ abstract class TerminalState {
   bool get altBufferMouseScrollMode;
 
   bool get bracketedPasteMode;
+
+  /// SGR 鼠标滚轮事件的编码方式。
+  SgrWheelEncoding get sgrWheelEncoding;
 }

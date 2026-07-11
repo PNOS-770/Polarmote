@@ -32,12 +32,29 @@ PopupMenuItem<T> compactMenuItem<T>({
   bool enabled = true,
   double height = 28,
   EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 10),
+  String? shortcut,
 }) {
   return PopupMenuItem<T>(
     value: value,
     enabled: enabled,
     height: height,
     padding: padding,
-    child: Text(label, style: const TextStyle(fontSize: 11)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11)),
+        if (shortcut != null) ...[
+          const Spacer(),
+          Text(
+            shortcut,
+            style: TextStyle(
+              fontSize: 10,
+              fontFamily: 'monospace',
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ],
+    ),
   );
 }

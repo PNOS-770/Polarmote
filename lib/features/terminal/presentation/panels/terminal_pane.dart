@@ -11,6 +11,7 @@ class _TerminalPane extends StatefulWidget {
     required this.showTitle,
     required this.onShowMenu,
     required this.onSplitShortcut,
+    this.captureKey,
   });
 
   final TerminalSession session;
@@ -22,6 +23,7 @@ class _TerminalPane extends StatefulWidget {
   final bool showTitle;
   final Future<void> Function(Offset position) onShowMenu;
   final KeyEventResult Function(KeyEvent event) onSplitShortcut;
+  final GlobalKey? captureKey;
 
   @override
   State<_TerminalPane> createState() => _TerminalPaneState();
@@ -29,12 +31,15 @@ class _TerminalPane extends StatefulWidget {
 
 class _TerminalPaneState extends State<_TerminalPane> {
   final ScrollController _horizontalScrollController = ScrollController();
+  TerminalCursorShape _lastCursorShape = TerminalCursorShape.block;
+  String? _lastBackgroundPath;
+  double _lastBackgroundOpacity = 0.15;
 
   bool _ghostActive = false;
   int _ghostStartCol = 0;
   int _ghostEndCol = 0;
-  Timer? _selectionPollTimer;
-  bool _hasSelection = false;
+  Timer? _ghostDebounceTimer;
+
 
   void _clearGhostState() {
     _ghostActive = false;
@@ -65,7 +70,8 @@ class _TerminalPaneState extends State<_TerminalPane> {
   }
 
   void _scheduleGhostTextUpdate() {
-    Future.microtask(() {
+    _ghostDebounceTimer?.cancel();
+    _ghostDebounceTimer = Timer(const Duration(milliseconds: 200), () {
       if (mounted) _updateGhostText();
     });
   }
@@ -143,6 +149,7 @@ class _TerminalPaneState extends State<_TerminalPane> {
 
   void _sendSessionInput(String payload) {
     if (payload.isEmpty) return;
+    widget.session.lastUserInputTime = DateTime.now();
     widget.session.sendInput(payload);
   }
 
@@ -211,14 +218,6 @@ class _TerminalPaneState extends State<_TerminalPane> {
     );
     if (text.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: text));
-  }
-
-  void _syncSelectionState() {
-    final next = widget.controller.selection != null;
-    if (next == _hasSelection || !mounted) return;
-    setState(() {
-      _hasSelection = next;
-    });
   }
 
   KeyEventResult _handleTerminalKeyEvent(FocusNode _, KeyEvent event) {
@@ -334,7 +333,9 @@ class _TerminalPaneState extends State<_TerminalPane> {
   @override
   void dispose() {
     widget.appState.removeListener(_onAppStateChanged);
-    _selectionPollTimer?.cancel();
+    widget.session.terminal.removeListener(_onTerminalChanged);
+    widget.session.onUserInput = null;
+    _ghostDebounceTimer?.cancel();
     _horizontalScrollController.dispose();
     super.dispose();
   }
@@ -342,16 +343,50 @@ class _TerminalPaneState extends State<_TerminalPane> {
   @override
   void initState() {
     super.initState();
-    _selectionPollTimer = Timer.periodic(
-      const Duration(milliseconds: 180),
-      (_) => _syncSelectionState(),
-    );
     widget.appState.addListener(_onAppStateChanged);
+    widget.session.onUserInput = _onUserInput;
+    widget.session.terminal.addListener(_onTerminalChanged);
+  }
+  
+  void _onTerminalChanged() {
+    // TerminalView 内部已订阅终端变化自行渲染，无需外层 setState
+  }
+
+  void _logBackgroundError(Object error) {
+    widget.appState.addStructuredLog(category: TerminalLogCategory.system, message: 'Background image load error: $error', notifyListeners: false);
+  }
+
+  void _onUserInput(String sessionId, String data) {
+    if (!widget.appState.broadcastEnabled) return;
+    for (final s in widget.appState.sessions) {
+      if (s.id != sessionId && s.tab.status == TerminalStatus.connected) {
+        s.sendInput(data);
+      }
+    }
   }
 
   void _onAppStateChanged() {
     if (!mounted) return;
-    setState(() {});
+    if (widget.appState.restorationInProgress) return;
+    var needsRebuild = false;
+    final cursorShape = widget.appState.globalAppearance.cursorShape;
+    if (cursorShape != _lastCursorShape) {
+      _lastCursorShape = cursorShape;
+      needsRebuild = true;
+    }
+    final bgPath = widget.appState.backgroundImagePathForActiveStage();
+    if (bgPath != _lastBackgroundPath) {
+      _lastBackgroundPath = bgPath;
+      needsRebuild = true;
+    }
+    final bgOpacity = widget.appState.terminalBackgroundOpacity;
+    if (bgOpacity != _lastBackgroundOpacity) {
+      _lastBackgroundOpacity = bgOpacity;
+      needsRebuild = true;
+    }
+    if (needsRebuild) {
+      setState(() {});
+    }
   }
 
   @override
@@ -378,10 +413,17 @@ class _TerminalPaneState extends State<_TerminalPane> {
       height: lineHeight,
     );
     const terminalTextScaler = TextScaler.noScaling;
-    final bgPath = appState.backgroundImagePathForPane(widget.paneId);
+    final bgPath = appState.backgroundImagePathForActiveStage();
     final bgOpacity = appState.terminalBackgroundOpacity;
+    final cursorShape = global.cursorShape;
+    final cursorType = switch (cursorShape) {
+      TerminalCursorShape.verticalBar => TerminalCursorType.verticalBar,
+      TerminalCursorShape.underline => TerminalCursorType.underline,
+      TerminalCursorShape.block => TerminalCursorType.block,
+    };
     final terminalView = TerminalView(
       widget.session.terminal,
+      key: ValueKey('terminal_${cursorShape.name}'),
       controller: widget.controller,
       scrollController: widget.verticalScrollController,
       focusNode: widget.focusNode,
@@ -392,29 +434,36 @@ class _TerminalPaneState extends State<_TerminalPane> {
       mobileSelectionToolbarEnabled: !isDesktop,
       textStyle: terminalTextStyle,
       textScaler: terminalTextScaler,
+      cursorType: cursorType,
       onKeyEvent: _handleTerminalKeyEvent,
-      onSecondaryTapDown: (details, _) {
-        unawaited(widget.onShowMenu(details.globalPosition));
-      },
     );
     final terminalViewport =
         widget.appState.terminalAccessibilitySemanticsEnabled
         ? terminalView
         : ExcludeSemantics(child: terminalView);
-    final verticalScrollableTerminal = RawScrollbar(
-      controller: widget.verticalScrollController,
-      thumbVisibility: true,
-      trackVisibility: true,
-      thickness: 8,
-      radius: const Radius.circular(4),
-      thumbColor: Colors.white.withValues(alpha: 0.34),
-      trackColor: Colors.white.withValues(alpha: 0.08),
-      trackBorderColor: Colors.transparent,
-      notificationPredicate: (notification) {
-        return notification.metrics.axis == Axis.vertical;
-      },
-      child: terminalViewport,
-    );
+    
+    // 检测是否在替代缓冲区（如 vim, OpenCode 等 TUI 应用）
+    final isUsingAltBuffer = widget.session.terminal.isUsingAltBuffer;
+    
+    Widget verticalScrollableTerminal;
+    if (isUsingAltBuffer) {
+      // 在替代缓冲区时不渲染 RawScrollbar，避免 ScrollController
+      // 绑定多个 ScrollPosition 导致崩溃
+      verticalScrollableTerminal = terminalViewport;
+    } else {
+      verticalScrollableTerminal = RawScrollbar(
+        controller: widget.verticalScrollController,
+        thickness: 8,
+        radius: const Radius.circular(4),
+        thumbColor: Colors.white.withValues(alpha: 0.34),
+        trackColor: Colors.white.withValues(alpha: 0.08),
+        trackBorderColor: Colors.transparent,
+        notificationPredicate: (notification) {
+          return notification.metrics.axis == Axis.vertical;
+        },
+        child: terminalViewport,
+      );
+    }
     final enableMobileHorizontalScroll =
         widget.appState.terminalHorizontalScrollEnabled;
     final terminalContent = enableMobileHorizontalScroll
@@ -464,11 +513,17 @@ class _TerminalPaneState extends State<_TerminalPane> {
               child: Image.file(
                 File(bgPath),
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, error, __) {
+                  _logBackgroundError(error);
+                  return const SizedBox.shrink();
+                },
               ),
             ),
           ),
-        RepaintBoundary(child: terminalContent),
+        RepaintBoundary(
+          key: widget.captureKey,
+          child: terminalContent,
+        ),
         if (widget.session.tab.status == TerminalStatus.connecting)
           _TerminalOverlay(
             label: l(widget.appState, AppStrings.values.connecting),
@@ -487,30 +542,135 @@ class _TerminalPaneState extends State<_TerminalPane> {
       ],
     );
 
-    if (!widget.showTitle) return body;
-    return Column(
-      children: [
-        Container(
-          height: 28,
-          color: headerColor,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          alignment: Alignment.centerLeft,
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+    Widget paneContent;
+    if (!widget.showTitle) {
+      paneContent = body;
+    } else {
+      paneContent = Column(
+        children: [
+          Container(
+            height: 28,
+            color: headerColor,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
           ),
-        ),
-        Expanded(child: body),
+          Expanded(child: body),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        Expanded(child: paneContent),
+        if (widget.session.tab.status == TerminalStatus.connected)
+          widget.session.profile.isLocal
+              ? _LocalStatusBar(session: widget.session, appState: widget.appState)
+              : TerminalStatusBar(session: widget.session, appState: widget.appState),
       ],
     );
   }
-
 }
+
+class _LocalStatusBar extends StatelessWidget {
+  const _LocalStatusBar({required this.session, required this.appState});
+  final TerminalSession session;
+  final TerminalAppState appState;
+
+  @override
+  Widget build(BuildContext context) {
+    final diagnostics = session.getAdaptiveThrottleDiagnostics();
+    final levelName = diagnostics['currentLevel'] as String;
+    final level = ThrottleLevel.values.byName(levelName);
+    final showThrottle = appState.performanceSettings.adaptiveThrottleEnabled;
+
+    return Container(
+      height: 22,
+      decoration: const BoxDecoration(
+        color: TerminalUiPalette.statusBarBg,
+        border: Border(
+          top: BorderSide(color: TerminalUiPalette.statusBarBorder, width: 0.5),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Row(
+        children: [
+          Icon(Icons.computer, size: 12, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
+            style: AppTextStyles.captionSmall,
+          ),
+          if (showThrottle) ...[
+            const SizedBox(width: 8),
+            _ThrottleBadge(level: level, diagnostics: diagnostics),
+          ],
+          const Spacer(),
+          Text(
+            t(context, AppStrings.values.localTerminalStatusLabel),
+            style: AppTextStyles.captionSmall.copyWith(
+              color: AppColors.textTertiary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThrottleBadge extends StatelessWidget {
+  const _ThrottleBadge({required this.level, required this.diagnostics});
+  final ThrottleLevel level;
+  final Map<String, dynamic> diagnostics;
+
+  String _levelText(BuildContext context) {
+    return switch (level) {
+      ThrottleLevel.normal => t(context, AppStrings.values.throttleLevelNormal),
+      ThrottleLevel.moderate => t(context, AppStrings.values.throttleLevelModerate),
+      ThrottleLevel.high => t(context, AppStrings.values.throttleLevelHigh),
+      ThrottleLevel.critical => t(context, AppStrings.values.throttleLevelCritical),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ThrottleLevelStyles.getColor(level);
+    final icon = ThrottleLevelStyles.getIndicatorIcon(level);
+    final flushMs = diagnostics['flushIntervalMs'];
+    final bufferKB = diagnostics['bufferSizeKB'];
+    final msText = t(context, AppStrings.values.millisecondsAbbreviation);
+    final kbText = t(context, AppStrings.values.kilobytesAbbreviation);
+
+    return Tooltip(
+      message: '$flushMs$msText • $bufferKB$kbText',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 3),
+          Text(
+            _levelText(context),
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 
 

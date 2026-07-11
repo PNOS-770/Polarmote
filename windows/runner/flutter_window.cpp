@@ -9,7 +9,7 @@
 
 namespace {
 constexpr UINT kMsgKeyboardRecovery = WM_APP + 0x124;
-constexpr char kRecoveryChannelName[] = "asmote/runtime_recovery";
+constexpr char kRecoveryChannelName[] = "polarmote/runtime_recovery";
 
 class StderrMirrorBuffer : public std::streambuf {
  public:

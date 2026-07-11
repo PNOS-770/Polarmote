@@ -66,6 +66,9 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
   /// Flag to toggle os specific behaviors.
   final TerminalTargetPlatform platform;
 
+  /// SGR 鼠标滚轮编码方式。
+  final SgrWheelEncoding _sgrWheelEncoding;
+
   /// Characters that break selection when double clicking. If not set, the
   /// [Buffer.defaultWordSeparators] will be used.
   final Set<int>? wordSeparators;
@@ -83,7 +86,9 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
     this.onPrivateOSC,
     this.reflowEnabled = true,
     this.wordSeparators,
-  });
+    SgrWheelEncoding? sgrWheelEncoding,
+  }) : _sgrWheelEncoding =
+            sgrWheelEncoding ?? SgrWheelEncoding.windowsTerminal;
 
   late final _parser = EscapeParser(this);
 
@@ -135,7 +140,7 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   MouseReportMode _mouseReportMode = MouseReportMode.normal;
 
-  bool _cursorBlinkMode = false;
+  bool _cursorBlinkMode = true;
 
   bool _cursorVisibleMode = true;
 
@@ -201,6 +206,9 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   bool get bracketedPasteMode => _bracketedPasteMode;
+
+  @override
+  SgrWheelEncoding get sgrWheelEncoding => _sgrWheelEncoding;
 
   /// Current active buffer of the terminal. This is initially [mainBuffer] and
   /// can be switched back and forth from [altBuffer] to [mainBuffer] when
@@ -697,7 +705,9 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   void setMouseMode(MouseMode mode) {
+    print('[TERMINAL] setMouseMode: $_mouseMode -> $mode');
     _mouseMode = mode;
+    notifyListeners();
   }
 
   @override
@@ -712,12 +722,16 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   void useAltBuffer() {
+    print('[TERMINAL] useAltBuffer');
     _buffer = _altBuffer;
+    notifyListeners();
   }
 
   @override
   void useMainBuffer() {
+    print('[TERMINAL] useMainBuffer');
     _buffer = _mainBuffer;
+    notifyListeners();
   }
 
   @override
@@ -737,7 +751,9 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   void setMouseReportMode(MouseReportMode mode) {
+    print('[TERMINAL] setMouseReportMode: $_mouseReportMode -> $mode');
     _mouseReportMode = mode;
+    notifyListeners();
   }
 
   @override

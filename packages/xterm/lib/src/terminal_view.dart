@@ -68,6 +68,7 @@ class TerminalView extends StatefulWidget {
     this.hardwareKeyboardOnly = false,
     this.simulateScroll = true,
     this.mobileSelectionToolbarEnabled = false,
+    this.selectionToolbarBuilder,
   });
 
   /// The underlying terminal that this widget renders.
@@ -165,6 +166,10 @@ class TerminalView extends StatefulWidget {
   ///
   /// This is only effective on Android/iOS and ignored on desktop/web.
   final bool mobileSelectionToolbarEnabled;
+
+  /// Optional builder for custom selection toolbar button items.
+  /// If provided, this overrides the default copy/paste/select-all items.
+  final List<ContextMenuButtonItem> Function(BuildContext context, bool hasSelectionText)? selectionToolbarBuilder;
 
   @override
   State<TerminalView> createState() => TerminalViewState();
@@ -313,7 +318,6 @@ class TerminalViewState extends State<TerminalView> {
       terminal: widget.terminal,
       simulateScroll: widget.simulateScroll,
       getCellOffset: (offset) => renderTerminal.getCellOffset(offset),
-      getLineHeight: () => renderTerminal.lineHeight,
       child: child,
     );
 
@@ -794,6 +798,13 @@ class TerminalViewState extends State<TerminalView> {
       return const SizedBox.shrink();
     }
     final hasSelectionText = _selectedText().isNotEmpty;
+    final customItems = widget.selectionToolbarBuilder?.call(context, hasSelectionText);
+    if (customItems != null) {
+      return AdaptiveTextSelectionToolbar.buttonItems(
+        anchors: anchors,
+        buttonItems: customItems,
+      );
+    }
     return AdaptiveTextSelectionToolbar.buttonItems(
       anchors: anchors,
       buttonItems: [

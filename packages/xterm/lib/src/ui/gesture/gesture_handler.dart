@@ -173,7 +173,12 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
   }
 
   void onSecondaryTapDown(TapDownDetails details) {
-    _tapDown(widget.onSecondaryTapDown, details, TerminalMouseButton.right);
+    _tapDown(
+      widget.onSecondaryTapDown,
+      details,
+      TerminalMouseButton.right,
+      forceCallback: true,
+    );
   }
 
   void onSecondaryTapUp(TapUpDetails details) {
@@ -457,7 +462,7 @@ class _TerminalGestureHandlerState extends State<TerminalGestureHandler> {
     widget.terminalController.setSelection(
       terminal.buffer.createAnchorFromOffset(range.begin),
       terminal.buffer.createAnchorFromOffset(range.end),
-      mode: SelectionMode.line,
+      mode: widget.terminalController.selectionMode,
     );
   }
 }

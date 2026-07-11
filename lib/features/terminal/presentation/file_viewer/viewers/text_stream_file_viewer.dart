@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../../shared/constants/app_string.dart';
+import '../../../../../shared/design_system/design_system.dart';
 typedef TextSaveCallback = Future<bool> Function(String content);
 
 class TextStreamFileViewer extends StatefulWidget {
@@ -45,6 +47,9 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
   bool _thumbVisible = false;
 
   bool get _readOnly => widget.truncated || widget.onSave == null;
+
+  String get _localeCode =>
+      (Localizations.maybeLocaleOf(context)?.languageCode ?? 'en').toLowerCase();
 
   @override
   void initState() {
@@ -132,7 +137,7 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
     try {
       final file = File(widget.filePath);
       if (!await file.exists()) {
-        throw StateError('File not found');
+        throw StateError(AppStrings.values.fileNotFound.en);
       }
       final bytes = await file.readAsBytes();
       final text = utf8.decode(bytes, allowMalformed: true);
@@ -186,7 +191,7 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
       if (!ok) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Save failed')));
+        ).showSnackBar(SnackBar(content: Text(AppStrings.values.saveFailed.resolve(_localeCode))));
         setState(() {
           _saving = false;
         });
@@ -209,7 +214,7 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Save failed: $error')));
+      ).showSnackBar(SnackBar(content: Text(AppStrings.values.saveFailedVar.resolve(_localeCode, params: {'error': '$error'}))));
     }
   }
 
@@ -220,7 +225,7 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
     }
     if (_error != null) {
       return Center(
-        child: Text(_error!, style: const TextStyle(color: Color(0xFFC62828))),
+        child: Text(_error!, style: AppTextStyles.error),
       );
     }
     return Column(
@@ -231,13 +236,13 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
             margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFFFECB3)),
+              color: Color(0xFFFFF8E1),
+              borderRadius: AppRadius.radiusLG,
+              border: Border.all(color: Color(0xFFFFECB3)),
             ),
             child: Text(
-              'Preview is truncated. Editing is disabled. Showing first ${widget.maxPreviewBytes ~/ 1024}KB.',
-              style: const TextStyle(color: Color(0xFF8A6D3B), fontSize: 12),
+              AppStrings.values.previewTruncatedVar.resolve(_localeCode, params: {'size': '${widget.maxPreviewBytes ~/ 1024}'}),
+              style: AppTextStyles.caption.copyWith(color: AppColors.warningDark),
             ),
           ),
         Expanded(
@@ -260,26 +265,21 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
                 keyboardType: TextInputType.multiline,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 13,
-                  height: 1.35,
-                  fontFamily: 'Consolas',
-                ),
+                style: AppTextStyles.code.copyWith(fontSize: 13),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColors.background,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFD0D7DE)),
+                    borderRadius: AppRadius.radiusLG,
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFD0D7DE)),
+                    borderRadius: AppRadius.radiusLG,
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF111111)),
+                    borderRadius: AppRadius.radiusLG,
+                    borderSide: const BorderSide(color: AppColors.primary),
                   ),
                   contentPadding: const EdgeInsets.all(12),
                 ),
@@ -290,35 +290,23 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
         Container(
           height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: const BoxDecoration(
-            color: Color(0xFFF5F6F7),
-            border: Border(top: BorderSide(color: Color(0xFFD0D7DE))),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundGrey,
+            border: const Border(top: BorderSide(color: AppColors.border)),
           ),
           child: Row(
             children: [
               Text(
                 _readOnly
-                    ? 'Read-only'
-                    : (_dirty ? 'Modified' : (_saving ? 'Saving...' : 'Saved')),
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
+                    ? AppStrings.values.readOnly.resolve(_localeCode)
+                    : (_dirty ? AppStrings.values.modifiedLabel.resolve(_localeCode) : (_saving ? AppStrings.values.savingLabel.resolve(_localeCode) : AppStrings.values.savedLabel.resolve(_localeCode))),
+                style: AppTextStyles.caption,
               ),
               const Spacer(),
-              FilledButton(
+              SecondaryButton(
                 onPressed: _readOnly || !_dirty || _saving ? null : _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Save'),
+                label: AppStrings.values.saveLabel.resolve(_localeCode),
+                size: ButtonSize.small,
               ),
             ],
           ),
@@ -327,3 +315,6 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
     );
   }
 }
+
+
+

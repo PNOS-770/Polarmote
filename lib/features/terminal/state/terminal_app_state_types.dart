@@ -4,34 +4,40 @@ enum NavSection { sessions, sftp, transfers, scripts, settings }
 
 enum SessionSortMode { smart, name, recent }
 
-enum TerminalSplitLayout { horizontal, vertical, grid }
-
-enum TerminalSplitAxis { row, column }
 
 enum HomeLayoutMode { mobile, desktop }
+
+enum TerminalCursorShape { block, verticalBar, underline }
 
 class TerminalAppearanceProfile {
   const TerminalAppearanceProfile({
     this.fontFamily = 'monospace',
     this.fontSize = 14.0,
     this.lineHeight = 1.25,
+    this.cursorShape = TerminalCursorShape.block,
   });
 
   final String fontFamily;
   final double fontSize;
   final double lineHeight;
+  final TerminalCursorShape cursorShape;
 
   Map<String, dynamic> toJson() => {
     'fontFamily': fontFamily,
     'fontSize': fontSize,
     'lineHeight': lineHeight,
+    'cursorShape': cursorShape.name,
   };
 
   factory TerminalAppearanceProfile.fromJson(Map<String, dynamic> json) {
     return TerminalAppearanceProfile(
       fontFamily: json['fontFamily']?.toString() ?? 'monospace',
-      fontSize: _parseDouble(json['fontSize'], 14.0),
+      fontSize: _parseDouble(json['fontSize'], 13.0),
       lineHeight: _parseDouble(json['lineHeight'], 1.25),
+      cursorShape: TerminalCursorShape.values.firstWhere(
+        (e) => e.name == json['cursorShape']?.toString(),
+        orElse: () => TerminalCursorShape.block,
+      ),
     );
   }
 
@@ -74,32 +80,27 @@ class TerminalSplitPaneConfig {
   const TerminalSplitPaneConfig({
     required this.id,
     this.sessionId = '',
-    this.backgroundImageId = '',
   });
 
   final String id;
   final String sessionId;
-  final String backgroundImageId;
 
-  TerminalSplitPaneConfig copyWith({String? sessionId, String? backgroundImageId}) {
+  TerminalSplitPaneConfig copyWith({String? sessionId}) {
     return TerminalSplitPaneConfig(
       id: id,
       sessionId: sessionId ?? this.sessionId,
-      backgroundImageId: backgroundImageId ?? this.backgroundImageId,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'sessionId': sessionId,
-    'backgroundImageId': backgroundImageId,
   };
 
   factory TerminalSplitPaneConfig.fromJson(Map<String, dynamic> json) {
     return TerminalSplitPaneConfig(
       id: json['id']?.toString() ?? '',
       sessionId: json['sessionId']?.toString() ?? '',
-      backgroundImageId: json['backgroundImageId']?.toString() ?? '',
     );
   }
 }
@@ -129,163 +130,6 @@ class BackgroundImageEntry {
     );
   }
 }
-
-class TerminalSplitTreeNode {
-  const TerminalSplitTreeNode.leaf({required this.id, required this.paneId})
-    : axis = null,
-      ratio = 0.5,
-      first = null,
-      second = null;
-
-  const TerminalSplitTreeNode.split({
-    required this.id,
-    required this.axis,
-    required this.ratio,
-    required this.first,
-    required this.second,
-  }) : paneId = '';
-
-  final String id;
-  final String paneId;
-  final TerminalSplitAxis? axis;
-  final double ratio;
-  final TerminalSplitTreeNode? first;
-  final TerminalSplitTreeNode? second;
-
-  bool get isLeaf => first == null && second == null;
-
-  List<String> get paneIds {
-    if (isLeaf) return paneId.isEmpty ? const <String>[] : [paneId];
-    return [...?first?.paneIds, ...?second?.paneIds];
-  }
-
-  TerminalSplitTreeNode copyWith({
-    String? paneId,
-    TerminalSplitAxis? axis,
-    double? ratio,
-    TerminalSplitTreeNode? first,
-    TerminalSplitTreeNode? second,
-  }) {
-    if (isLeaf) {
-      return TerminalSplitTreeNode.leaf(id: id, paneId: paneId ?? this.paneId);
-    }
-    return TerminalSplitTreeNode.split(
-      id: id,
-      axis: axis ?? this.axis ?? TerminalSplitAxis.row,
-      ratio: ratio ?? this.ratio,
-      first: first ?? this.first!,
-      second: second ?? this.second!,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    if (isLeaf) {
-      return {'id': id, 'type': 'leaf', 'paneId': paneId};
-    }
-    return {
-      'id': id,
-      'type': 'split',
-      'axis': axis?.name ?? TerminalSplitAxis.row.name,
-      'ratio': ratio,
-      'first': first?.toJson(),
-      'second': second?.toJson(),
-    };
-  }
-
-  factory TerminalSplitTreeNode.fromJson(Map<String, dynamic> json) {
-    final type = json['type']?.toString();
-    final id = json['id']?.toString() ?? '';
-    if (type == 'leaf') {
-      return TerminalSplitTreeNode.leaf(
-        id: id,
-        paneId: json['paneId']?.toString() ?? '',
-      );
-    }
-    final axisName = json['axis']?.toString();
-    final axis = TerminalSplitAxis.values.firstWhere(
-      (item) => item.name == axisName,
-      orElse: () => TerminalSplitAxis.row,
-    );
-    TerminalSplitTreeNode? parseChild(dynamic value) {
-      if (value is Map<String, dynamic>) {
-        return TerminalSplitTreeNode.fromJson(value);
-      }
-      return null;
-    }
-
-    final first = parseChild(json['first']);
-    final second = parseChild(json['second']);
-    if (first == null || second == null) {
-      return TerminalSplitTreeNode.leaf(id: id, paneId: '');
-    }
-    final ratio = double.tryParse('${json['ratio'] ?? ''}') ?? 0.5;
-    return TerminalSplitTreeNode.split(
-      id: id,
-      axis: axis,
-      ratio: ratio.clamp(0.15, 0.85).toDouble(),
-      first: first,
-      second: second,
-    );
-  }
-}
-
-class TerminalSplitTemplate {
-  const TerminalSplitTemplate({
-    required this.id,
-    required this.name,
-    required this.layout,
-    required this.panes,
-    this.tree,
-    this.primaryRatio = 0.5,
-    this.secondaryRatio = 0.5,
-  });
-
-  final String id;
-  final String name;
-  final TerminalSplitLayout layout;
-  final List<TerminalSplitPaneConfig> panes;
-  final TerminalSplitTreeNode? tree;
-  final double primaryRatio;
-  final double secondaryRatio;
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'layout': layout.name,
-    'panes': panes.map((pane) => pane.toJson()).toList(),
-    'tree': tree?.toJson(),
-    'primaryRatio': primaryRatio,
-    'secondaryRatio': secondaryRatio,
-  };
-
-  factory TerminalSplitTemplate.fromJson(Map<String, dynamic> json) {
-    final layoutName = json['layout']?.toString();
-    final layout = TerminalSplitLayout.values.firstWhere(
-      (item) => item.name == layoutName,
-      orElse: () => TerminalSplitLayout.horizontal,
-    );
-    final panes = (json['panes'] as List? ?? const <dynamic>[])
-        .whereType<Map<String, dynamic>>()
-        .map(TerminalSplitPaneConfig.fromJson)
-        .where((pane) => pane.id.trim().isNotEmpty)
-        .toList(growable: false);
-    final primary = double.tryParse('${json['primaryRatio'] ?? ''}') ?? 0.5;
-    final secondary = double.tryParse('${json['secondaryRatio'] ?? ''}') ?? 0.5;
-    final treeJson = json['tree'];
-    return TerminalSplitTemplate(
-      id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
-      layout: layout,
-      panes: panes,
-      tree: treeJson is Map<String, dynamic>
-          ? TerminalSplitTreeNode.fromJson(treeJson)
-          : null,
-      primaryRatio: primary.clamp(0.2, 0.8).toDouble(),
-      secondaryRatio: secondary.clamp(0.2, 0.8).toDouble(),
-    );
-  }
-}
-
 class ViewerCacheCleanupResult {
   const ViewerCacheCleanupResult({
     required this.dirs,
@@ -350,8 +194,9 @@ class PortableStateSnapshot {
         label: json['label']?.toString() ?? '',
         path: json['path']?.toString() ?? '',
         description: json['description']?.toString(),
-      );
+    );
 }
+
 
 class VisitedFileEntry {
   const VisitedFileEntry({
@@ -420,24 +265,12 @@ class VisitedFileEntry {
   }
 }
 
-enum TerminalLogCategory {
-  startup,
-  session,
-  transfer,
-  externalEdit,
-  system,
-  ui,
-  script,
-}
 
-enum TerminalLogLevel { info, warn, error, begin, end }
-
-enum LogVerbosity { all, important, errorsOnly }
-
-class _PendingLogLine {
-  const _PendingLogLine({required this.line, required this.timestamp});
-  final String line;
-  final DateTime timestamp;
+enum MemoryMode { 
+  low,      // 2000 lines - ~0.4MB per terminal
+  medium,   // 5000 lines - ~1MB per terminal
+  high,     // 10000 lines - ~2MB per terminal
+  custom,   // User-defined
 }
 
 class HostKeyVerificationPrompt {
@@ -547,7 +380,7 @@ class ShortcutPreset {
 
   static List<ShortcutPreset> builtinPresets() {
     return [
-      const ShortcutPreset(id: 'default', name: 'Asmote Default', bindings: _defaultBindings),
+      const ShortcutPreset(id: 'default', name: 'Polarmote Default', bindings: _defaultBindings),
       ShortcutPreset(
         id: 'vscode',
         name: 'VS Code Style',
@@ -574,8 +407,19 @@ class ShortcutPreset {
     ShortcutBinding(id: 'blockSelect', name: 'Toggle block selection', defaultKeys: 'Alt+B'),
     ShortcutBinding(id: 'splitMaximize', name: 'Maximize / Restore pane', defaultKeys: 'Ctrl+Alt+Enter'),
     ShortcutBinding(id: 'splitBroadcast', name: 'Toggle input broadcast', defaultKeys: 'Ctrl+Alt+B'),
-    ShortcutBinding(id: 'splitPrev', name: 'Switch to previous pane', defaultKeys: 'Ctrl+Alt+Left / Ctrl+Alt+Up'),
-    ShortcutBinding(id: 'splitNext', name: 'Switch to next pane', defaultKeys: 'Ctrl+Alt+Right / Ctrl+Alt+Down'),
+    ShortcutBinding(id: 'newSession', name: 'New session', defaultKeys: 'Ctrl+N'),
+    ShortcutBinding(id: 'quickConnect', name: 'Quick connect', defaultKeys: 'Ctrl+K'),
+    ShortcutBinding(id: 'closeSession', name: 'Close current workspace', defaultKeys: 'Ctrl+W'),
+    ShortcutBinding(id: 'closeAllSessions', name: 'Close all sessions', defaultKeys: 'Ctrl+Shift+W'),
+    ShortcutBinding(id: 'newScript', name: 'New script', defaultKeys: 'Ctrl+Shift+N'),
+    ShortcutBinding(id: 'runScript', name: 'Run script', defaultKeys: 'Ctrl+Shift+R'),
+    ShortcutBinding(id: 'scriptList', name: 'Script list', defaultKeys: 'Ctrl+Shift+L'),
+    ShortcutBinding(id: 'scriptMonitor', name: 'Script monitor', defaultKeys: 'Ctrl+Shift+M'),
+    ShortcutBinding(id: 'sftpBrowser', name: 'SFTP browser', defaultKeys: 'Ctrl+Shift+F'),
+    ShortcutBinding(id: 'transferManager', name: 'Transfer manager', defaultKeys: 'Ctrl+Shift+T'),
+    ShortcutBinding(id: 'portForwarding', name: 'Port forwarding', defaultKeys: 'Ctrl+Shift+P'),
+    ShortcutBinding(id: 'lanScan', name: 'LAN scan', defaultKeys: 'Ctrl+Shift+A'),
+    ShortcutBinding(id: 'openSettings', name: 'Settings', defaultKeys: 'Ctrl+,')
   ];
 
   static List<ShortcutBinding> _vscodeBindings() {
@@ -598,8 +442,6 @@ class ShortcutPreset {
         'search' => b.copyWith(customKeys: 'Cmd+F'),
         'splitMaximize' => b.copyWith(customKeys: 'Cmd+Enter'),
         'splitBroadcast' => b.copyWith(customKeys: 'Cmd+Shift+I'),
-        'splitPrev' => b.copyWith(customKeys: 'Cmd+['),
-        'splitNext' => b.copyWith(customKeys: 'Cmd+]'),
         _ => b,
       };
     }).toList();
@@ -616,3 +458,84 @@ class _ShortcutOwner {
   final String name;
   final String type;
 }
+
+class TerminalStage {
+  const TerminalStage({
+    required this.id,
+    required this.name,
+    required this.sessionIds,
+    this.createdAt,
+    this.backgroundImageId = '',
+    this.connectedHostIds = const [],
+    this.fileTreeHeight = 220,
+  });
+
+  final String id;
+  final String name;
+  final List<String> sessionIds;
+  final DateTime? createdAt;
+  final String backgroundImageId;
+  final List<String> connectedHostIds;
+  final double fileTreeHeight;
+
+  TerminalStage copyWith({
+    String? id,
+    String? name,
+    List<String>? sessionIds,
+    String? backgroundImageId,
+    List<String>? connectedHostIds,
+    double? fileTreeHeight,
+  }) {
+    return TerminalStage(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      sessionIds: sessionIds ?? this.sessionIds,
+      createdAt: createdAt,
+      backgroundImageId: backgroundImageId ?? this.backgroundImageId,
+      connectedHostIds: connectedHostIds ?? this.connectedHostIds,
+      fileTreeHeight: fileTreeHeight ?? this.fileTreeHeight,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'sessionIds': sessionIds,
+    'createdAt': createdAt?.toIso8601String(),
+    'backgroundImageId': backgroundImageId,
+    'connectedHostIds': connectedHostIds,
+    'fileTreeHeight': fileTreeHeight,
+  };
+
+  factory TerminalStage.fromJson(Map<String, dynamic> json) {
+    final createdStr = json['createdAt']?.toString() ?? '';
+    final rawIds = json['sessionIds'];
+    List<String> ids;
+    if (rawIds is List) {
+      ids = rawIds.whereType<String>().toList(growable: false);
+    } else {
+      ids = const <String>[];
+    }
+    // 向后兼容：读取旧的 sessionId 字段
+    if (ids.isEmpty) {
+      final legacyId = json['sessionId']?.toString() ?? '';
+      if (legacyId.isNotEmpty) ids = [legacyId];
+    }
+    final rawHostIds = json['connectedHostIds'];
+    final hostIds = rawHostIds is List
+        ? rawHostIds.whereType<String>().toList(growable: false)
+        : const <String>[];
+    return TerminalStage(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      sessionIds: ids,
+      createdAt: createdStr.trim().isNotEmpty
+          ? DateTime.tryParse(createdStr)
+          : null,
+      backgroundImageId: json['backgroundImageId']?.toString() ?? '',
+      connectedHostIds: hostIds,
+      fileTreeHeight: (json['fileTreeHeight'] as num?)?.toDouble() ?? 220,
+    );
+  }
+}
+

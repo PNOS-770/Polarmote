@@ -18,8 +18,6 @@ import '../../presentation/common/terminal_localization.dart';
 import '../diagnostics/path_error_diagnostics.dart';
 import '../terminal_app_state.dart';
 import '../terminal_app_state_models.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
-
 part 'terminal_app_state_viewer_cache.dart';
 
 extension TerminalAppStateExternalEdit on TerminalAppState {
@@ -569,17 +567,17 @@ extension TerminalAppStateExternalEdit on TerminalAppState {
       if (sftp != null) {
         try {
           sftp.close();
-        } catch (e) { PolarmoteLog.error('terminal_app_state_external_edit', '$e'); }
+        } catch (_) {}
       }
       if (client != null) {
         try {
           client.close();
-        } catch (e) { PolarmoteLog.error('terminal_app_state_external_edit', '$e'); }
+        } catch (_) {}
       }
       for (final aux in auxiliaryClients.reversed) {
         try {
           aux.close();
-        } catch (e) { PolarmoteLog.error('terminal_app_state_external_edit', '$e'); }
+        } catch (_) {}
       }
     }
   }

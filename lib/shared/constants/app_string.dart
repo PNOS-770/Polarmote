@@ -342,9 +342,7 @@ class _AppStringValues {
   final logLevelBegin = const AppText(en: 'BEGIN', zh: '开始');
   final logLevelEnd = const AppText(en: 'END', zh: '结束');
   final logErrorVar = const AppText(en: 'Error: {message}', zh: '错误：{message}');
-  final logVerbosityAll = const AppText(en: 'All logs', zh: '全部');
-  final logVerbosityImportant = const AppText(en: 'Important only', zh: '重要');
-  final logVerbosityErrorsOnly = const AppText(en: 'Errors only', zh: '仅错误');
+  final operations = const AppText(en: 'Operation History', zh: '操作记录');
   final logKeyboardRecoveryTriggered = const AppText(
     en: 'Keyboard recovery triggered',
     zh: '已触发键盘恢复',
@@ -1728,20 +1726,20 @@ class _AppStringValues {
   final shortcutPreset = const AppText(en: 'Shortcut preset', zh: '快捷键预设');
   final shortcutSplitMaximize = const AppText(en: 'Maximize / Restore pane', zh: '最大化 / 还原窗格');
   final shortcutSplitBroadcast = const AppText(en: 'Toggle input broadcast', zh: '切换输入广播');
-  final shortcutSplitPrev = const AppText(en: 'Switch to previous pane', zh: '切换到上一个窗格');
-  final shortcutSplitNext = const AppText(en: 'Switch to next pane', zh: '切换到下一个窗格');
   final shortcutNewSession = const AppText(en: 'New session', zh: '新建会话');
   final shortcutQuickConnect = const AppText(en: 'Quick connect', zh: '快速连接');
   final shortcutCloseSession = const AppText(en: 'Close current workspace', zh: '关闭当前工作区');
   final shortcutCloseAllSessions = const AppText(en: 'Close all sessions', zh: '关闭所有会话');
+  final shortcutPreviousStage = const AppText(en: 'Previous stage', zh: '上一个工作区');
+  final shortcutNextStage = const AppText(en: 'Next stage', zh: '下一个工作区');
   final shortcutNewScript = const AppText(en: 'New script', zh: '新建脚本');
   final shortcutRunScript = const AppText(en: 'Run script', zh: '运行脚本');
   final shortcutScriptList = const AppText(en: 'Script list', zh: '脚本列表');
   final shortcutScriptMonitor = const AppText(en: 'Script monitor', zh: '脚本监控');
-  final shortcutSftpBrowser = const AppText(en: 'SFTP browser', zh: 'SFTP 浏览器');
   final shortcutTransferManager = const AppText(en: 'Transfer manager', zh: '传输管理器');
   final shortcutPortForwarding = const AppText(en: 'Port forwarding', zh: '端口转发');
   final shortcutLanScan = const AppText(en: 'LAN scan', zh: '局域网扫描');
+  final shortcutLogViewer = const AppText(en: 'Log viewer', zh: '日志查看器');
   final shortcutOpenSettings = const AppText(en: 'Settings', zh: '设置');
   final shortcutConflictTitle = const AppText(en: 'Shortcut conflict', zh: '快捷键冲突');
   final shortcutConflictMessage = const AppText(
@@ -2036,6 +2034,9 @@ class _AppStringValues {
     zh: '回滚缓冲区保留的行数',
   );
   final terminalBufferSizeLines = const AppText(en: '{count} lines', zh: '{count} 行');
+  final stageCardSize = const AppText(en: 'Stage Card Size', zh: 'Stage 卡片大小');
+  final stageCardWidth = const AppText(en: 'Card width', zh: '卡片宽度');
+  final stageCardAspect = const AppText(en: 'Aspect ratio', zh: '宽高比');
   
   final smartMemoryManagement = const AppText(en: 'Smart Memory Management', zh: '智能内存管理');
   final smartMemoryManagementDesc = const AppText(
@@ -2086,8 +2087,6 @@ class _AppStringValues {
   final commandBarCloseCurrentWorkspace = const AppText(en: 'Close Current Workspace Session', zh: '关闭当前工作区会话');
   final commandBarScriptList = const AppText(en: 'Script List', zh: '脚本列表');
   final commandBarScriptMonitor = const AppText(en: 'Script Monitor', zh: '脚本监控');
-  final commandBarLogViewer = const AppText(en: 'Log Viewer', zh: '日志查看器');
-
   final ungrouped = const AppText(en: 'Ungrouped', zh: '未分组');
 
   final collapseSidebar = const AppText(en: 'Collapse sidebar', zh: '折叠侧边栏');
@@ -2199,8 +2198,8 @@ class _AppStringValues {
   final clickToConnect = const AppText(en: 'Click to connect', zh: '点击连接');
   final noStageDescription = const AppText(en: 'No stages yet. A new stage will be created automatically when you connect.', zh: '暂无 Stage，新建连接后将自动创建');
   final addStage = const AppText(en: 'Add Stage', zh: '新建 Stage');
-  final previousStage = const AppText(en: 'Previous stage', zh: '上一个 Stage');
-  final nextStage = const AppText(en: 'Next stage', zh: '下一个 Stage');
+  final previousStage = const AppText(en: 'Previous stage', zh: '上一个工作区');
+  final nextStage = const AppText(en: 'Next stage', zh: '下一个工作区');
 }
 
 class AppStrings {

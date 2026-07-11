@@ -36,7 +36,7 @@ extension TerminalAppStateOps on TerminalAppState {
         } else {
           await _secureStorage.write(key: key, value: jsonEncode(stored.toJson()));
         }
-      } catch (e) { PolarmoteLog.error('ops', '$e'); }
+      } catch (_) {}
     }
   }
 
@@ -67,7 +67,7 @@ extension TerminalAppStateOps on TerminalAppState {
       await file.writeAsString(TerminalAppState._stateJsonEncoder.convert(data));
       portableStateSnapshots.add(PortableStateSnapshot(id: id, createdAt: timestamp, label: 'Snapshot ${portableStateSnapshots.length + 1}', path: file.path));
       notifyState();
-    } catch (e) { PolarmoteLog.error('ops', '$e'); }
+    } catch (_) {}
   }
 
   Future<List<PortableStateSnapshot>> refreshPortableStateSnapshots() async {
@@ -103,7 +103,7 @@ extension TerminalAppStateOps on TerminalAppState {
   Future<void> deletePortableStateSnapshot(String snapshotId) async {
     for (final snap in portableStateSnapshots.toList()) {
       if (snap.id == snapshotId) {
-        if (snap.path.isNotEmpty) { try { await File(snap.path).delete(); } catch (e) { PolarmoteLog.error('ops', '$e'); } }
+        if (snap.path.isNotEmpty) { try { await File(snap.path).delete(); } catch (_) {} }
         portableStateSnapshots.remove(snap);
         notifyState();
         return;
@@ -121,7 +121,7 @@ extension TerminalAppStateOps on TerminalAppState {
   }
 
   Future<void> _savePortableSnapshotMeta(PortableStateSnapshot snap) async {
-    try { await File('${snap.path}.meta.json').writeAsString(TerminalAppState._stateJsonEncoder.convert(snap.toJson())); } catch (e) { PolarmoteLog.error('ops', '$e'); }
+    try { await File('${snap.path}.meta.json').writeAsString(TerminalAppState._stateJsonEncoder.convert(snap.toJson())); } catch (_) {}
   }
 
   Future<void> _loadPortableSnapshotMetas() async {
@@ -133,7 +133,7 @@ extension TerminalAppStateOps on TerminalAppState {
           snap.label = data['label']?.toString() ?? snap.label;
           snap.description = data['description']?.toString();
         }
-      } catch (e) { PolarmoteLog.error('ops', '$e'); }
+      } catch (_) {}
     }
   }
 
@@ -293,10 +293,10 @@ extension TerminalAppStateOps on TerminalAppState {
     final target = FlutterSecureStoragePlatform.instance;
     if (legacyData.isNotEmpty) {
       for (final entry in legacyData.entries) {
-        try { await target.write(key: entry.key, value: entry.value, options: options); } catch (e) { PolarmoteLog.error('ops', '$e'); }
+        try { await target.write(key: entry.key, value: entry.value, options: options); } catch (_) {}
       }
     }
-    try { await current.deleteAll(options: options); } catch (e) { PolarmoteLog.error('ops', '$e'); }
+    try { await current.deleteAll(options: options); } catch (_) {}
   }
 
   Future<bool> verifyHostFingerprint({required HostEntry host, required String keyType, required String fingerprint}) async {
@@ -410,12 +410,12 @@ extension TerminalAppStateOps on TerminalAppState {
       final key = _secureHostSecretKey(host.id);
       if (!hasSecret) { await _secureStorage.delete(key: key, wOptions: Platform.isWindows ? const WindowsOptions(useBackwardCompatibility: false) : null); return; }
       await _secureStorage.write(key: key, value: jsonEncode(secret.toJson()), wOptions: Platform.isWindows ? const WindowsOptions(useBackwardCompatibility: false) : null);
-    } catch (e) { PolarmoteLog.error('ops', '$e'); }
+    } catch (_) {}
   }
 
   Future<void> _deleteHostSecret(String hostId) async {
     await _ensureSecureStorageReady();
-    try { await _secureStorage.delete(key: _secureHostSecretKey(hostId), wOptions: Platform.isWindows ? const WindowsOptions(useBackwardCompatibility: false) : null); } catch (e) { PolarmoteLog.error('ops', '$e'); }
+    try { await _secureStorage.delete(key: _secureHostSecretKey(hostId), wOptions: Platform.isWindows ? const WindowsOptions(useBackwardCompatibility: false) : null); } catch (_) {}
   }
 
 

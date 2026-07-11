@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dartssh2/dartssh2.dart';
-import '../shared/logging/Polarmote_log.dart';
 
 import '../features/terminal/models/host_entry.dart';
 import '../features/terminal/models/terminal_tab.dart';
@@ -155,7 +154,7 @@ class ServerMonitorService {
       } finally {
         client.close();
       }
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
   }
 
   Future<void> _collectForLocalHost(HostEntry host) async {
@@ -199,7 +198,7 @@ class ServerMonitorService {
       );
 
       _addSnapshot(host.id, snapshot);
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
   }
 
   Future<String?> _readLocalProcStat() async {
@@ -230,7 +229,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null && value > 0) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     try {
       final result = await Process.run(
@@ -243,7 +242,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null && value > 0) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     try {
       final result = await Process.run('wmic', ['cpu', 'get', 'loadpercentage']);
@@ -252,7 +251,7 @@ class ServerMonitorService {
         final value = int.tryParse(trimmed);
         if (value != null && value > 0) return value.toDouble();
       }
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     return 0;
   }
@@ -270,7 +269,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     try {
       final result = await Process.run(
@@ -288,7 +287,7 @@ class ServerMonitorService {
           return ((total - free) / total * 100);
         }
       }
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     return 0;
   }
@@ -305,7 +304,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     try {
       final result = await Process.run(
@@ -322,7 +321,7 @@ class ServerMonitorService {
           return ((size - free) / size * 100);
         }
       }
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
 
     return 0;
   }
@@ -338,7 +337,7 @@ class ServerMonitorService {
         final sys = double.tryParse(match.group(2) ?? '0') ?? 0;
         return user + sys;
       }
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -350,7 +349,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     try {
       final result = await Process.run(
         'sh',
@@ -358,7 +357,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -396,7 +395,7 @@ class ServerMonitorService {
         final value = double.tryParse(result.stdout.toString().trim());
         if (value != null) return value;
       }
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -408,7 +407,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -425,7 +424,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     try {
       final result = await Process.run(
         'sh',
@@ -433,7 +432,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -446,7 +445,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     try {
       final result = await Process.run(
         'sh',
@@ -454,7 +453,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -466,7 +465,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     try {
       final result = await Process.run(
         'sh',
@@ -474,7 +473,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -486,7 +485,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 
@@ -499,7 +498,7 @@ class ServerMonitorService {
       );
       final value = double.tryParse(result.stdout.toString().trim());
       if (value != null) return value;
-    } catch (e) { PolarmoteLog.error('server_monitor_service', '$e'); }
+    } catch (_) {}
     return 0;
   }
 

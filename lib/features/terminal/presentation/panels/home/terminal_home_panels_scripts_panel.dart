@@ -948,9 +948,23 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
       for (final folder in appState.scriptFolders) folder.id: folder,
     };
     final keyword = _scriptKeyword.trim().toLowerCase();
+
+    // Build a canonical-id map: folders with same name under the same parent
+    // are merged into the first folder of that name.
+    final canonicalId = <String, String>{};
+    final nameSeen = <String, Set<String>>{};
+    for (final folder in appState.scriptFolders) {
+      final key = '${folder.parentId.trim()}\n${folder.name}';
+      (nameSeen[key] ??= {}).add(folder.id);
+    }
+    for (final folder in appState.scriptFolders) {
+      final group = nameSeen['${folder.parentId.trim()}\n${folder.name}'] ?? {folder.id};
+      canonicalId[folder.id] = group.first;
+    }
+
     final scriptsByFolder = <String, List<ScriptEntry>>{};
     for (final script in sortedScripts) {
-      final folderId = script.folderId.trim();
+      final folderId = canonicalId[script.folderId.trim()] ?? script.folderId.trim();
       (scriptsByFolder[folderId] ??= <ScriptEntry>[]).add(script);
     }
     for (final list in scriptsByFolder.values) {
@@ -958,7 +972,9 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
     }
     final foldersByParent = <String, List<ScriptFolderEntry>>{};
     for (final folder in appState.scriptFolders) {
-      final parentId = folder.parentId.trim();
+      final cid = canonicalId[folder.id] ?? folder.id;
+      if (cid != folder.id) continue; // skip duplicate-named folders
+      final parentId = canonicalId[folder.parentId.trim()] ?? folder.parentId.trim();
       (foldersByParent[parentId] ??= <ScriptFolderEntry>[]).add(folder);
     }
     for (final list in foldersByParent.values) {

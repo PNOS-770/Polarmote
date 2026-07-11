@@ -80,11 +80,6 @@ extension TerminalAppStateMemoryMonitor on TerminalAppState {
         message: 'Smart memory management: Reduced buffer size to conserve memory',
         level: TerminalLogLevel.warn,
       );
-      
-      PolarmoteLog.info(
-        'memory_monitor',
-        'Automatically reduced memory mode to $newMode (estimated usage: ${(estimatedMemoryPerTerminal * sessions.length).toStringAsFixed(1)} MB)',
-      );
     }
   }
   
@@ -100,11 +95,6 @@ extension TerminalAppStateMemoryMonitor on TerminalAppState {
       category: TerminalLogCategory.startup,
       message: 'Smart memory management: Restored original buffer size',
       level: TerminalLogLevel.info,
-    );
-    
-    PolarmoteLog.info(
-      'memory_monitor',
-      'Restored memory mode to $memoryMode',
     );
   }
   

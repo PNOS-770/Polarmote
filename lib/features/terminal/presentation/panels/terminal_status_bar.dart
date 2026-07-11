@@ -142,6 +142,19 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Row(
         children: [
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text(
+                session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10, color: TerminalUiPalette.statusBarLabel, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+          Container(width: 1, height: 12, color: TerminalUiPalette.statusBarBorder),
+          const SizedBox(width: 6),
           if (appState.broadcastEnabled)
             Padding(
               padding: const EdgeInsets.only(right: 6),

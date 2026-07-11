@@ -171,10 +171,8 @@ class FileTreeHeader extends StatefulWidget {
     required this.onCreateFolder,
     required this.onToggleShowHidden,
     required this.onSearchChanged,
-    required this.onUploadFromSystem,
     required this.onPathSubmitted,
     required this.onGoHome,
-    required this.onDownload,
   });
 
   final TerminalSession session;
@@ -189,10 +187,8 @@ class FileTreeHeader extends StatefulWidget {
   final VoidCallback onCreateFolder;
   final VoidCallback onToggleShowHidden;
   final ValueChanged<String> onSearchChanged;
-  final VoidCallback onUploadFromSystem;
   final ValueChanged<String> onPathSubmitted;
   final VoidCallback onGoHome;
-  final VoidCallback onDownload;
 
   @override
   State<FileTreeHeader> createState() => FileTreeHeaderState();
@@ -329,18 +325,6 @@ class FileTreeHeaderState extends State<FileTreeHeader> {
                 AppStrings.values.showHiddenFiles,
               ),
               active: widget.showHiddenFiles,
-            ),
-            const SizedBox(width: 2),
-            toolbarIconButton(
-              onPressed: widget.onUploadFromSystem,
-              icon: Icons.upload_outlined,
-              semanticsLabel: l(appState, AppStrings.values.uploads),
-            ),
-            const SizedBox(width: 2),
-            toolbarIconButton(
-              onPressed: widget.onDownload,
-              icon: Icons.download_outlined,
-              semanticsLabel: l(appState, AppStrings.values.downloads),
             ),
             const SizedBox(width: 2),
             toolbarIconButton(
@@ -1006,7 +990,7 @@ class _FileDropTargetState extends State<_FileDropTarget> {
           final uri = Uri.parse(line);
           parsed.add(uri.toFilePath(windows: Platform.isWindows));
           continue;
-        } catch (e) { PolarmoteLog.error('terminal_file_tree_sections', '$e'); }
+        } catch (_) {}
       }
       parsed.add(line);
     }

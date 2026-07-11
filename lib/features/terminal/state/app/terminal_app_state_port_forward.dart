@@ -10,8 +10,6 @@ import '../../../../shared/constants/app_string.dart';
 import '../../models/host_entry.dart';
 import '../../models/port_forward_entry.dart';
 import '../terminal_app_state.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
-
 part 'terminal_app_state_port_forward_types.dart';
 part 'terminal_app_state_port_forward_templates.dart';
 
@@ -576,7 +574,7 @@ extension TerminalAppStatePortForward on TerminalAppState {
       _touchRuntimeActivity(runtime);
       try {
         await remote?.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward', '$e'); }
+      } catch (_) {}
     }
   }
 
@@ -624,7 +622,7 @@ extension TerminalAppStatePortForward on TerminalAppState {
       _touchRuntimeActivity(runtime);
       try {
         await incoming.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward', '$e'); }
+      } catch (_) {}
     }
   }
 
@@ -703,7 +701,7 @@ extension TerminalAppStatePortForward on TerminalAppState {
       _touchRuntimeActivity(runtime);
       try {
         await remote?.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward', '$e'); }
+      } catch (_) {}
       await reader.cancel();
       localSocket.destroy();
     }

@@ -15,7 +15,7 @@ void showMobileMoreMenu(BuildContext context, TerminalAppState appState) {
     return keys.isEmpty ? null : keys;
   }
   for (final id in [
-    'newSession', 'quickConnect', 'closeSession', 'closeAllSessions',
+    'newSession', 'quickConnect', 'closeAllSessions',
     'newScript', 'scriptList', 'scriptMonitor',
     'sftpBrowser', 'transferManager',
     'portForwarding', 'lanScan', 'openSettings',
@@ -30,8 +30,6 @@ void showMobileMoreMenu(BuildContext context, TerminalAppState appState) {
           l(appState, AppStrings.values.commandBarNewSession)),
       MenuItem('quick_connect', Icons.flash_on,
           l(appState, AppStrings.values.commandBarQuickConnect)),
-      MenuItem('close_workspace', Icons.close,
-          l(appState, AppStrings.values.commandBarCloseCurrentWorkspace)),
       MenuItem('close_all', Icons.highlight_off,
           l(appState, AppStrings.values.commandBarCloseAllSessions)),
     ]),

@@ -25,43 +25,27 @@ extension TerminalAppStateOps2 on TerminalAppState {
   }
 
   void addStructuredLog({required TerminalLogCategory category, required String message, TerminalLogLevel level = TerminalLogLevel.info, bool notifyListeners = true}) {
-    if (_shouldSuppressLog(category, message, level)) return;
     final cl = _logCategoryLabel(category); final m = message.trim(); final lp = _logLevelPrefix(level);
     final p = m.isNotEmpty && m.startsWith(cl); final core = m.isEmpty ? cl : (p ? m : '$cl $m');
     final line = lp.isEmpty ? core : (m.isEmpty ? '$cl $lp' : (p ? '$cl $lp${m.substring(cl.length).trimLeft()}' : '$cl $lp$m'));
     addLog(line, notifyListeners: notifyListeners);
   }
 
-  bool _shouldSuppressLog(TerminalLogCategory category, String message, TerminalLogLevel level) { return false; }
-
   List<String> get todayLogs => logController.todayLogs;
 
-  Future<void> openLogFolder() => logController.openLogFolder();
+  Future<void> openStateFolder() async { try { final f = await ensureStateFile(); await f.parent.create(recursive: true); await OpenFilex.open(f.parent.path); } catch (_) {} }
 
-  Future<void> openStateFolder() async { try { final f = await ensureStateFile(); await f.parent.create(recursive: true); await OpenFilex.open(f.parent.path); } catch (e) { PolarmoteLog.error('ops2', '$e'); } }
-
-  Future<void> _initLogs() => logController.initialize();
-
-  DateTime? _parseLogTimestamp(String line) {
-    if (!line.startsWith('[')) return null;
-    final end = line.indexOf(']'); if (end <= 1) return null;
-    final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$').firstMatch(line.substring(1, end));
-    if (m != null) return DateTime(int.parse(m.group(1)!), int.parse(m.group(2)!), int.parse(m.group(3)!), int.parse(m.group(4)!), int.parse(m.group(5)!));
-    return DateTime.tryParse(line.substring(1, end));
-  }
-
-  String _formatLogTimestamp(DateTime v) => '${v.year.toString().padLeft(4, '0')}-${v.month.toString().padLeft(2, '0')}-${v.day.toString().padLeft(2, '0')} ${v.hour.toString().padLeft(2, '0')}:${v.minute.toString().padLeft(2, '0')}';
-  String _compactLogMessage(String raw, {int max = 280}) { var n = raw.trim(); if (n.isEmpty) return ''; final s = n.indexOf('\n#0'); if (s > 0) n = n.substring(0, s).trim(); n = n.replaceAll('\r\n', ' | ').replaceAll('\n', ' | ').replaceAll('\r', ' | ').replaceAll(RegExp(r'\s+'), ' ').trim(); return n.length <= max ? n : '${n.substring(0, max)}...'; }
+  Future<void> _initLogs() async {} // LogController no longer needs async init
 
   // === Persistence ===
   void scheduleStateSave() { if (suspendStateSave) return; stateSaveTimer?.cancel(); stateSaveTimer = Timer(const Duration(milliseconds: 100), () => unawaited(_persistState())); }
 
   Future<void> _persistState() async {
-    try { final f = await ensureStateFile(); final d = buildPortableState(includeSecrets: false); d.remove('commandHistoryByHost'); await f.writeAsString('${TerminalAppState._stateJsonEncoder.convert(d)}\n'); await _persistLargeData(); } catch (e) { PolarmoteLog.error('ops2', '$e'); }
+    try { final f = await ensureStateFile(); final d = buildPortableState(includeSecrets: false); d.remove('commandHistoryByHost'); await f.writeAsString('${TerminalAppState._stateJsonEncoder.convert(d)}\n'); await _persistLargeData(); } catch (_) {}
   }
 
   Future<void> _persistLargeData() async {
-    try { final b = await getApplicationSupportDirectory(); await File(p.join(b.path, 'Polarmote_large_data.json')).writeAsString('${TerminalAppState._stateJsonEncoder.convert({'commandHistoryByHost': commandHistoryByHost.map((k, v) => MapEntry(k, List<String>.from(v)))})}\n'); } catch (e) { PolarmoteLog.error('ops2', '$e'); }
+    try { final b = await getApplicationSupportDirectory(); await File(p.join(b.path, 'Polarmote_large_data.json')).writeAsString('${TerminalAppState._stateJsonEncoder.convert({'commandHistoryByHost': commandHistoryByHost.map((k, v) => MapEntry(k, List<String>.from(v)))})}\n'); } catch (_) {}
   }
 
   Future<void> _loadLargeData() async {
@@ -72,13 +56,13 @@ extension TerminalAppStateOps2 on TerminalAppState {
       if (d is! Map<String, dynamic>) return;
       final h = d['commandHistoryByHost'];
       if (h is Map) { commandHistoryByHost.clear(); for (final e in h.entries) { final k = e.key?.toString().trim() ?? ''; if (k.isEmpty || e.value is! List) continue; final items = (e.value as List).map((x) => x?.toString().trim() ?? '').where((x) => x.isNotEmpty).toList(); if (items.isNotEmpty) commandHistoryByHost[k] = items; } }
-    } catch (e) { PolarmoteLog.error('ops2', '$e'); }
+    } catch (_) {}
   }
 
   Map<String, dynamic>? settingsOrNull(Map<String, dynamic> data) { final s = data['settings']; if (s is Map<String, dynamic>) return s; if (s is Map) { final m = <String, dynamic>{}; s.forEach((k, v) => m['$k'] = v); return m; } return null; }
 
   Future<void> _loadState() async {
-    try { final f = await ensureStateFile(); if (!await f.exists()) return; final raw = await f.readAsString(); if (raw.trim().isEmpty) return; final d = jsonDecode(raw); if (d is Map<String, dynamic>) await _loadStateFromData(d); } catch (e) { PolarmoteLog.error('ops2', '$e'); }
+    try { final f = await ensureStateFile(); if (!await f.exists()) return; final raw = await f.readAsString(); if (raw.trim().isEmpty) return; final d = jsonDecode(raw); if (d is Map<String, dynamic>) await _loadStateFromData(d); } catch (_) {}
   }
 
   Future<void> _loadStateFromData(Map<String, dynamic> data) async {
@@ -114,7 +98,7 @@ extension TerminalAppStateOps2 on TerminalAppState {
     transferRetryMaxAttempts = int.tryParse(settings['transferRetryMaxAttempts']?.toString() ?? '')?.clamp(1, 20) ?? 3;
     transferRetryBaseDelayMs = int.tryParse(settings['transferRetryBaseDelayMs']?.toString() ?? '')?.clamp(100, 60000) ?? 800;
     transferRetryMaxDelayMs = int.tryParse(settings['transferRetryMaxDelayMs']?.toString() ?? '')?.clamp(1000, 120000) ?? 10000;
-    logVerbosity = switch (settings['logVerbosity'] as int? ?? 1) { 0 => LogVerbosity.all, 2 => LogVerbosity.errorsOnly, _ => LogVerbosity.important };
+
     memoryMode = switch (settings['memoryMode'] as int? ?? 1) { 0 => MemoryMode.low, 1 => MemoryMode.medium, 2 => MemoryMode.high, 3 => MemoryMode.custom, _ => MemoryMode.medium };
     smartMemoryManagement = settings['smartMemoryManagement'] as bool? ?? true;
     stageManagerEnabled = true;
@@ -170,6 +154,8 @@ extension TerminalAppStateOps2 on TerminalAppState {
         settings['performanceSettings'] as Map<String, dynamic>,
       );
     }
+    stageCardMinWidth = int.tryParse(settings['stageCardMinWidth']?.toString() ?? '')?.clamp(160, 600) ?? 280;
+    stageCardAspectRatio = (_parseDouble(settings['stageCardAspectRatio']) ?? 1.45).clamp(0.8, 3.0).toDouble();
     androidKeepSshAliveInBackground = settings['androidKeepSshAliveInBackground'] as bool? ?? Platform.isAndroid;
     sessionQuery = settings['sessionQuery']?.toString() ?? '';
     sessionSortMode = SessionSortMode.values.firstWhere(
@@ -187,11 +173,37 @@ extension TerminalAppStateOps2 on TerminalAppState {
       }
     }
     if (settings['shortcutBindings'] is List) {
+      final defaults = {
+        for (final d in TerminalAppState.defaultShortcutBindings()) d.id: d,
+      };
       final loaded = <ShortcutBinding>[];
       for (final e in settings['shortcutBindings'] as List) {
-        if (e is Map<String, dynamic>) {
-          loaded.add(ShortcutBinding.fromJson(e));
+        if (e is! Map<String, dynamic>) continue;
+        final sb = ShortcutBinding.fromJson(e);
+        if (sb.id == 'sftpBrowser') continue;
+        if (sb.id == 'splitPrev') {
+          final def = defaults['previousStage']!;
+          loaded.add(ShortcutBinding(
+            id: def.id, name: def.name, defaultKeys: def.defaultKeys,
+            customKeys: sb.customKeys,
+          ));
+          continue;
         }
+        if (sb.id == 'splitNext') {
+          final def = defaults['nextStage']!;
+          loaded.add(ShortcutBinding(
+            id: def.id, name: def.name, defaultKeys: def.defaultKeys,
+            customKeys: sb.customKeys,
+          ));
+          continue;
+        }
+        final def = defaults[sb.id];
+        loaded.add(def != null
+            ? ShortcutBinding(
+                id: def.id, name: def.name, defaultKeys: def.defaultKeys,
+                customKeys: sb.customKeys,
+              )
+            : sb);
       }
       if (loaded.isNotEmpty) {
         shortcutBindings.clear();
@@ -221,13 +233,14 @@ extension TerminalAppStateOps2 on TerminalAppState {
       'sessionQuery': sessionQuery, 'sessionSortMode': sessionSortMode.name, 'settingsTabIndex': settingsTabIndex,
       'globalAppearance': globalAppearance.toJson(), 'terminalBackgroundImages': terminalBackgroundImages.map((e) => e.toJson()).toList(),
       'terminalBackgroundOpacity': terminalBackgroundOpacity, 'showThumbnailBackground': showThumbnailBackground, 'reuseSessionForNewPane': reuseSessionForNewPane,
-      'terminalBlockSelectEnabled': terminalBlockSelectEnabled, 'logVerbosity': logVerbosity.index,
+      'terminalBlockSelectEnabled': terminalBlockSelectEnabled,
       'memoryMode': memoryMode.index, 'customTerminalBufferSize': customTerminalBufferSize,
       'smartMemoryManagement': smartMemoryManagement, 'customKeyBindings': customKeyBindings.map((k) => k.toJson()).toList(),
       'shortcutBindings': shortcutBindings.map((s) => s.toJson()).toList(),
       'activeTerminalStageId': activeTerminalStageId, 'terminalStages': terminalStages.map((s) => s.toJson()).toList(),
     },
-    'hosts': hosts.map((h) => h.toJson(includeSecrets: includeSecrets)).toList(),
+      'stageCardMinWidth': stageCardMinWidth, 'stageCardAspectRatio': stageCardAspectRatio,
+      'hosts': hosts.map((h) => h.toJson(includeSecrets: includeSecrets)).toList(),
     'scripts': scripts.map((s) => s.toJson()).toList(), 'scriptFolders': scriptFolders.map((s) => s.toJson()).toList(),
     'scriptWorkflows': scriptWorkflows.map((s) => s.toJson()).toList(), 'scriptBatchTemplates': scriptBatchTemplates.map((s) => s.toJson()).toList(),
     'scriptTriggers': scriptTriggers.map((s) => s.toJson()).toList(), 'portForwards': portForwards.map((p) => p.toJson()).toList(),
@@ -253,15 +266,15 @@ extension TerminalAppStateOps2 on TerminalAppState {
   }
 
   Future<void> _restoreLocaleForStartupLogs() async {
-    try { final f = await ensureStateFile(); if (!await f.exists()) return; final d = jsonDecode(await f.readAsString()); if (d is Map<String, dynamic> && d['settings'] is Map<String, dynamic>) { final lc = (d['settings'] as Map<String, dynamic>)['locale']?.toString(); if (lc != null && lc.trim().isNotEmpty) locale = Locale(lc.trim()); } } catch (e) { PolarmoteLog.error('ops2', '$e'); }
+    try { final f = await ensureStateFile(); if (!await f.exists()) return; final d = jsonDecode(await f.readAsString()); if (d is Map<String, dynamic> && d['settings'] is Map<String, dynamic>) { final lc = (d['settings'] as Map<String, dynamic>)['locale']?.toString(); if (lc != null && lc.trim().isNotEmpty) locale = Locale(lc.trim()); } } catch (_) {}
   }
 
   Future<void> _runStartupSection(AppText section, Future<void> Function() action) async {
     final sw = Stopwatch()..start();
-    try { await action(); } catch (error) { sw.stop(); try { _addStartupStructuredLog(section, _l(AppStrings.values.startupSectionErrorDurationVarVar, params: {'error': '$error', 'elapsedMs': '${sw.elapsedMilliseconds}'}), level: TerminalLogLevel.error); } catch (e) { PolarmoteLog.error('ops2', '$e'); } }
+    try { await action(); } catch (error) { sw.stop(); try { _addStartupStructuredLog(section, _l(AppStrings.values.startupSectionErrorDurationVarVar, params: {'error': '$error', 'elapsedMs': '${sw.elapsedMilliseconds}'}), level: TerminalLogLevel.error); } catch (_) {} }
   }
 
-  void _addStartupStructuredLog(AppText section, String msg, {TerminalLogLevel level = TerminalLogLevel.info}) { try { addStructuredLog(category: TerminalLogCategory.startup, message: msg, level: level, notifyListeners: false); } catch (e) { PolarmoteLog.error('ops2', '$e'); } }
+  void _addStartupStructuredLog(AppText section, String msg, {TerminalLogLevel level = TerminalLogLevel.info}) { try { addStructuredLog(category: TerminalLogCategory.startup, message: msg, level: level, notifyListeners: false); } catch (_) {} }
 
   Future<void> _logStartupVersionInfo() async {
     if (TerminalAppState._explicitAppVersion.trim().isNotEmpty) return;

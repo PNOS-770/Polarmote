@@ -487,13 +487,8 @@ class _NativeBindings {
           DynamicLibrary.process(),
           loadedFrom: '<process>',
         );
-        bindings.logLoaded();
         return bindings;
       } catch (error) {
-        PolarmoteLog.warn(
-          'native_transfer',
-          'failed to initialize from <process>: $error',
-        );
         return null;
       }
     }
@@ -509,14 +504,9 @@ class _NativeBindings {
         final library = DynamicLibrary.open(candidate);
         try {
           final bindings = _NativeBindings._(library, loadedFrom: candidate);
-          bindings.logLoaded();
           return bindings;
         } catch (error) {
           lastError = error;
-          PolarmoteLog.warn(
-            'native_transfer',
-            'loaded "$candidate" but initialization failed: $error',
-          );
         }
       } catch (error) {
         lastError = error;
@@ -524,7 +514,7 @@ class _NativeBindings {
     }
 
     if (lastError != null) {
-      PolarmoteLog.warn('native_transfer', 'failed to load native core: $lastError');
+      
     }
     return null;
   }
@@ -696,20 +686,6 @@ class _NativeBindings {
       return null;
     }
     return normalized;
-  }
-
-  void logLoaded() {
-    final sourceMeta = _sourceMeta();
-    final buildMeta = buildInfo;
-    final apiMeta = supportsRuntimeApi ? 'api=runtime_v2' : 'api=legacy_v1';
-    if (buildMeta == null) {
-      PolarmoteLog.info('native_transfer', 'loaded ($sourceMeta, $apiMeta)');
-      return;
-    }
-    PolarmoteLog.info(
-      'native_transfer',
-      'loaded ($sourceMeta, $apiMeta) build=$buildMeta',
-    );
   }
 
   String _sourceMeta() {

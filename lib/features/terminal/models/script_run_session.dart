@@ -1,8 +1,6 @@
 import 'dart:io';
 
 import 'package:dartssh2/dartssh2.dart';
-import '../../../shared/logging/Polarmote_log.dart';
-
 enum ScriptTargetRunStatus { pending, running, success, failed, cancelled }
 
 class _CancellableProcess {
@@ -15,7 +13,7 @@ class _CancellableProcess {
     process?.kill(ProcessSignal.sigterm);
     try {
       sshSession?.close();
-    } catch (e) { PolarmoteLog.error('script_run_session', '$e'); }
+    } catch (_) {}
   }
 }
 
@@ -66,8 +64,8 @@ class ScriptRunSession {
 
   void registerProcess(Process? process, SSHSession? sshSession) {
     if (_cancelling) {
-      try { process?.kill(ProcessSignal.sigterm); } catch (e) { PolarmoteLog.error('script_run_session', '$e'); }
-      try { sshSession?.close(); } catch (e) { PolarmoteLog.error('script_run_session', '$e'); }
+      try { process?.kill(ProcessSignal.sigterm); } catch (_) {}
+      try { sshSession?.close(); } catch (_) {}
       return;
     }
     _activeProcesses.add(_CancellableProcess(process, sshSession));

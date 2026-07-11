@@ -193,9 +193,9 @@ extension TerminalAppStateViewerCache on TerminalAppState {
       }
       statPairs.sort((a, b) => b.$2.compareTo(a.$2));
       for (final entry in statPairs.skip(80)) {
-        try { await entry.$1.delete(); } catch (e) { PolarmoteLog.error('terminal_app_state_viewer_cache', '$e'); }
+        try { await entry.$1.delete(); } catch (_) {}
       }
-    } catch (e) { PolarmoteLog.error('terminal_app_state_viewer_cache', '$e'); }
+    } catch (_) {}
   }
 }
 

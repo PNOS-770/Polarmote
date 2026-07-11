@@ -21,7 +21,6 @@ class TerminalSettingsPanel extends StatefulWidget {
 class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsTabMixin {
   final List<TextEditingController> _pendingDisposals = [];
   final ScrollController _scrollController = ScrollController();
-  String _logQuery = '';
   int _selectedCategoryIndex = 0;
   String? _scrollToBindingId;
 
@@ -461,328 +460,6 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
     );
   }
 
-  Widget _buildPerformanceTab(TerminalAppState appState) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 内存模式标题
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Text(
-            t(context, AppStrings.values.memoryMode),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        
-        // 内存模式选择
-        _buildMemoryModeOption(
-          appState,
-          MemoryMode.low,
-          t(context, AppStrings.values.memoryModeLow),
-          t(context, AppStrings.values.memoryModeLowDesc),
-        ),
-        _buildMemoryModeOption(
-          appState,
-          MemoryMode.medium,
-          t(context, AppStrings.values.memoryModeMedium),
-          t(context, AppStrings.values.memoryModeMediumDesc),
-        ),
-        _buildMemoryModeOption(
-          appState,
-          MemoryMode.high,
-          t(context, AppStrings.values.memoryModeHigh),
-          t(context, AppStrings.values.memoryModeHighDesc),
-        ),
-        _buildMemoryModeOption(
-          appState,
-          MemoryMode.custom,
-          t(context, AppStrings.values.memoryModeCustom),
-          t(context, AppStrings.values.memoryModeCustomDesc),
-        ),
-        
-        // 自定义缓冲区大小滑块（仅在自定义模式时显示）
-        if (appState.memoryMode == MemoryMode.custom) ...[
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t(context, AppStrings.values.terminalBufferSize),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Slider(
-                        value: appState.customTerminalBufferSize.toDouble(),
-                        min: 1000,
-                        max: 50000,
-                        divisions: 49,
-                        label: '${appState.customTerminalBufferSize}',
-                        onChanged: (value) {
-                          appState.customTerminalBufferSize = value.toInt();
-                          appState.notifyState();
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        '${appState.customTerminalBufferSize} ${t(context, AppStrings.values.terminalBufferSizeLines).replaceAll('{count}', '').trim()}',
-                        style: const TextStyle(fontSize: 12),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-        
-        const SizedBox(height: 20),
-        const Divider(height: 1),
-        const SizedBox(height: 20),
-        
-        // 智能内存管理开关
-        _SettingSwitchRow(
-          title: t(context, AppStrings.values.smartMemoryManagement),
-          value: appState.smartMemoryManagement,
-          onChanged: (value) {
-            appState.smartMemoryManagement = value;
-            if (value) {
-              appState.startMemoryMonitoring();
-            } else {
-              appState.stopMemoryMonitoring();
-            }
-            appState.notifyState();
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 4),
-          child: Text(
-            t(context, AppStrings.values.smartMemoryManagementDesc),
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 20),
-        const Divider(height: 1),
-        const SizedBox(height: 20),
-        
-        // 内存占用预览
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                t(context, AppStrings.values.estimatedMemoryUsage),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundGrey,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.memory, size: 16, color: AppColors.textPrimary),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${t(context, AppStrings.values.terminalBufferSize)}: ${appState.terminalBufferSize} ${t(context, AppStrings.values.terminalBufferSizeLines).replaceAll('{count}', '').trim()}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '~${appState.estimatedMemoryPerTerminal.toStringAsFixed(1)} MB ${t(context, AppStrings.values.perTerminal)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (appState.sessions.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${appState.sessions.length} terminals: ${(appState.estimatedMemoryPerTerminal * appState.sessions.length).toStringAsFixed(1)} MB',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 20),
-        const Divider(height: 1),
-        const SizedBox(height: 20),
-        
-        // 自适应限流状态
-        _buildAdaptiveThrottleStatus(appState),
-      ],
-    );
-  }
-  
-  Widget _buildAdaptiveThrottleStatus(TerminalAppState appState) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                t(context, AppStrings.values.adaptiveThrottle),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              // 启用/禁用开关
-              Switch(
-                value: appState.performanceSettings.adaptiveThrottleEnabled,
-                onChanged: (value) {
-                  appState.performanceSettings = appState.performanceSettings.copyWith(
-                    adaptiveThrottleEnabled: value,
-                  );
-                  for (final s in appState.sessions) {
-                    s.setAdaptiveThrottleEnabled(value);
-                  }
-                  appState.notifyState();
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            t(context, AppStrings.values.adaptiveThrottleDescription),
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          
-          // 显示所有会话的限流状态
-          if (appState.sessions.isNotEmpty && appState.performanceSettings.adaptiveThrottleEnabled) ...[
-            const SizedBox(height: 16),
-            ...appState.sessions.map((session) {
-              final diagnostics = session.getAdaptiveThrottleDiagnostics();
-              final levelName = diagnostics['currentLevel'] as String;
-              final level = ThrottleLevel.values.byName(levelName);
-              final color = ThrottleLevelStyles.getColor(level);
-              final bgColor = ThrottleLevelStyles.getBackgroundColor(level);
-              final icon = ThrottleLevelStyles.getIndicatorIcon(level);
-              final flushMs = diagnostics['flushIntervalMs'];
-              final bufferKB = diagnostics['bufferSizeKB'];
-              
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: color.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(icon, size: 20, color: color),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            session.profile.name,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_getThrottleLevelText(level)} • $flushMs${t(context, AppStrings.values.millisecondsAbbreviation)} • $bufferKB${t(context, AppStrings.values.kilobytesAbbreviation)}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: color,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (level != ThrottleLevel.normal)
-                      IconButton(
-                        icon: Icon(Icons.refresh, size: 18, color: color),
-                        tooltip: t(context, AppStrings.values.performanceResetThrottle),
-                        onPressed: () {
-                          session.resetAdaptiveThrottle();
-                          appState.notifyState();
-                        },
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ],
-          
-          if (appState.sessions.isEmpty && appState.performanceSettings.adaptiveThrottleEnabled) ...[
-            const SizedBox(height: 12),
-            Text(
-              'No active sessions',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-  
-  String _getThrottleLevelText(ThrottleLevel level) {
-    return switch (level) {
-      ThrottleLevel.normal => t(context, AppStrings.values.throttleLevelNormal),
-      ThrottleLevel.moderate => t(context, AppStrings.values.throttleLevelModerate),
-      ThrottleLevel.high => t(context, AppStrings.values.throttleLevelHigh),
-      ThrottleLevel.critical => t(context, AppStrings.values.throttleLevelCritical),
-    };
-  }
-  
   Widget _buildMemoryModeOption(
     TerminalAppState appState,
     MemoryMode mode,
@@ -839,59 +516,6 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildLogsTab(TerminalAppState appState) {
-    final query = _logQuery.trim().toLowerCase();
-    final source = List<String>.from(appState.logController.logs.reversed, growable: false);
-    final filtered = query.isEmpty
-        ? source
-        : source
-              .where((line) => line.toLowerCase().contains(query))
-              .toList(growable: false);
-    final spans = <TextSpan>[];
-    for (var i = 0; i < filtered.length; i++) {
-      final line = filtered[i];
-      spans.add(
-        AppTextStyles.highlightSpan(
-          text: line,
-          query: _logQuery,
-          baseStyle: const TextStyle(fontSize: 12),
-        ),
-      );
-      if (i != filtered.length - 1) {
-        spans.add(const TextSpan(text: '\n'));
-      }
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 4),
-        AppSearchBar(
-          hint: t(context, AppStrings.values.logSearchHint),
-          onChanged: (value) => setState(() => _logQuery = value),
-        ),
-        const SizedBox(height: 8),
-        if (filtered.isEmpty)
-          Text(
-            t(context, AppStrings.values.noLogs),
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-          )
-        else
-          Container(
-            constraints: const BoxConstraints(minHeight: 200, maxHeight: 500),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(8),
-              color: AppColors.cardBackground,
-            ),
-            padding: const EdgeInsets.all(12),
-            child: SingleChildScrollView(
-              child: SelectableText.rich(TextSpan(children: spans)),
-            ),
-          ),
-      ],
     );
   }
 
@@ -1305,6 +929,151 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
             }
           },
         ),
+        const SizedBox(height: 16),
+        _SectionTitle(label: t(context, AppStrings.values.memoryMode)),
+        const SizedBox(height: 4),
+        _buildMemoryModeOption(
+          appState,
+          MemoryMode.low,
+          t(context, AppStrings.values.memoryModeLow),
+          t(context, AppStrings.values.memoryModeLowDesc),
+        ),
+        _buildMemoryModeOption(
+          appState,
+          MemoryMode.medium,
+          t(context, AppStrings.values.memoryModeMedium),
+          t(context, AppStrings.values.memoryModeMediumDesc),
+        ),
+        _buildMemoryModeOption(
+          appState,
+          MemoryMode.high,
+          t(context, AppStrings.values.memoryModeHigh),
+          t(context, AppStrings.values.memoryModeHighDesc),
+        ),
+        _buildMemoryModeOption(
+          appState,
+          MemoryMode.custom,
+          t(context, AppStrings.values.memoryModeCustom),
+          t(context, AppStrings.values.memoryModeCustomDesc),
+        ),
+        if (appState.memoryMode == MemoryMode.custom) ...[
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t(context, AppStrings.values.terminalBufferSize),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: appState.customTerminalBufferSize.toDouble(),
+                        min: 1000,
+                        max: 50000,
+                        divisions: 49,
+                        label: '${appState.customTerminalBufferSize}',
+                        onChanged: (value) {
+                          appState.customTerminalBufferSize = value.toInt();
+                          appState.notifyState();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 80,
+                      child: Text(
+                        '${appState.customTerminalBufferSize} ${t(context, AppStrings.values.terminalBufferSizeLines).replaceAll('{count}', '').trim()}',
+                        style: const TextStyle(fontSize: 12),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        _SectionTitle(label: t(context, AppStrings.values.stageCardSize)),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: appState.stageCardMinWidth.toDouble(),
+                      min: 160,
+                      max: 600,
+                      divisions: 44,
+                      label: '${appState.stageCardMinWidth}',
+                      onChanged: (v) {
+                        appState.stageCardMinWidth = v.round();
+                        appState.scheduleStateSave();
+                        appState.notifyState();
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      '${appState.stageCardMinWidth}px',
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                t(context, AppStrings.values.stageCardWidth),
+                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: appState.stageCardAspectRatio,
+                      min: 0.8,
+                      max: 3.0,
+                      divisions: 44,
+                      label: appState.stageCardAspectRatio.toStringAsFixed(2),
+                      onChanged: (v) {
+                        appState.stageCardAspectRatio =
+                            double.parse(v.toStringAsFixed(2));
+                        appState.scheduleStateSave();
+                        appState.notifyState();
+                      },
+                    ),
+                  ),
+                  SizedBox(
+                    width: 60,
+                    child: Text(
+                      appState.stageCardAspectRatio.toStringAsFixed(2),
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                t(context, AppStrings.values.stageCardAspect),
+                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 12),
       ],
     );
@@ -1562,16 +1331,6 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
         builder: () => _buildTerminalTab(widget.appState),
       ),
       _CategoryInfo(
-        title: t(context, AppStrings.values.performanceSettings),
-        icon: Icons.speed,
-        builder: () => _buildPerformanceTab(widget.appState),
-      ),
-      _CategoryInfo(
-        title: t(context, AppStrings.values.logs),
-        icon: Icons.list_alt,
-        builder: () => _buildLogsTab(widget.appState),
-      ),
-      _CategoryInfo(
         title: t(context, AppStrings.values.settingsConfigBackup),
         icon: Icons.backup,
         builder: () => _buildBackupTab(widget.appState),
@@ -1583,6 +1342,7 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
       ),
     ];
   }
+
 }
 
 class _ImportDropZone extends StatefulWidget {

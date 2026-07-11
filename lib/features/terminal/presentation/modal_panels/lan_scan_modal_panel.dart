@@ -9,8 +9,6 @@ import '../../models/host_entry.dart';
 import '../../state/terminal_app_state.dart';
 import '../common/terminal_localization.dart';
 import 'modal_panel_base.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
-
 class LanScanResult {
   final String ip;
   final String? mac;
@@ -84,7 +82,7 @@ class _LanScanPanelState extends State<LanScanPanel> {
             final addr = await InternetAddress(ip).reverse();
             hostname = addr.host;
             if (hostname == ip) hostname = null;
-          } catch (e) { PolarmoteLog.error('lan_scan_modal_panel', '$e'); }
+          } catch (_) {}
           results.add(LanScanResult(ip: ip, hostname: hostname));
         }
 
@@ -113,7 +111,7 @@ class _LanScanPanelState extends State<LanScanPanel> {
           }
         }
       }
-    } catch (e) { PolarmoteLog.error('lan_scan_modal_panel', '$e'); }
+    } catch (_) {}
     return ips;
   }
 
@@ -131,7 +129,7 @@ class _LanScanPanelState extends State<LanScanPanel> {
           }
         }
       }
-    } catch (e) { PolarmoteLog.error('lan_scan_modal_panel', '$e'); }
+    } catch (_) {}
     return null;
   }
 
@@ -164,7 +162,7 @@ class _LanScanPanelState extends State<LanScanPanel> {
         if (mounted) {
           setState(() => result.connectable = true);
         }
-      } catch (e) { PolarmoteLog.error('lan_scan_modal_panel', '$e'); }
+      } catch (_) {}
     }
   }
 

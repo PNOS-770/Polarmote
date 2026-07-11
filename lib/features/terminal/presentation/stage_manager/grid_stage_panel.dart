@@ -34,14 +34,15 @@ class GridStagePanel extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final cardWidth = appState.stageCardMinWidth;
         final crossAxisCount =
-            (constraints.maxWidth / 240).floor().clamp(1, 5);
+            (constraints.maxWidth / cardWidth).floor().clamp(1, 5);
 
         return GridView.builder(
           padding: const EdgeInsets.all(AppSpacing.lg),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 1.6,
+            childAspectRatio: appState.stageCardAspectRatio,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.md,
           ),

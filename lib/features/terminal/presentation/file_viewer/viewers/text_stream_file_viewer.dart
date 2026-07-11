@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../../shared/constants/app_string.dart';
 import '../../../../../shared/design_system/design_system.dart';
-import '../../../../../shared/logging/Polarmote_log.dart';
-
 typedef TextSaveCallback = Future<bool> Function(String content);
 
 class TextStreamFileViewer extends StatefulWidget {
@@ -202,7 +200,7 @@ class _TextStreamFileViewerState extends State<TextStreamFileViewer> {
       _baseline = content;
       try {
         await File(widget.filePath).writeAsString(content, flush: true);
-      } catch (e) { PolarmoteLog.error('text_stream_file_viewer', '$e'); }
+      } catch (_) {}
       setState(() {
         _saving = false;
         _dirty = false;

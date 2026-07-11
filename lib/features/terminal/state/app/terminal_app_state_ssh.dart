@@ -8,8 +8,6 @@ import 'package:dartssh2/dartssh2.dart';
 import '../../models/host_entry.dart';
 import '../ssh/ssh_openssh_compat.dart';
 import '../terminal_app_state.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
-
 class _SshSocketRoute {
   const _SshSocketRoute({required this.socket, required this.auxiliaryClients});
 
@@ -277,7 +275,7 @@ extension TerminalAppStateSsh on TerminalAppState {
           hopClient = await _buildClientOnSocket(socket, hopEntry);
         }
       } catch (error) {
-        for (final c in allAux.reversed) { try { c.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_ssh', '$e'); } }
+        for (final c in allAux.reversed) { try { c.close(); } catch (_) {} }
         rethrow;
       }
       allAux.add(hopClient);
@@ -291,7 +289,7 @@ extension TerminalAppStateSsh on TerminalAppState {
         );
         return _SshSocketRoute(socket: finalSocket, auxiliaryClients: allAux);
       } catch (error) {
-        for (final c in allAux.reversed) { try { c.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_ssh', '$e'); } }
+        for (final c in allAux.reversed) { try { c.close(); } catch (_) {} }
         rethrow;
       }
     }
@@ -491,7 +489,7 @@ extension TerminalAppStateSsh on TerminalAppState {
     } catch (_) {
       try {
         await bufferedSocket.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_ssh', '$e'); }
+      } catch (_) {}
       rethrow;
     }
   }

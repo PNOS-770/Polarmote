@@ -7,8 +7,6 @@ import '../../../models/host_entry.dart';
 import '../transport_factory.dart';
 import '../transport_provider.dart';
 import 'native_transfer_bridge.dart';
-import '../../../../../shared/logging/Polarmote_log.dart';
-
 class NativeTransport implements TransportProvider {
   NativeTransport({
     required HostEntry profile,
@@ -148,7 +146,7 @@ class NativeTransport implements TransportProvider {
       unawaited(() async {
         try {
           await tempDir.delete(recursive: true);
-        } catch (e) { PolarmoteLog.error('native_transport', '$e'); }
+        } catch (e) {  }
       }());
     }
   }

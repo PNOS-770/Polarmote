@@ -13,8 +13,6 @@ mixin _ShortcutsTabMixin on State<TerminalSettingsPanel> {
     'blockSelect': 'selection',
     'splitMaximize': 'panes',
     'splitBroadcast': 'panes',
-    'splitPrev': 'panes',
-    'splitNext': 'panes',
     'newSession': 'sessions',
     'quickConnect': 'sessions',
     'closeSession': 'sessions',
@@ -23,11 +21,13 @@ mixin _ShortcutsTabMixin on State<TerminalSettingsPanel> {
     'runScript': 'scripts',
     'scriptList': 'scripts',
     'scriptMonitor': 'scripts',
-    'sftpBrowser': 'files',
     'transferManager': 'files',
     'portForwarding': 'tools',
     'lanScan': 'tools',
+    'logViewer': 'tools',
     'openSettings': 'settings',
+    'previousStage': 'sessions',
+    'nextStage': 'sessions',
   };
 
   String _shortcutGroupLabel(String key) {
@@ -292,8 +292,6 @@ mixin _ShortcutsTabMixin on State<TerminalSettingsPanel> {
       'blockSelect' => t(context, AppStrings.values.shortcutBlockSelect),
       'splitMaximize' => t(context, AppStrings.values.shortcutSplitMaximize),
       'splitBroadcast' => t(context, AppStrings.values.shortcutSplitBroadcast),
-      'splitPrev' => t(context, AppStrings.values.shortcutSplitPrev),
-      'splitNext' => t(context, AppStrings.values.shortcutSplitNext),
       'newSession' => t(context, AppStrings.values.shortcutNewSession),
       'quickConnect' => t(context, AppStrings.values.shortcutQuickConnect),
       'closeSession' => t(context, AppStrings.values.shortcutCloseSession),
@@ -302,11 +300,13 @@ mixin _ShortcutsTabMixin on State<TerminalSettingsPanel> {
       'runScript' => t(context, AppStrings.values.shortcutRunScript),
       'scriptList' => t(context, AppStrings.values.shortcutScriptList),
       'scriptMonitor' => t(context, AppStrings.values.shortcutScriptMonitor),
-      'sftpBrowser' => t(context, AppStrings.values.shortcutSftpBrowser),
       'transferManager' => t(context, AppStrings.values.shortcutTransferManager),
       'portForwarding' => t(context, AppStrings.values.shortcutPortForwarding),
       'lanScan' => t(context, AppStrings.values.shortcutLanScan),
+      'logViewer' => t(context, AppStrings.values.shortcutLogViewer),
       'openSettings' => t(context, AppStrings.values.shortcutOpenSettings),
+      'previousStage' => t(context, AppStrings.values.shortcutPreviousStage),
+      'nextStage' => t(context, AppStrings.values.shortcutNextStage),
       _ => sb.name,
     };
   }

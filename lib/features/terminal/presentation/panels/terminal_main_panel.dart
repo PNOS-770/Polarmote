@@ -27,7 +27,6 @@ import '../session_tree/session_tree_panel.dart';
 import '../file_tree/terminal_file_tree.dart';
 import '../mobile/mobile_terminal_layout.dart';
 import '../dialogs/terminal_dialogs.dart';
-import '../modal_panels/file_tree_modal_panel.dart';
 import '../modal_panels/transfer_modal_panel.dart';
 import '../modal_panels/port_forward_modal_panel.dart';
 import '../modal_panels/lan_scan_modal_panel.dart';
@@ -211,12 +210,6 @@ String _emptyPaneTreeKey(TerminalAppState state) {
   return parts.join('\u001f');
 }
 
-class _SplitPaneSlot {
-  const _SplitPaneSlot({required this.pane, required this.session});
-  final TerminalSplitPaneConfig pane;
-  final TerminalSession? session;
-}
-
 enum _TerminalMenuAction { copy, paste, selectAll, openUrl, toggleBlockSelect, selectBackground }
 
 class _TerminalArea extends StatefulWidget {
@@ -289,6 +282,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
   String _focusedStageId = '';
   bool _showFileTreePanel = true;
   double _fileTreeHeight = 220;
+  final ScrollController _stageTabScrollController = ScrollController();
 
   int _searchCurrentIndex = 0;
   List<_SearchMatch> _searchMatches = [];
@@ -313,10 +307,16 @@ class _TerminalAreaState extends State<_TerminalArea> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_globalKeyHandler);
+    widget.appState.addListener(_onAppStateChanged);
+  }
+
+  void _onAppStateChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    widget.appState.removeListener(_onAppStateChanged);
     HardwareKeyboard.instance.removeHandler(_globalKeyHandler);
     for (final node in _focusNodes.values) {
       node.dispose();
@@ -330,6 +330,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
       controller.dispose();
     }
     _terminalScrollControllers.clear();
+    _stageTabScrollController.dispose();
     super.dispose();
   }
 
@@ -729,6 +730,17 @@ class _TerminalAreaState extends State<_TerminalArea> {
       return KeyEventResult.handled;
     }
 
+    final customPrevStage = _checkCustomShortcut(appState, event, 'previousStage');
+    if (customPrevStage != null) {
+      _switchToStage(appState, -1);
+      return KeyEventResult.handled;
+    }
+    final customNextStage = _checkCustomShortcut(appState, event, 'nextStage');
+    if (customNextStage != null) {
+      _switchToStage(appState, 1);
+      return KeyEventResult.handled;
+    }
+
     final customSearch = _checkCustomShortcut(appState, event, 'search');
     if (customSearch != null) {
       final paneId = appState.activeTerminalSplitPaneId;
@@ -776,11 +788,8 @@ class _TerminalAreaState extends State<_TerminalArea> {
     }
 
     if (!_splitEnabled) {
-      final customSplitAction = _checkCustomShortcut(appState, event, 'splitMaximize') ??
-          _checkCustomShortcut(appState, event, 'splitPrev') ??
-          _checkCustomShortcut(appState, event, 'splitNext');
+      final customSplitAction = _checkCustomShortcut(appState, event, 'splitMaximize');
       if (customSplitAction != null) return KeyEventResult.ignored;
-      // Continue checking non-split shortcuts below
     } else {
       final customMaximize = _checkCustomShortcut(appState, event, 'splitMaximize');
       if (customMaximize != null) {
@@ -789,14 +798,6 @@ class _TerminalAreaState extends State<_TerminalArea> {
           appState.toggleMaximizedTerminalSplitPane(paneId);
           return KeyEventResult.handled;
         }
-      }
-      final customPrev = _checkCustomShortcut(appState, event, 'splitPrev');
-      if (customPrev != null) {
-        return _navigateSplitPane(appState, -1);
-      }
-      final customNext = _checkCustomShortcut(appState, event, 'splitNext');
-      if (customNext != null) {
-        return _navigateSplitPane(appState, 1);
       }
     }
 
@@ -823,11 +824,6 @@ class _TerminalAreaState extends State<_TerminalArea> {
       showScriptsPanelDialog(context, appState);
       return KeyEventResult.handled;
     }
-    final customSftp = _checkCustomShortcut(appState, event, 'sftpBrowser');
-    if (customSftp != null) {
-      FileTreeModalPanel.show(context);
-      return KeyEventResult.handled;
-    }
     final customTransfer = _checkCustomShortcut(appState, event, 'transferManager');
     if (customTransfer != null) {
       TransferModalPanel.show(context);
@@ -851,21 +847,6 @@ class _TerminalAreaState extends State<_TerminalArea> {
     }
 
     return KeyEventResult.ignored;
-  }
-
-  KeyEventResult _navigateSplitPane(TerminalAppState appState, int direction) {
-    final slots = _splitSlots(appState);
-    if (slots.isEmpty) return KeyEventResult.ignored;
-    final currentIndex = slots.indexWhere(
-      (slot) => slot.pane.id == appState.activeTerminalSplitPaneId,
-    );
-    final index = currentIndex < 0 ? 0 : currentIndex;
-    final nextIndex = (index + direction + slots.length) % slots.length;
-    final session = slots[nextIndex].session;
-    if (session != null) {
-      _focusNodeForSession(session).requestFocus();
-    }
-    return KeyEventResult.handled;
   }
 
   void _requestSearchPane(
@@ -912,17 +893,6 @@ class _TerminalAreaState extends State<_TerminalArea> {
       buffer.createAnchor(match.start, match.line),
       buffer.createAnchor(match.end, match.line),
     );
-  }
-
-  List<_SplitPaneSlot> _splitSlots(TerminalAppState appState) {
-    appState.ensureTerminalSplitPanes();
-    return [
-      for (final pane in appState.terminalSplitPanes)
-        _SplitPaneSlot(
-          pane: pane,
-          session: appState.terminalSessionById(pane.sessionId),
-        ),
-    ];
   }
 
 
@@ -1027,9 +997,6 @@ class _TerminalAreaState extends State<_TerminalArea> {
           MenuItemData('quick_connect', Icons.flash_on,
               l(appState, AppStrings.values.commandBarQuickConnect),
               shortcut: shortcut('quickConnect')),
-          MenuItemData('close_workspace', Icons.close,
-              l(appState, AppStrings.values.commandBarCloseCurrentWorkspace),
-              shortcut: shortcut('closeSession')),
           MenuItemData('close_all', Icons.highlight_off,
               l(appState, AppStrings.values.commandBarCloseAllSessions),
               shortcut: shortcut('closeAllSessions')),
@@ -1154,25 +1121,76 @@ class _TerminalAreaState extends State<_TerminalArea> {
     _ensureSftpForFocusedStage();
   }
 
-  Widget _buildStageNavButton(IconData icon, String tooltip, VoidCallback onPressed) {
-    return Tooltip(
-      message: tooltip,
-      waitDuration: const Duration(milliseconds: 250),
-      child: StepIconButton(icon: icon, onPressed: onPressed),
+  static const double _stageTabWidth = 180;
+
+  Widget _buildStageTabs(TerminalAppState appState) {
+    final stages = appState.terminalStages;
+    final currentId = _focusedStageId.isNotEmpty ? _focusedStageId : appState.activeTerminalStageId;
+    final currentIndex = stages.indexWhere((s) => s.id == currentId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || currentIndex < 0) return;
+      final target = currentIndex * _stageTabWidth - _stageTabScrollController.position.viewportDimension / 2 + _stageTabWidth / 2;
+      final clamped = target.clamp(0.0, _stageTabScrollController.position.maxScrollExtent);
+      if (_stageTabScrollController.hasClients && _stageTabScrollController.offset != clamped) {
+        _stageTabScrollController.animateTo(clamped, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+      }
+    });
+    return SizedBox(
+      height: 32,
+      child: ListView.builder(
+        controller: _stageTabScrollController,
+        scrollDirection: Axis.horizontal,
+        itemCount: stages.length,
+        itemExtent: _stageTabWidth,
+        itemBuilder: (context, index) {
+          final s = stages[index];
+          final isActive = s.id == currentId;
+          return GestureDetector(
+            onTap: () {
+              if (!isActive) {
+                _cachedPaneWidgets.clear();
+                appState.switchTerminalStage(s.id);
+                setState(() => _focusedStageId = s.id);
+                _updateSessionBackgroundMode();
+                _ensureSftpForFocusedStage();
+              }
+            },
+            child: Container(
+              height: 24,
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.accent.withValues(alpha: 0.15) : Colors.transparent,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isActive ? AppColors.accent : AppColors.border.withValues(alpha: 0.4),
+                    width: isActive ? 2 : 1,
+                  ),
+                  right: index < stages.length - 1
+                      ? BorderSide(color: AppColors.border.withValues(alpha: 0.3))
+                      : BorderSide.none,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                s.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  color: isActive ? AppColors.accent : AppColors.textSecondary,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildFocusedHeader(
       BuildContext context, TerminalAppState appState, TerminalSession? session) {
-    final stage = appState.terminalStages.firstWhere(
-      (s) => s.id == _focusedStageId,
-      orElse: () => appState.terminalStages.first,
-    );
-    final isConnected =
-        session != null && session.tab.status == TerminalStatus.connected;
-
     return Container(
-      height: 36,
+      height: 40,
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
@@ -1219,58 +1237,21 @@ class _TerminalAreaState extends State<_TerminalArea> {
           Container(
               width: 1, height: 20, color: AppColors.border),
           const SizedBox(width: 4),
-          _buildStageNavButton(
-            Icons.chevron_left,
-            l(appState, AppStrings.values.previousStage),
-            () => _switchToStage(appState, -1),
+          Expanded(
+            flex: 3,
+            child: _buildStageTabs(appState),
           ),
-          _buildStageNavButton(
-            Icons.chevron_right,
-            l(appState, AppStrings.values.nextStage),
-            () => _switchToStage(appState, 1),
-          ),
-          const SizedBox(width: 4),
-          Icon(Icons.dashboard, size: 14, color: AppColors.textTertiary),
-          const SizedBox(width: 6),
-          Text(
-            stage.name,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (session != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isConnected ? AppColors.success : AppColors.border,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                session.tab.title.isNotEmpty
-                    ? session.tab.title
-                    : session.profile.name,
-                style: AppTextStyles.captionSmall
-                    .copyWith(color: AppColors.textTertiary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-          const Spacer(),
           if (session != null)
-          HeaderIconButton(
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: HeaderIconButton(
             icon: Icons.folder_open,
             iconSize: 16,
             isActive: _showFileTreePanel,
             activeColor: AppColors.accent,
             tooltip: l(appState, AppStrings.values.showFileTree),
             onPressed: () => setState(() => _showFileTreePanel = !_showFileTreePanel),
+          ),
           ),
         ],
       ),

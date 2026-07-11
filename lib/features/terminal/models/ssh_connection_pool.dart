@@ -1,6 +1,5 @@
 import 'package:dartssh2/dartssh2.dart';
 
-import '../../../shared/logging/Polarmote_log.dart';
 import 'host_entry.dart';
 
 class SshConnectionPool {
@@ -36,11 +35,11 @@ class SshConnectionPool {
       _clients.remove(key);
       try {
         pooled.client.close();
-      } catch (e) { PolarmoteLog.error('ssh_connection_pool', '$e'); }
+      } catch (_) {}
       for (final auxiliary in pooled.auxiliaryClients.reversed) {
         try {
           auxiliary.close();
-        } catch (e) { PolarmoteLog.error('ssh_connection_pool', '$e'); }
+        } catch (_) {}
       }
     }
   }
@@ -49,11 +48,11 @@ class SshConnectionPool {
     for (final pooled in _clients.values) {
       try {
         pooled.client.close();
-      } catch (e) { PolarmoteLog.error('ssh_connection_pool', '$e'); }
+      } catch (_) {}
       for (final auxiliary in pooled.auxiliaryClients.reversed) {
         try {
           auxiliary.close();
-        } catch (e) { PolarmoteLog.error('ssh_connection_pool', '$e'); }
+        } catch (_) {}
       }
     }
     _clients.clear();

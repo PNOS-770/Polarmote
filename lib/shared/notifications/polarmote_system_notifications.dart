@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../logging/Polarmote_log.dart';
-
 class PolarmoteSystemNotifications {
   PolarmoteSystemNotifications._();
 
@@ -53,7 +51,7 @@ class PolarmoteSystemNotifications {
       }
       _initialized = true;
     } catch (error) {
-      PolarmoteLog.warn('notifications', 'init failed: $error');
+      
     }
   }
 
@@ -112,7 +110,7 @@ class PolarmoteSystemNotifications {
         notificationDetails: details,
       );
     } catch (error) {
-      PolarmoteLog.warn('notifications', 'show script result failed: $error');
+      
     }
   }
 }

@@ -1,10 +1,7 @@
-import '../logging/Polarmote_log.dart';
-
 T? tryOrLog<T>(T Function() action, {String? label, T? fallback}) {
   try {
     return action();
-  } catch (e, s) {
-    PolarmoteLog.error(label ?? 'operation', '$e\n$s');
+  } catch (_) {
     return fallback;
   }
 }
@@ -12,8 +9,7 @@ T? tryOrLog<T>(T Function() action, {String? label, T? fallback}) {
 Future<T?> tryOrLogAsync<T>(Future<T> Function() action, {String? label, T? fallback}) async {
   try {
     return await action();
-  } catch (e, s) {
-    PolarmoteLog.error(label ?? 'operation', '$e\n$s');
+  } catch (_) {
     return fallback;
   }
 }
@@ -21,16 +17,11 @@ Future<T?> tryOrLogAsync<T>(Future<T> Function() action, {String? label, T? fall
 void tryDo(void Function() action, {String? label}) {
   try {
     action();
-  } catch (e, s) {
-    PolarmoteLog.error(label ?? 'operation', '$e\n$s');
-  }
+  } catch (_) {}
 }
 
 Future<void> tryDoAsync(Future<void> Function() action, {String? label}) async {
   try {
     await action();
-  } catch (e, s) {
-    PolarmoteLog.error(label ?? 'operation', '$e\n$s');
-  }
+  } catch (_) {}
 }
-

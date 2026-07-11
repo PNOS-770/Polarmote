@@ -1,5 +1,3 @@
-enum LogVerbosity { all, important, errorsOnly }
-
 enum TerminalLogCategory {
   startup,
   session,

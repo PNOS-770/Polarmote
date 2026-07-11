@@ -7,7 +7,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../../shared/logging/Polarmote_log.dart';
+
 
 class NativeTerminalPtyException implements Exception {
   const NativeTerminalPtyException(this.message);
@@ -330,7 +330,7 @@ class _NativePtyBindings {
         loadedFrom: opened.source,
       );
       if (kDebugMode) {
-        PolarmoteLog.info('native_pty', 'loaded from ${bindings.loadedFrom}');
+        
       }
       return bindings;
     } catch (_) {

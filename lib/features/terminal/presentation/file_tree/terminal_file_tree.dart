@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +26,6 @@ import '../dialogs/terminal_dialogs.dart';
 import '../file_viewer/file_open_controller.dart';
 import 'file_icon_resolver.dart';
 import '../panels/terminal_home_panels.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
-
 part 'terminal_file_tree_sections.dart';
 
 const _remoteFileTreeDragLocalDataTag = 'terminal.remote_file_tree_drag';
@@ -240,113 +237,6 @@ class FileTreeState extends State<FileTree> {
     return operation != DropOperation.none &&
         operation != DropOperation.forbidden &&
         operation != DropOperation.userCancelled;
-  }
-
-  Future<void> _uploadFromSystemPicker(
-    TerminalAppState appState,
-    TerminalSession session,
-    String rootPath,
-  ) async {
-    try {
-      final files = await openFiles();
-      final (localPaths, cleanupTempPaths) = await _resolveUploadLocalPaths(
-        files,
-      );
-      if (localPaths.isEmpty) {
-        return;
-      }
-      final targetDir = session.fileState.currentPath.isNotEmpty
-          ? session.fileState.currentPath
-          : rootPath;
-      try {
-        await appState.uploadFiles(session, localPaths, targetDir);
-      } finally {
-        unawaited(_cleanupTempUploadFiles(cleanupTempPaths));
-      }
-    } catch (error) {
-      appState.setError(
-        AppStrings.values.failedToOpenLocalFileVar.resolve(
-          appState.locale.languageCode,
-          params: {'error': '$error'},
-        ),
-      );
-    }
-  }
-
-  Future<(List<String>, List<String>)> _resolveUploadLocalPaths(
-    List<XFile> files,
-  ) async {
-    final localPaths = <String>{};
-    final cleanupTempPaths = <String>[];
-    if (files.isEmpty) {
-      return (<String>[], <String>[]);
-    }
-
-    final tempRoot = Directory(
-      p.join(Directory.systemTemp.path, 'Polarmote-mobile-upload-cache'),
-    );
-
-    for (final file in files) {
-      final path = file.path.trim();
-      if (path.isNotEmpty) {
-        final type = await FileSystemEntity.type(path);
-        if (type != FileSystemEntityType.notFound) {
-          localPaths.add(path);
-          continue;
-        }
-      }
-
-      if (!await tempRoot.exists()) {
-        await tempRoot.create(recursive: true);
-      }
-      final fallbackName = file.name.trim().isEmpty
-          ? 'upload-${DateTime.now().microsecondsSinceEpoch}'
-          : file.name.trim();
-      final tempPath = await _allocateUniqueFilePath(
-        tempRoot.path,
-        fallbackName,
-      );
-      final sink = File(tempPath).openWrite();
-      try {
-        await for (final chunk in file.openRead()) {
-          sink.add(chunk);
-        }
-      } finally {
-        await sink.close();
-      }
-      localPaths.add(tempPath);
-      cleanupTempPaths.add(tempPath);
-    }
-
-    return (localPaths.toList(growable: false), cleanupTempPaths);
-  }
-
-  Future<String> _allocateUniqueFilePath(
-    String directory,
-    String fileName,
-  ) async {
-    final safeName = fileName.isEmpty ? 'upload-file' : fileName;
-    final stem = p.basenameWithoutExtension(safeName);
-    final ext = p.extension(safeName);
-    var candidate = p.join(directory, safeName);
-    var index = 1;
-    while (await FileSystemEntity.type(candidate) !=
-        FileSystemEntityType.notFound) {
-      candidate = p.join(directory, '$stem ($index)$ext');
-      index += 1;
-    }
-    return candidate;
-  }
-
-  Future<void> _cleanupTempUploadFiles(List<String> paths) async {
-    for (final path in paths) {
-      try {
-        final file = File(path);
-        if (await file.exists()) {
-          await file.delete();
-        }
-      } catch (e) { PolarmoteLog.error('terminal_file_tree', '$e'); }
-    }
   }
 
   Future<bool> _waitForDrop(DragSession session) async {
@@ -597,22 +487,11 @@ class FileTreeState extends State<FileTree> {
                   _nameFilterQuery = value;
                 });
               },
-              onUploadFromSystem: () => unawaited(
-                _uploadFromSystemPicker(appState, session, rootPath),
-              ),
               onPathSubmitted: (value) =>
                   unawaited(appState.navigateToPath(session, value)),
               onGoHome: () {
                 final home = session.fileState.homePath ?? session.fileState.rootPath;
                 unawaited(appState.navigateToPath(session, home));
-              },
-              onDownload: () {
-                final selected = session.fileState.selected.toList();
-                if (selected.isEmpty) return;
-                unawaited(() async {
-                  final dir = await appState.resolveDesktopDirectory();
-                  await appState.downloadFiles(session, selected, dir.path);
-                }());
               },
             ),
             Expanded(

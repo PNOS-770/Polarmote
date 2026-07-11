@@ -6,7 +6,7 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:xterm/xterm.dart';
 
-import '../../../shared/logging/Polarmote_log.dart';
+
 import 'host_entry.dart';
 import 'osc_parser.dart';
 import 'session_file_state.dart';
@@ -147,6 +147,7 @@ class TerminalSession {
   final List<double> netTxHistory = [];
 
   SSHClient? client;
+  SSHClient? metricsClient;
   SSHSession? session;
   SftpClient? sftp;
   NativeTerminalPtySession? localPtySession;
@@ -158,22 +159,13 @@ class TerminalSession {
   StreamSubscription<List<int>>? _byteChannelOutputSub;
   void Function(List<int> bytes)? _byteChannelInputWriter;
   void Function()? _byteChannelCloser;
-  String _byteChannelInputName = 'transport:stdin';
   final StringBuffer _inputLineBuffer = StringBuffer();
 
   StreamSubscription? _stdoutSub;
   StreamSubscription? _stderrSub;
-  int _byteLogSeq = 0;
   int? _lastResizeCols;
   int? _lastResizeRows;
 
-  static const int _maxLogBytes = 256;
-  static const bool _byteLogEnabled = bool.fromEnvironment(
-    'Polarmote_TERMINAL_BYTE_LOG',
-  );
-  static const bool _resizeLogEnabled = bool.fromEnvironment(
-    'Polarmote_TERMINAL_RESIZE_LOG',
-  );
   static const Duration _windowsCmdWelcomeDelay = Duration(milliseconds: 200);
   static final RegExp _ansiEscapeRegExp = RegExp(r'\x1B\[[0-9;?]*[ -/]*[@-~]');
   static final RegExp _oscEscapeRegExp = RegExp(
@@ -211,7 +203,6 @@ class TerminalSession {
     }
     _lastOutputAt = DateTime.now();
     onOutputBytes?.call(id, data);
-    _logBytes(direction: 'OUT', channel: channel, bytes: data);
     _injectStartupBannerBeforePromptIfNeeded(data);
     
     // 使用批处理和限流写入终端
@@ -235,11 +226,7 @@ class TerminalSession {
       final now = DateTime.now();
       if (_lastDropWarning == null || now.difference(_lastDropWarning!) > const Duration(seconds: 5)) {
         _lastDropWarning = now;
-        PolarmoteLog.warn(
-          'terminal_session',
-          '[$id] Output buffer overflow (level: ${_adaptiveThrottle.currentLevel.name}), '
-          'dropped $_droppedBytesCount bytes. Adaptive throttle active.',
-        );
+        debugPrint('[$id] Output buffer overflow (level: ${_adaptiveThrottle.currentLevel.name}), dropped $_droppedBytesCount bytes. Adaptive throttle active.');
       }
       return;
     }
@@ -315,7 +302,7 @@ class TerminalSession {
         bufferSize: 0,
       );
     } catch (e) {
-      PolarmoteLog.error('terminal_session', '[$id] Failed to flush output buffer: $e');
+      
       _outputBuffer.clear();
       _outputBufferSize = 0;
       
@@ -335,7 +322,6 @@ class TerminalSession {
     final cmdLikeLocalShell = _isWindowsCmdLikeLocalSession();
     ptySession.onOutputBytes = (bytes) {
       onOutputBytes?.call(id, bytes);
-      _logBytes(direction: 'OUT', channel: 'pty:stdout', bytes: bytes);
       if (cmdLikeLocalShell) {
         _scheduleWindowsCmdDelayedBannerOnFirstOutputIfNeeded();
       } else {
@@ -361,7 +347,6 @@ class TerminalSession {
     _safeCall(() => _byteChannelCloser?.call());
     _byteChannelInputWriter = writeInputBytes;
     _byteChannelCloser = close;
-    _byteChannelInputName = inputChannelName;
     _closedNotified = false;
     _byteChannelOutputSub = output.listen(
       (data) => _onOutputBytes(data, channel: outputChannelName),
@@ -398,7 +383,7 @@ class TerminalSession {
         try {
           pty.write('\r');
       } catch (e) {
-        PolarmoteLog.warn('terminal_session', '[$id] pty write failed: $e');
+        
         localPtySession = null;
       }
       }
@@ -424,7 +409,7 @@ class TerminalSession {
     transferCleanupTimer?.cancel();
     transferCleanupTimer = null;
     
-    PolarmoteLog.info('terminal_session', '[$id] session disposed');
+    
   }
 
   void closeConnection() {
@@ -441,6 +426,7 @@ class TerminalSession {
     final currentStderrSub = _stderrSub;
     final currentSession = session;
     final currentClient = client;
+    final currentMetricsClient = metricsClient;
     final currentSftp = sftp;
     final currentLocalPtySession = localPtySession;
     final currentByteChannelOutputSub = _byteChannelOutputSub;
@@ -451,12 +437,12 @@ class TerminalSession {
     _stderrSub = null;
     session = null;
     client = null;
+    metricsClient = null;
     sftp = null;
     localPtySession = null;
     _byteChannelOutputSub = null;
     _byteChannelInputWriter = null;
     _byteChannelCloser = null;
-    _byteChannelInputName = 'transport:stdin';
     onLocalPtyExit = null;
     _pendingStartupBanner = null;
     _startupPromptProbeBuffer = '';
@@ -467,6 +453,7 @@ class TerminalSession {
     _safeCall(() => currentStderrSub?.cancel());
     _safeCall(() => currentSession?.close());
     _safeCall(() => currentClient?.close());
+    _safeCall(() => currentMetricsClient?.close());
     _safeCall(() => currentSftp?.close());
     _safeCall(() => currentByteChannelOutputSub?.cancel());
     _safeCall(() => currentByteChannelCloser?.call());
@@ -482,7 +469,7 @@ class TerminalSession {
     metricsTimer = null;
     fileTreeRefreshTimer?.cancel();
     fileTreeRefreshTimer = null;
-    PolarmoteLog.info('terminal_session', '[$id] connection closed');
+    
   }
 
   void _notifyClosed() {
@@ -578,7 +565,6 @@ class TerminalSession {
     final sshSession = session;
     if (sshSession != null) {
       try {
-        _logBytes(direction: 'IN', channel: 'ssh:stdin', bytes: bytes);
         sshSession.write(bytes);
         return;
       } catch (_) {
@@ -588,7 +574,6 @@ class TerminalSession {
     final pty = localPtySession;
     if (pty != null) {
       try {
-        _logBytes(direction: 'IN', channel: 'pty:stdin', bytes: bytes);
         pty.write(data);
         return;
       } catch (_) {
@@ -598,14 +583,9 @@ class TerminalSession {
     final writer = _byteChannelInputWriter;
     if (writer != null) {
       try {
-        _logBytes(
-          direction: 'IN',
-          channel: _byteChannelInputName,
-          bytes: bytes,
-        );
         writer(bytes);
       } catch (e) {
-        PolarmoteLog.warn('terminal_session', '[$id] byte channel write failed: $e');
+        
         _byteChannelInputWriter = null;
         _safeCall(() => _byteChannelCloser?.call());
         _byteChannelCloser = null;
@@ -614,11 +594,10 @@ class TerminalSession {
     final telnet = telnetSession;
     if (telnet != null) {
       try {
-        _logBytes(direction: 'IN', channel: 'telnet:stdin', bytes: bytes);
         telnet.send(bytes);
         return;
       } catch (e) {
-        PolarmoteLog.warn('terminal_session', '[$id] telnet write failed: $e');
+        
         telnetSession = null;
       }
     }
@@ -690,40 +669,6 @@ class TerminalSession {
     onCommandSubmitted?.call(profile.id, command);
   }
 
-  void _logBytes({
-    required String direction,
-    required String channel,
-    required List<int> bytes,
-  }) {
-    if (!_byteLogEnabled || bytes.isEmpty) {
-      return;
-    }
-    _byteLogSeq += 1;
-    final previewLen = bytes.length > _maxLogBytes
-        ? _maxLogBytes
-        : bytes.length;
-    final preview = bytes.sublist(0, previewLen);
-    final hex = preview
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join(' ');
-    final text = _escapeBytes(preview);
-    final more = bytes.length > previewLen
-        ? ' ...(+${bytes.length - previewLen} bytes)'
-        : '';
-    PolarmoteLog.debug(
-      'terminal_session',
-      '[$id][#$_byteLogSeq][$direction][$channel] len=${bytes.length}',
-    );
-    PolarmoteLog.debug(
-      'terminal_session',
-      '[$id][#$_byteLogSeq][$direction][$channel] hex=$hex$more',
-    );
-    PolarmoteLog.debug(
-      'terminal_session',
-      '[$id][#$_byteLogSeq][$direction][$channel] txt="$text"$more',
-    );
-  }
-
   void _writeToTerminal(List<int> bytes) {
     if (bytes.isEmpty) {
       return;
@@ -745,7 +690,7 @@ class TerminalSession {
     try {
       sshSession.resizeTerminal(cols, rows, 0, 0);
       } catch (e) {
-        PolarmoteLog.warn('terminal_session', '[$id] ssh write failed: $e');
+        
         session = null;
       }
   }
@@ -771,34 +716,6 @@ class TerminalSession {
     }
   }
 
-  String _escapeBytes(List<int> bytes) {
-    final sb = StringBuffer();
-    for (final b in bytes) {
-      switch (b) {
-        case 0x1b:
-          sb.write(r'\e');
-        case 0x0d:
-          sb.write(r'\r');
-        case 0x0a:
-          sb.write(r'\n');
-        case 0x09:
-          sb.write(r'\t');
-        case 0x5c:
-          sb.write(r'\\');
-        case 0x22:
-          sb.write(r'\"');
-        default:
-          if (b >= 0x20 && b <= 0x7e) {
-            sb.writeCharCode(b);
-          } else {
-            sb.write(r'\x');
-            sb.write(b.toRadixString(16).padLeft(2, '0'));
-          }
-      }
-    }
-    return sb.toString();
-  }
-
   void resizeTerminal(int cols, int rows, int pixelWidth, int pixelHeight) {
     final safeCols = cols.clamp(1, 500).toInt();
     final safeRows = rows.clamp(1, 500).toInt();
@@ -807,9 +724,6 @@ class TerminalSession {
     }
     _lastResizeCols = safeCols;
     _lastResizeRows = safeRows;
-    if (_resizeLogEnabled) {
-      PolarmoteLog.debug('terminal_session', '[$id] resize cols=$safeCols rows=$safeRows');
-    }
     final sshSession = session;
     if (sshSession != null) {
       try {
@@ -837,7 +751,7 @@ class TerminalSession {
   /// 重置自适应限流器（用于故障恢复）
   void resetAdaptiveThrottle() {
     _adaptiveThrottle.reset();
-    PolarmoteLog.info('terminal_session', '[$id] Adaptive throttle reset to normal level');
+    
   }
 
   /// 更新自适应限流启用状态

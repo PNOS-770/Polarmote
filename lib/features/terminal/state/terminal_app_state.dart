@@ -15,7 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../errors/app_error.dart';
 import '../../../events/event_bus.dart';
 import '../../../shared/constants/app_string.dart';
-import '../../../shared/logging/Polarmote_log.dart';
+
 import '../../../shared/logging/log_controller.dart';
 import '../../../shared/logging/log_level.dart';
 export '../../../shared/logging/log_level.dart';
@@ -136,7 +136,6 @@ class TerminalAppState extends ChangeNotifier {
   Completer<bool>? _hostKeyPromptDecision;
   bool _hostKeyPromptRemember = true;
   final LogController logController = LogController();
-  LogVerbosity logVerbosity = LogVerbosity.important;
   MemoryMode memoryMode = MemoryMode.medium;
   int customTerminalBufferSize = 5000;
   bool smartMemoryManagement = true;
@@ -157,6 +156,8 @@ class TerminalAppState extends ChangeNotifier {
   int lastTransferTimestamp = 0;
   int keyboardRecoveryToken = 0;
   int stageChangeToken = 0;
+  int stageCardMinWidth = 280;
+  double stageCardAspectRatio = 1.45;
   bool showHiddenFiles = true;
   bool autoReconnect = true;
   bool androidKeepSshAliveInBackground = Platform.isAndroid;
@@ -169,11 +170,11 @@ class TerminalAppState extends ChangeNotifier {
   int thumbnailBackgroundVersion = 0;
   bool reuseSessionForNewPane = false;
   bool terminalBlockSelectEnabled = false;
-  final List<ShortcutBinding> shortcutBindings = _defaultShortcutBindings();
+  final List<ShortcutBinding> shortcutBindings = defaultShortcutBindings();
   final List<KeyBinding> customKeyBindings = [];
   String shortcutPresetId = 'default';
 
-  static List<ShortcutBinding> _defaultShortcutBindings() => [
+  static List<ShortcutBinding> defaultShortcutBindings() => [
     const ShortcutBinding(id: 'copy', name: 'Copy', defaultKeys: 'Ctrl+Shift+C / Ctrl+C'),
     const ShortcutBinding(id: 'paste', name: 'Paste', defaultKeys: 'Ctrl+V / Shift+Insert'),
     const ShortcutBinding(id: 'selectAll', name: 'Select All', defaultKeys: 'Ctrl+A'),
@@ -181,8 +182,6 @@ class TerminalAppState extends ChangeNotifier {
     const ShortcutBinding(id: 'blockSelect', name: 'Toggle block selection', defaultKeys: 'Alt+B'),
     const ShortcutBinding(id: 'splitMaximize', name: 'Maximize / Restore pane', defaultKeys: 'Ctrl+Alt+Enter'),
     const ShortcutBinding(id: 'splitBroadcast', name: 'Toggle input broadcast', defaultKeys: 'Ctrl+Alt+B'),
-    const ShortcutBinding(id: 'splitPrev', name: 'Switch to previous pane', defaultKeys: 'Ctrl+Alt+Left / Ctrl+Alt+Up'),
-    const ShortcutBinding(id: 'splitNext', name: 'Switch to next pane', defaultKeys: 'Ctrl+Alt+Right / Ctrl+Alt+Down'),
     const ShortcutBinding(id: 'newSession', name: 'New session', defaultKeys: 'Ctrl+N'),
     const ShortcutBinding(id: 'quickConnect', name: 'Quick connect', defaultKeys: 'Ctrl+K'),
     const ShortcutBinding(id: 'closeSession', name: 'Close current workspace', defaultKeys: 'Ctrl+W'),
@@ -191,12 +190,13 @@ class TerminalAppState extends ChangeNotifier {
     const ShortcutBinding(id: 'runScript', name: 'Run script', defaultKeys: 'Ctrl+Shift+R'),
     const ShortcutBinding(id: 'scriptList', name: 'Script list', defaultKeys: 'Ctrl+Shift+L'),
     const ShortcutBinding(id: 'scriptMonitor', name: 'Script monitor', defaultKeys: 'Ctrl+Shift+M'),
-    const ShortcutBinding(id: 'sftpBrowser', name: 'SFTP browser', defaultKeys: 'Ctrl+Shift+F'),
     const ShortcutBinding(id: 'transferManager', name: 'Transfer manager', defaultKeys: 'Ctrl+Shift+T'),
     const ShortcutBinding(id: 'portForwarding', name: 'Port forwarding', defaultKeys: 'Ctrl+Shift+P'),
     const ShortcutBinding(id: 'lanScan', name: 'LAN scan', defaultKeys: 'Ctrl+Shift+A'),
     const ShortcutBinding(id: 'openSettings', name: 'Settings', defaultKeys: 'Ctrl+,'),
     const ShortcutBinding(id: 'logViewer', name: 'Log viewer', defaultKeys: 'Ctrl+Shift+O'),
+    const ShortcutBinding(id: 'previousStage', name: 'Previous stage', defaultKeys: 'Alt+Left'),
+    const ShortcutBinding(id: 'nextStage', name: 'Next stage', defaultKeys: 'Alt+Right'),
   ];
 
   HomeLayoutMode homeLayoutMode = _defaultHomeLayoutMode();

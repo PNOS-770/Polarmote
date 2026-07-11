@@ -77,11 +77,7 @@ class _LogViewerModalPanelState extends State<LogViewerModalPanel> {
                 ),
               ),
               const SizedBox(width: 8),
-              AppTextButton(
-                onPressed: appState.openLogFolder,
-                icon: Icons.folder_open,
-                label: l(appState, AppStrings.values.openFolder),
-              ),
+
             ],
           ),
         ),

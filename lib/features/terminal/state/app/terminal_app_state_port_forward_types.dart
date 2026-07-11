@@ -25,22 +25,22 @@ class _ActivePortForwardRuntime {
     serverSubscription = null;
     await remoteForwardSubscription?.cancel();
     remoteForwardSubscription = null;
-    try { remoteForward?.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward_types', '$e'); }
+    try { remoteForward?.close(); } catch (_) {}
     remoteForward = null;
-    try { await server?.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward_types', '$e'); }
+    try { await server?.close(); } catch (_) {}
     server = null;
     for (final socket in activeLocalSockets.toList(growable: false)) {
       socket.destroy();
     }
     activeLocalSockets.clear();
     for (final channel in activeChannels.toList(growable: false)) {
-      try { channel.destroy(); } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward_types', '$e'); }
+      try { channel.destroy(); } catch (_) {}
     }
     activeChannels.clear();
-    try { client?.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward_types', '$e'); }
+    try { client?.close(); } catch (_) {}
     client = null;
     for (final auxiliary in auxiliaryClients.reversed) {
-      try { auxiliary.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_port_forward_types', '$e'); }
+      try { auxiliary.close(); } catch (_) {}
     }
     auxiliaryClients.clear();
   }

@@ -18,7 +18,6 @@ import '../../models/terminal_tab.dart';
 import '../../models/workflow_node.dart';
 import '../terminal_app_state.dart';
 
-import '../../../../shared/logging/Polarmote_log.dart';
 part 'terminal_app_state_scripts_execution.dart';
 part 'terminal_app_state_scripts_schedule.dart';
 

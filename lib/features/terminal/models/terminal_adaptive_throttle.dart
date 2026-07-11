@@ -1,4 +1,4 @@
-import '../../../shared/logging/Polarmote_log.dart';
+
 
 /// 自适应限流器 - 根据系统压力动态调整终端输出刷新策略
 class TerminalAdaptiveThrottle {
@@ -31,7 +31,6 @@ class TerminalAdaptiveThrottle {
   final void Function(ThrottleLevel oldLevel, ThrottleLevel newLevel, String reason)? onLevelChanged;
 
   bool _enabled;
-  bool _logChanges = true;
 
   /// 启用/禁用限流器
   // ignore: unnecessary_getters_setters
@@ -147,12 +146,6 @@ class TerminalAdaptiveThrottle {
       throughputKBps: _totalBytesInWindow / 1024 / _monitorWindow.inSeconds,
       reason: reason,
     ));
-    if (_logChanges) {
-      final sessionPrefix = sessionId != null ? '[$sessionId] ' : '';
-      PolarmoteLog.warn('terminal_throttle',
-          '${sessionPrefix}Reactive upgrade: ${oldLevel.name} → ${target.name} | $reason | '
-          'flush=${_currentFlushInterval.inMilliseconds}ms, buffer=${(_currentBufferSize / 1024).toStringAsFixed(0)}KB');
-    }
     onLevelChanged?.call(oldLevel, target, reason);
   }
 
@@ -182,12 +175,6 @@ class TerminalAdaptiveThrottle {
       reason: reason,
     ));
 
-    if (_logChanges) {
-      final sessionPrefix = sessionId != null ? '[$sessionId] ' : '';
-      PolarmoteLog.info('terminal_throttle',
-          '${sessionPrefix}Reactive downgrade: ${oldLevel.name} → ${target.name} | $reason | '
-          'flush=${_currentFlushInterval.inMilliseconds}ms, buffer=${(_currentBufferSize / 1024).toStringAsFixed(0)}KB');
-    }
     onLevelChanged?.call(oldLevel, target, reason);
   }
 
@@ -255,16 +242,6 @@ class TerminalAdaptiveThrottle {
         reason: reason,
       ));
 
-      final sessionPrefix = sessionId != null ? '[$sessionId] ' : '';
-      final logLevel = newLevel.index > oldLevel.index ? 'warn' : 'info';
-      final logMessage = '${sessionPrefix}Adaptive throttle: ${oldLevel.name} → ${newLevel.name} | $reason | '
-          'flush=${_currentFlushInterval.inMilliseconds}ms, buffer=${(_currentBufferSize / 1024).toStringAsFixed(0)}KB';
-
-      if (logLevel == 'warn') {
-        PolarmoteLog.warn('terminal_throttle', logMessage);
-      } else {
-        PolarmoteLog.info('terminal_throttle', logMessage);
-      }
       onLevelChanged?.call(oldLevel, newLevel, reason);
     }
   }

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import '../../../shared/logging/Polarmote_log.dart';
+
 import '../models/host_entry.dart';
 import '../models/session_file_state.dart';
 import '../models/terminal_session.dart';
@@ -30,7 +30,7 @@ class StressTestServer {
       InternetAddress.loopbackIPv4,
       port,
     );
-    PolarmoteLog.info('stress_test', 'Listening on http://localhost:$port');
+    
     _server!.listen(_handleRequest);
   }
 
@@ -366,13 +366,13 @@ class StressTestServer {
     Timer? timer;
 
     try {
-      PolarmoteLog.info('stress_test', 'Marathon: deleting ${_appState.terminalStages.length - 1} existing stages...');
+      
       while (_appState.terminalStages.length > 1) {
         _appState.removeStageById(_appState.terminalStages.last.id);
       }
       _appState.notifyState();
 
-      PolarmoteLog.info('stress_test', 'Marathon: creating $stageCount stages from ${availableHosts.length} hosts...');
+      
 
       // 创建 stage 并连接 session
       for (var i = 0; i < stageCount; i++) {
@@ -409,32 +409,32 @@ class StressTestServer {
         switchCount++;
       });
 
-      PolarmoteLog.info('stress_test', 'Marathon running for $durationSec seconds...');
+      
       await Future<void>.delayed(Duration(seconds: durationSec));
       timer.cancel();
       stopwatch.stop();
 
-      PolarmoteLog.info('stress_test', 'Marathon finished: ${stopwatch.elapsed}, switches: $switchCount');
+      
     } catch (e, s) {
-      PolarmoteLog.error('stress_test', 'Marathon error: $e\n$s');
+      
     } finally {
       timer?.cancel();
       _marathonTask = null;
       
-      PolarmoteLog.info('stress_test', 'Marathon cleanup: closing ${marathonSessionIds.length} sessions...');
+      
       // 关闭 marathon 创建的 session
       for (final sid in marathonSessionIds) {
         await _appState.closeSession(sid);
       }
       
-      PolarmoteLog.info('stress_test', 'Marathon cleanup: removing ${stageIds.length} stages...');
+      
       // 删除 marathon 创建的 stage
       for (final id in stageIds) {
         _appState.removeStageById(id);
       }
       _appState.notifyState();
       
-      PolarmoteLog.info('stress_test', 'Marathon cleanup done. Current: ${_appState.terminalStages.length} stages, ${_appState.sessions.length} sessions');
+      
     }
   }
 

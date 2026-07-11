@@ -7,8 +7,6 @@ import 'package:system_tray/system_tray.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../shared/constants/app_string.dart';
-import '../shared/logging/polarmote_log.dart';
-
 typedef ShutdownHook = void Function();
 
 class PolarmoteSystemTray {
@@ -31,9 +29,9 @@ class PolarmoteSystemTray {
       await windowManager.ensureInitialized();
       await windowManager.waitUntilReadyToShow();
       await windowManager.setMinimumSize(const Size(800, 500));
-      PolarmoteLog.info('system_tray', 'window manager ready');
+      
     } catch (e) {
-      PolarmoteLog.error('system_tray', 'window manager setup failed: $e');
+      
       return;
     }
 
@@ -53,7 +51,7 @@ class PolarmoteSystemTray {
         }
       } catch (_) {}
       await tempIcon.writeAsBytes(iconData.buffer.asUint8List(), flush: true);
-      PolarmoteLog.info('system_tray', 'icon extracted to ${tempIcon.path}');
+      
 
       const trayChannel = MethodChannel('flutter/system_tray');
       final ok = await trayChannel.invokeMethod<bool>('InitSystemTray', <String, String>{
@@ -61,25 +59,25 @@ class PolarmoteSystemTray {
         'iconpath': tempIcon.path,
         'tooltip': 'Polarmote',
       });
-      PolarmoteLog.info('system_tray', 'InitSystemTray returned $ok');
+      
 
       // Force a NIM_MODIFY by updating tooltip — this can re-register the
       // icon's callback HWND and fix event delivery on some Windows builds.
       if (ok == true) {
         await _tray.setSystemTrayInfo(toolTip: 'Polarmote');
-        PolarmoteLog.info('system_tray', 'tray info refreshed (NIM_MODIFY)');
+        
       }
     } catch (e) {
-      PolarmoteLog.error('system_tray', 'tray icon init failed: $e');
+      
     }
 
     // --- Step 3: event handler + menu ---
     try {
       _tray.registerSystemTrayEventHandler((eventName) {
-        PolarmoteLog.info('system_tray', 'event: $eventName');
+        
         try {
           if (eventName == 'rightMouseUp' || eventName == 'rightMouseDown') {
-            PolarmoteLog.info('system_tray', 'popUpContextMenu called');
+            
             _tray.popUpContextMenu();
           } else if (eventName == 'leftMouseUp' ||
               eventName == 'leftMouseDblClk') {
@@ -87,18 +85,18 @@ class PolarmoteSystemTray {
             windowManager.focus();
           }
         } catch (e) {
-          PolarmoteLog.error('system_tray', 'event handler error: $e');
+          
         }
       });
-      PolarmoteLog.info('system_tray', 'event handler registered');
+      
 
       final locale = Platform.localeName.startsWith('zh') ? 'zh' : 'en';
       await _buildMenu(locale);
-      PolarmoteLog.info('system_tray', 'menu built');
+      
 
       _initialized = true;
     } catch (e) {
-      PolarmoteLog.error('system_tray', 'event/menu setup failed: $e');
+      
     }
   }
 

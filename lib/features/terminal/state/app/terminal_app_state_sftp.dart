@@ -6,7 +6,6 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../../../shared/logging/Polarmote_log.dart';
 import '../../../../shared/constants/app_string.dart';
 import '../../models/file_node.dart';
 import '../../models/terminal_session.dart';
@@ -362,7 +361,7 @@ extension TerminalAppStateSftp on TerminalAppState {
         try {
           await sftp?.listdir(home);
           return home;
-        } catch (e) { PolarmoteLog.error('terminal_app_state_sftp', '$e'); }
+        } catch (_) {}
       }
     }
     final root = _normalizePathForSession(session, session.fileState.rootPath);
@@ -375,7 +374,7 @@ extension TerminalAppStateSftp on TerminalAppState {
         try {
           await sftp?.listdir(root);
           return root;
-        } catch (e) { PolarmoteLog.error('terminal_app_state_sftp', '$e'); }
+        } catch (_) {}
       }
       return root;
     }
@@ -761,7 +760,7 @@ extension TerminalAppStateSftp on TerminalAppState {
             androidCandidates.add(sharedRoot);
           }
         }
-      } catch (e) { PolarmoteLog.error('terminal_app_state_sftp', '$e'); }
+      } catch (_) {}
 
       try {
         final externals = await getExternalStorageDirectories();
@@ -774,7 +773,7 @@ extension TerminalAppStateSftp on TerminalAppState {
             }
           }
         }
-      } catch (e) { PolarmoteLog.error('terminal_app_state_sftp', '$e'); }
+      } catch (_) {}
 
       for (final candidate in androidCandidates) {
         final normalized = p.normalize(candidate);

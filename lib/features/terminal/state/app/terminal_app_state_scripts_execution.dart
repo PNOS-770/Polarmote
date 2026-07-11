@@ -329,7 +329,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
           ? await process.exitCode.timeout(stepTimeout)
           : await process.exitCode;
     } on TimeoutException {
-      try { process.kill(ProcessSignal.sigterm); } catch (e) { PolarmoteLog.error('terminal_app_state_scripts_execution', '$e'); }
+      try { process.kill(ProcessSignal.sigterm); } catch (_) {}
       return _ScriptSessionExecutionResult(
         success: false,
         exitCode: -1,
@@ -412,7 +412,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
           await session.done;
         }
       } on TimeoutException {
-        try { session.close(); } catch (e) { PolarmoteLog.error('terminal_app_state_scripts_execution', '$e'); }
+        try { session.close(); } catch (_) {}
         return _ScriptSessionExecutionResult(
           success: false,
           exitCode: -1,
@@ -441,7 +441,7 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     } finally {
       try {
         session?.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_scripts_execution', '$e'); }
+      } catch (_) {}
     }
   }
 

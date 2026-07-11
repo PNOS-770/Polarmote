@@ -80,14 +80,7 @@ class _LogPanelState extends State<_LogPanel> {
                                 ),
                                 const SizedBox(width: 8),
                               ],
-                              AppTextButton(
-                                onPressed: widget.appState.openLogFolder,
-                                icon: Icons.folder_open,
-                                label: l(
-                                  widget.appState,
-                                  AppStrings.values.openFolder,
-                                ),
-                              ),
+
                             ],
                           ),
                           if (!inlineSearch) ...[

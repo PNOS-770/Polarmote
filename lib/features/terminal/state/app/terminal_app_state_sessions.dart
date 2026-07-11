@@ -7,7 +7,7 @@ import 'package:flutter_libserialport/flutter_libserialport.dart';
 
 import '../../../../events/event_bus.dart';
 import '../../../../shared/constants/app_string.dart';
-import '../../../../shared/logging/Polarmote_log.dart';
+
 import '../../models/host_entry.dart';
 import '../../models/session_file_state.dart';
 import '../../models/terminal_session.dart';
@@ -280,7 +280,7 @@ extension TerminalAppStateSessions on TerminalAppState {
     TerminalSession session, {
     bool background = false,
   }) async {
-    PolarmoteLog.info('session', 'connecting serial session ${session.id} port=${session.profile.serialPortPath}');
+    
     if (!_isSerialSupportedOnPlatform()) {
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       setError(
@@ -325,13 +325,13 @@ extension TerminalAppStateSessions on TerminalAppState {
         close: () {
           try {
             serialReader?.close();
-          } catch (e) { PolarmoteLog.error('terminal_app_state_sessions', '$e'); }
+          } catch (_) {}
           try {
             serialPort?.close();
-          } catch (e) { PolarmoteLog.error('terminal_app_state_sessions', '$e'); }
+          } catch (_) {}
           try {
             serialPort?.dispose();
-          } catch (e) { PolarmoteLog.error('terminal_app_state_sessions', '$e'); }
+          } catch (_) {}
           serialReader = null;
           serialPort = null;
         },
@@ -359,18 +359,18 @@ extension TerminalAppStateSessions on TerminalAppState {
         syncSshForegroundGuardNow();
       }
     } catch (e) {
-      PolarmoteLog.error('session', 'serial session ${session.id} failed: $e');
+      
       session.closeConnection();
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       try {
         serialReader?.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_sessions', '$e'); }
+      } catch (_) {}
       try {
         serialPort?.close();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_sessions', '$e'); }
+      } catch (_) {}
       try {
         serialPort?.dispose();
-      } catch (e) { PolarmoteLog.error('terminal_app_state_sessions', '$e'); }
+      } catch (_) {}
       setError(
         AppStrings.values.serialConnectFailedVar.resolve(
           locale.languageCode,
@@ -388,7 +388,7 @@ extension TerminalAppStateSessions on TerminalAppState {
     if (!sessions.contains(session) || session.closedByUser) return;
     final telnetPort = session.profile.telnetPort;
     final host = session.profile.host;
-    PolarmoteLog.info('session', 'connecting telnet session ${session.id} $host:$telnetPort');
+    
     addStructuredLog(
       category: TerminalLogCategory.session,
       message: AppStrings.values.connectingToVarVar.resolve(
@@ -430,7 +430,7 @@ extension TerminalAppStateSessions on TerminalAppState {
         syncSshForegroundGuardNow();
       }
     } catch (e) {
-      PolarmoteLog.error('session', 'telnet session ${session.id} $host:$telnetPort failed: $e');
+      
       session.closeConnection();
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       setError(
@@ -456,7 +456,7 @@ extension TerminalAppStateSessions on TerminalAppState {
     TerminalSession session, {
     bool background = false,
   }) async {
-    PolarmoteLog.info('session', 'connecting local session ${session.id}');
+    
     if (Platform.isWindows &&
         session.profile.localShellType == LocalShellType.powershellAdmin &&
         !_isWindowsProcessElevated()) {
@@ -540,7 +540,7 @@ extension TerminalAppStateSessions on TerminalAppState {
         syncSshForegroundGuardNow();
       }
     } catch (e) {
-      PolarmoteLog.error('session', 'local session ${session.id} failed: $e');
+      
       session.closeConnection();
       session.tab = session.tab.copyWith(status: TerminalStatus.disconnected);
       setError(

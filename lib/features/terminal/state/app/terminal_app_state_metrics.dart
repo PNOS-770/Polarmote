@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import '../../../../shared/logging/Polarmote_log.dart';
+
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
 import '../../transport/native/native_local_metrics_bridge.dart';
@@ -50,7 +50,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
       try {
         _nativeCollector = LocalMetricsCollector();
       } catch (e) {
-        PolarmoteLog.warn('metrics', 'failed to create native collector: $e');
+        
         rethrow;
       }
     }
@@ -67,7 +67,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
       final collector = _getCollector();
       final data = collector.collect();
       if (data == null || data.isEmpty) {
-        PolarmoteLog.warn('metrics', 'native metrics returned empty (cpu=$_prevCpuIdle prevTotal=$_prevTotal)');
+        
         return;
       }
 
@@ -116,7 +116,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
       _updateMetricHistory(session);
       notifyState();
     } catch (e) {
-      PolarmoteLog.warn('metrics', 'native metrics poll failed: $e');
+      
     }
   }
 
@@ -142,10 +142,14 @@ extension TerminalAppStateMetrics on TerminalAppState {
   // ── Remote (SSH) metrics: parses /proc/* output ──
 
   Future<void> _pollRemoteMetrics(TerminalSession session) async {
-    final client = session.client;
-    if (client == null) return;
+    if (session.client == null) return;
     try {
-      final output = await client
+      if (session.metricsClient == null) {
+        final c = await connectSshClientForHost(session.profile).timeout(const Duration(seconds: 10));
+        if (session.client == null) { c.close(); return; }
+        session.metricsClient = c;
+      }
+      final output = await session.metricsClient!
           .run(
             "sh -c 'cat /proc/stat; echo __MEM__; cat /proc/meminfo; echo __DF__; df -P /; echo __LOAD__; cat /proc/loadavg; echo __NET__; cat /proc/net/dev; echo __DISK__; cat /proc/diskstats'",
             stdout: true,

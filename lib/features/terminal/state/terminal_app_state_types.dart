@@ -407,8 +407,6 @@ class ShortcutPreset {
     ShortcutBinding(id: 'blockSelect', name: 'Toggle block selection', defaultKeys: 'Alt+B'),
     ShortcutBinding(id: 'splitMaximize', name: 'Maximize / Restore pane', defaultKeys: 'Ctrl+Alt+Enter'),
     ShortcutBinding(id: 'splitBroadcast', name: 'Toggle input broadcast', defaultKeys: 'Ctrl+Alt+B'),
-    ShortcutBinding(id: 'splitPrev', name: 'Switch to previous pane', defaultKeys: 'Ctrl+Alt+Left / Ctrl+Alt+Up'),
-    ShortcutBinding(id: 'splitNext', name: 'Switch to next pane', defaultKeys: 'Ctrl+Alt+Right / Ctrl+Alt+Down'),
     ShortcutBinding(id: 'newSession', name: 'New session', defaultKeys: 'Ctrl+N'),
     ShortcutBinding(id: 'quickConnect', name: 'Quick connect', defaultKeys: 'Ctrl+K'),
     ShortcutBinding(id: 'closeSession', name: 'Close current workspace', defaultKeys: 'Ctrl+W'),
@@ -444,8 +442,6 @@ class ShortcutPreset {
         'search' => b.copyWith(customKeys: 'Cmd+F'),
         'splitMaximize' => b.copyWith(customKeys: 'Cmd+Enter'),
         'splitBroadcast' => b.copyWith(customKeys: 'Cmd+Shift+I'),
-        'splitPrev' => b.copyWith(customKeys: 'Cmd+['),
-        'splitNext' => b.copyWith(customKeys: 'Cmd+]'),
         _ => b,
       };
     }).toList();

@@ -672,12 +672,24 @@ impl RuntimeSession {
         let provider = pool.provider_mut();
         let cancelled_flag = token.as_flag();
 
+        // Helper: run a provider operation and disconnect the provider on
+        // error so the broken connection is not returned to the idle pool.
+        macro_rules! try_provider {
+            ($expr:expr) => {{
+                let result = $expr;
+                if result.is_err() {
+                    provider.disconnect();
+                }
+                result
+            }};
+        }
+
         match &node.operation {
             NodeOperation::UploadFile {
                 local_path,
                 remote_path,
                 chunk_size,
-            } => provider.upload(
+            } => try_provider!(provider.upload(
                 local_path,
                 remote_path,
                 chunk_size.unwrap_or(self.config.default_chunk_size()),
@@ -695,35 +707,48 @@ impl RuntimeSession {
                     );
                     Ok(())
                 },
-            ),
+            )),
             NodeOperation::DownloadFile {
                 remote_path,
                 local_path,
                 chunk_size,
-            } => provider.download(
-                remote_path,
-                local_path,
-                chunk_size.unwrap_or(self.config.default_chunk_size()),
-                cancelled_flag.as_ref(),
-                &mut |transferred, total| {
-                    self.push_node_event(
-                        graph_id,
-                        node.node_id,
-                        EventType::NodeProgress,
-                        None,
-                        Some(transferred),
-                        total,
-                        None,
-                        node.qos,
-                    );
-                    Ok(())
-                },
-            ),
+            } => {
+                eprintln!(
+                    "[EXEC_NODE] id={} DownloadFile remote={remote_path} local={local_path}",
+                    node.node_id.0,
+                );
+                let output = try_provider!(provider.download(
+                    remote_path,
+                    local_path,
+                    chunk_size.unwrap_or(self.config.default_chunk_size()),
+                    cancelled_flag.as_ref(),
+                    &mut |transferred, total| {
+                        self.push_node_event(
+                            graph_id,
+                            node.node_id,
+                            EventType::NodeProgress,
+                            None,
+                            Some(transferred),
+                            total,
+                            None,
+                            node.qos,
+                        );
+                        Ok(())
+                    },
+                ))?;
+                eprintln!(
+                    "[EXEC_NODE] id={} DownloadFile result: transferred={} total={:?}",
+                    node.node_id.0,
+                    output.transferred_bytes,
+                    output.total_bytes,
+                );
+                Ok(output)
+            }
             NodeOperation::UploadBatch {
                 local_paths,
                 target_dir,
                 chunk_size,
-            } => provider.upload_batch(
+            } => try_provider!(provider.upload_batch(
                 &self.config,
                 local_paths,
                 target_dir,
@@ -742,12 +767,12 @@ impl RuntimeSession {
                     );
                     Ok(())
                 },
-            ),
+            )),
             NodeOperation::DownloadBatch {
                 remote_paths,
                 target_dir,
                 chunk_size,
-            } => provider.download_batch(
+            } => try_provider!(provider.download_batch(
                 &self.config,
                 remote_paths,
                 target_dir,
@@ -766,9 +791,9 @@ impl RuntimeSession {
                     );
                     Ok(())
                 },
-            ),
+            )),
             NodeOperation::MkdirRemote { path, mode } => {
-                provider.mkdir_remote(path, mode.unwrap_or(0o755))?;
+                try_provider!(provider.mkdir_remote(path, mode.unwrap_or(0o755)))?;
                 Ok(crate::models::TaskExecutionOutput {
                     transferred_bytes: 0,
                     total_bytes: None,
@@ -784,7 +809,7 @@ impl RuntimeSession {
                 })
             }
             NodeOperation::RemoveRemote { path } => {
-                provider.remove_remote(path)?;
+                try_provider!(provider.remove_remote(path))?;
                 Ok(crate::models::TaskExecutionOutput {
                     transferred_bytes: 0,
                     total_bytes: None,

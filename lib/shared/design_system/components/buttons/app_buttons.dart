@@ -243,6 +243,57 @@ class AppTextButton extends StatelessWidget {
   }
 }
 
+/// 36px 方型图标按钮，用于顶栏等行内工具栏。
+/// 自带悬浮高亮反馈，支持 toggle 状态的动态颜色。
+class HeaderIconButton extends StatelessWidget {
+  const HeaderIconButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.iconSize = 18,
+    this.color = AppColors.textSecondary,
+    this.activeColor,
+    this.isActive = false,
+    this.tooltip,
+    this.width = 36,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+  final double iconSize;
+  final Color color;
+  final Color? activeColor;
+  final bool isActive;
+  final String? tooltip;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = isActive && activeColor != null ? activeColor : color;
+    final button = SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          hoverColor: AppColors.grey100,
+          onTap: onPressed,
+          child: Center(
+            child: Icon(icon, size: iconSize, color: effectiveColor),
+          ),
+        ),
+      ),
+    );
+    if (tooltip != null) {
+      return Tooltip(
+        message: tooltip!,
+        waitDuration: const Duration(milliseconds: 250),
+        child: button,
+      );
+    }
+    return button;
+  }
+}
+
 /// Compact icon button for script step editor rows.
 class StepIconButton extends StatelessWidget {
   const StepIconButton({
@@ -256,16 +307,25 @@ class StepIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(4),
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(4),
+          hoverColor: AppColors.grey100,
+          onTap: onPressed,
+          child: Ink(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Icon(icon, size: 18, color: AppColors.textSecondary),
+            ),
+          ),
         ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
       ),
     );
   }

@@ -18,6 +18,7 @@ import '../../../../shared/design_system/design_system.dart';
 import '../../models/file_node.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
+import '../../models/transfer_task.dart';
 import '../../state/terminal_app_state.dart';
 import '../common/terminal_formatters.dart';
 import '../common/terminal_localization.dart';
@@ -37,6 +38,7 @@ const _fileTreePermissionsColWidth = 120.0;
 const _fileTreeSizeColWidth = 88.0;
 const _fileTreeOwnerColWidth = 88.0;
 const _fileTreeGroupColWidth = 88.0;
+const _fileTreeTransferColWidth = 80.0;
 const _fileTreeColumnGapWidth = 10.0;
 const _fileTreeLeadingWidth = 51.0;
 const _fileTreeTrailingWidth = 6.0;
@@ -51,7 +53,9 @@ const _fileTreeColumnsContentWidth =
     _fileTreeColumnGapWidth +
     _fileTreeOwnerColWidth +
     _fileTreeColumnGapWidth +
-    _fileTreeGroupColWidth;
+    _fileTreeGroupColWidth +
+    _fileTreeColumnGapWidth +
+    _fileTreeTransferColWidth;
 
 class _FileTreeColumnLayout {
   const _FileTreeColumnLayout({
@@ -60,10 +64,12 @@ class _FileTreeColumnLayout {
     required this.permissionsWidth,
     required this.ownerWidth,
     required this.groupWidth,
+    required this.transferWidth,
     required this.gapAfterSize,
     required this.gapAfterModified,
     required this.gapAfterPermissions,
     required this.gapAfterOwner,
+    required this.gapAfterGroup,
   });
 
   final double sizeWidth;
@@ -72,15 +78,18 @@ class _FileTreeColumnLayout {
   final double permissionsWidth;
   final double ownerWidth;
   final double groupWidth;
+  final double transferWidth;
   final double gapAfterSize;
   final double gapAfterModified;
   final double gapAfterPermissions;
   final double gapAfterOwner;
+  final double gapAfterGroup;
 
   bool get hasModified => modifiedWidth > 0;
   bool get hasPermissions => permissionsWidth > 0;
   bool get hasOwner => ownerWidth > 0;
   bool get hasGroup => groupWidth > 0;
+  bool get hasTransfer => transferWidth > 0;
 }
 
 _FileTreeColumnLayout _computeFileTreeColumnLayout(double maxWidth) {
@@ -90,10 +99,12 @@ _FileTreeColumnLayout _computeFileTreeColumnLayout(double maxWidth) {
     permissionsWidth: _fileTreePermissionsColWidth,
     ownerWidth: _fileTreeOwnerColWidth,
     groupWidth: _fileTreeGroupColWidth,
+    transferWidth: _fileTreeTransferColWidth,
     gapAfterSize: _fileTreeColumnGapWidth,
     gapAfterModified: _fileTreeColumnGapWidth,
     gapAfterPermissions: _fileTreeColumnGapWidth,
     gapAfterOwner: _fileTreeColumnGapWidth,
+    gapAfterGroup: _fileTreeColumnGapWidth,
   );
 }
 
@@ -522,6 +533,13 @@ class FileTreeState extends State<FileTree> {
     if (nodes == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    final transferTasks = <String, TransferTask>{};
+    for (final task in session.transferQueue) {
+      final remotePath = task.direction == TransferDirection.download
+          ? task.sourcePath
+          : task.destinationPath;
+      if (remotePath != null) transferTasks[remotePath] = task;
+    }
     final entries = _sortEntries(
       nodes.where((node) {
         if (!showHidden && node.name.startsWith('.')) return false;
@@ -683,6 +701,7 @@ class FileTreeState extends State<FileTree> {
                             ),
                           );
                         },
+                        transferTask: transferTasks[fileNode.path],
                       );
                       if (!isDesktop || session.profile.isLocal) {
                         return KeyedSubtree(
@@ -765,7 +784,9 @@ class FileTreeState extends State<FileTree> {
                                 request.session,
                               );
                               if (!accepted) {
-                                unawaited(appState.cleanupDragFile(filePath));
+                                unawaited(
+                                  appState.cleanupDragFile(filePath),
+                                );
                                 return;
                               }
                               await appState.downloadFileToLocal(

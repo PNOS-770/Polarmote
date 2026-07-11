@@ -19,7 +19,12 @@ Future<void> showHostDialog(
         ? defaultGroup
         : currentGroup,
   );
-  final passwordController = TextEditingController(text: host?.password ?? '');
+  final password = (host?.password ?? '').isNotEmpty
+      ? host!.password
+      : host != null && host.authType == AuthType.password
+          ? (await appState.readHostSecret(host.id))?.password
+          : null;
+  final passwordController = TextEditingController(text: password ?? '');
   final localTerminalSupported = _isLocalTerminalSupportedOnPlatform();
   final serialTerminalSupported = _isSerialSupportedOnPlatform();
   final localShellOptions = _localShellOptionsForCurrentPlatform();
@@ -30,8 +35,13 @@ Future<void> showHostDialog(
   }
   var authType = host?.authType ?? AuthType.password;
   var keyPath = host?.privateKeyPath ?? '';
+  final keyPassphrase = (host?.privateKeyPassphrase ?? '').isNotEmpty
+      ? host!.privateKeyPassphrase
+      : host != null && host.authType == AuthType.key && (host.privateKeyPath ?? '').isNotEmpty
+          ? (await appState.readHostSecret(host.id))?.privateKeyPassphrase
+          : null;
   final keyPassphraseController = TextEditingController(
-    text: host?.privateKeyPassphrase ?? '',
+    text: keyPassphrase ?? '',
   );
   var sshProxyType = host?.sshProxyType ?? SshProxyType.none;
   final socksProxyHostController = TextEditingController(

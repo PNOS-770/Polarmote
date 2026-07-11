@@ -117,8 +117,9 @@ fn apply_compatibility_handshake_profile(session: &Session) -> CoreResult<()> {
 fn authenticate(session: &Session, config: &SessionConfig) -> CoreResult<()> {
     let mut attempted = false;
 
-    if config.private_key_path.is_some() || config.password.is_none() {
+    if let Some(key_path) = &config.private_key_path {
         attempted = true;
+        session.set_option(SshOption::AddIdentity(key_path.clone()))?;
         let passphrase = config
             .private_key_passphrase
             .as_deref()
@@ -475,13 +476,33 @@ where
     ensure_not_cancelled(cancelled)?;
 
     let remote_path = normalize_remote_path(remote_path);
-    let total_hint = connection.sftp().metadata(&remote_path)?.len();
+    let total_hint = match connection.sftp().metadata(&remote_path) {
+        Ok(m) => {
+            let size = m.len();
+            eprintln!("[DOWNLOAD_FILE] metadata {remote_path}: size={size:?}");
+            size
+        }
+        Err(e) => {
+            eprintln!("[DOWNLOAD_FILE] metadata {remote_path} FAILED: {e}");
+            return Err(e.into());
+        }
+    };
     ensure_local_parent_exists(local_path)?;
     let resume_meta_path = local_resume_meta_path(local_path);
 
-    let mut remote_file = connection
+    let mut remote_file = match connection
         .sftp()
-        .open(&remote_path, OpenFlags::READ_ONLY, 0)?;
+        .open(&remote_path, OpenFlags::READ_ONLY, 0)
+    {
+        Ok(f) => {
+            eprintln!("[DOWNLOAD_FILE] open {remote_path}: OK");
+            f
+        }
+        Err(e) => {
+            eprintln!("[DOWNLOAD_FILE] open {remote_path} FAILED: {e}");
+            return Err(e.into());
+        }
+    };
     let remote_fingerprint = if let Some(total) = total_hint {
         Some(build_remote_fingerprint(&mut remote_file, total)?)
     } else {
@@ -519,12 +540,14 @@ where
     let mut last_emit_bytes = transferred;
     let mut last_emit_at = Instant::now();
 
+    let mut read_ops = 0u32;
     loop {
         ensure_not_cancelled(cancelled)?;
         let bytes_read = remote_file.read(&mut buffer)?;
         if bytes_read == 0 {
             break;
         }
+        read_ops += 1;
 
         local_file.write_all(&buffer[..bytes_read])?;
         transferred += bytes_read as u64;
@@ -535,12 +558,56 @@ where
         }
     }
 
+    eprintln!(
+        "[DOWNLOAD_FILE] read loop done: read_ops={read_ops}, transferred={transferred}, total_hint={:?}",
+        total_hint,
+    );
+
     local_file.flush()?;
+
+    // Safety net: if the remote file has a known size > 0 but we transferred
+    // nothing (connection was dead but SFTP returned EOF instead of error),
+    // fail loudly rather than silently creating a 0-byte local file.
+    if let Some(expected) = total_hint {
+        if expected > 0 && transferred == 0 {
+            eprintln!(
+                "[DOWNLOAD_FILE] SAFETY FAIL: 0 bytes for {remote_path} (expected {expected})"
+            );
+            let _ = fs::remove_file(local_path);
+            return Err(CoreError::Io(format!(
+                "downloaded 0 bytes but remote file {remote_path} size is {expected}"
+            )));
+        }
+    }
+
+    // Verify the local file was actually written to disk.
+    if transferred > 0 {
+        let actual = fs::metadata(local_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+        eprintln!(
+            "[DOWNLOAD_FILE] local file check: transferred={transferred}, on_disk={actual}",
+        );
+        if actual < transferred.saturating_sub(chunk_size_or_default(chunk_size) as u64) {
+            eprintln!(
+                "[DOWNLOAD_FILE] DISK MISMATCH: transferred={transferred} but on_disk={actual}, removing"
+            );
+            let _ = fs::remove_file(local_path);
+            return Err(CoreError::Io(format!(
+                "downloaded {transferred} bytes but local file {local_path} is only {actual} bytes"
+            )));
+        }
+    }
+
     let output_total = total_hint.or(Some(transferred));
     if transferred != last_emit_bytes {
         on_progress(transferred, output_total)?;
     }
     let _ = fs::remove_file(&resume_meta_path);
+
+    eprintln!(
+        "[DOWNLOAD_FILE] SUCCESS: {remote_path} -> local, transferred={transferred}",
+    );
 
     Ok(TaskExecutionOutput {
         transferred_bytes: transferred,

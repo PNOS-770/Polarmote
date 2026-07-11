@@ -2193,6 +2193,8 @@ class _AppStringValues {
   final workspace = const AppText(en: 'Workspace', zh: '工作区');
   final stageBackgroundImage = const AppText(en: 'Background Image', zh: '背景图片');
   final noStageSessions = const AppText(en: 'Not connected', zh: '未连接');
+  final previousStage = const AppText(en: 'Previous stage', zh: '上一个 Stage');
+  final nextStage = const AppText(en: 'Next stage', zh: '下一个 Stage');
 }
 
 class AppStrings {

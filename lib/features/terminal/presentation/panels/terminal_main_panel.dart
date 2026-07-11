@@ -1153,21 +1153,17 @@ class _TerminalAreaState extends State<_TerminalArea> {
     final idx = stages.indexWhere((s) => s.id == _focusedStageId);
     if (idx < 0) return;
     final target = (idx + direction) % stages.length;
-    _focusedStageId = stages[target].id;
+    final targetId = stages[target].id;
+    appState.switchTerminalStage(targetId);
+    setState(() => _focusedStageId = targetId);
     _updateSessionBackgroundMode();
   }
 
-  Widget _buildStageNavButton(IconData icon, VoidCallback onPressed) {
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: IconButton(
-        iconSize: 16,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-        icon: Icon(icon, color: AppColors.textSecondary),
-        onPressed: onPressed,
-      ),
+  Widget _buildStageNavButton(IconData icon, String tooltip, VoidCallback onPressed) {
+    return Tooltip(
+      message: tooltip,
+      waitDuration: const Duration(milliseconds: 250),
+      child: StepIconButton(icon: icon, onPressed: onPressed),
     );
   }
 
@@ -1188,18 +1184,13 @@ class _TerminalAreaState extends State<_TerminalArea> {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 36,
-            child: InkWell(
-              onTap: () {
-                setState(() => _focusedStageId = '');
-                _updateSessionBackgroundMode();
-              },
-              child: Center(
-                child: Icon(Icons.arrow_back,
-                    size: 18, color: AppColors.textSecondary),
-              ),
-            ),
+          HeaderIconButton(
+            icon: Icons.arrow_back,
+            tooltip: l(appState, AppStrings.values.back),
+            onPressed: () {
+              setState(() => _focusedStageId = '');
+              _updateSessionBackgroundMode();
+            },
           ),
           IconButton(
             iconSize: 20,
@@ -1214,10 +1205,12 @@ class _TerminalAreaState extends State<_TerminalArea> {
           const SizedBox(width: 4),
           _buildStageNavButton(
             Icons.chevron_left,
+            l(appState, AppStrings.values.previousStage),
             () => _switchToStage(appState, -1),
           ),
           _buildStageNavButton(
             Icons.chevron_right,
+            l(appState, AppStrings.values.nextStage),
             () => _switchToStage(appState, 1),
           ),
           const SizedBox(width: 4),
@@ -1255,20 +1248,13 @@ class _TerminalAreaState extends State<_TerminalArea> {
           ],
           const Spacer(),
           if (session != null)
-          SizedBox(
-            width: 36,
-            child: InkWell(
-              onTap: () => setState(() => _showFileTreePanel = !_showFileTreePanel),
-              child: Center(
-                child: Icon(
-                  Icons.folder_open,
-                  size: 16,
-                  color: _showFileTreePanel
-                      ? AppColors.accent
-                      : AppColors.textSecondary,
-                ),
-              ),
-            ),
+          HeaderIconButton(
+            icon: Icons.folder_open,
+            iconSize: 16,
+            isActive: _showFileTreePanel,
+            activeColor: AppColors.accent,
+            tooltip: l(appState, AppStrings.values.showFileTree),
+            onPressed: () => setState(() => _showFileTreePanel = !_showFileTreePanel),
           ),
         ],
       ),
@@ -1450,18 +1436,21 @@ class _FileTreeSelector {
   const _FileTreeSelector({
     required this.version,
     required this.showHiddenFiles,
+    required this.transferVersion,
   });
   final int version;
   final bool showHiddenFiles;
+  final int transferVersion;
 
   @override
   bool operator ==(Object other) =>
       other is _FileTreeSelector &&
       other.version == version &&
-      other.showHiddenFiles == showHiddenFiles;
+      other.showHiddenFiles == showHiddenFiles &&
+      other.transferVersion == transferVersion;
 
   @override
-  int get hashCode => Object.hash(version, showHiddenFiles);
+  int get hashCode => Object.hash(version, showHiddenFiles, transferVersion);
 }
 
 class _FileTreePanel extends StatefulWidget {
@@ -1510,6 +1499,7 @@ class _FileTreePanelState extends State<_FileTreePanel> {
                   selector: (_, state) => _FileTreeSelector(
                     version: state.activeSession?.fileState.version ?? -1,
                     showHiddenFiles: state.showHiddenFiles,
+                    transferVersion: state.activeSession?.transferVersion ?? -1,
                   ),
                   builder: (_, sel, __) => FileTree(
                     appState: widget.appState,

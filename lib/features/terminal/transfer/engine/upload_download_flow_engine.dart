@@ -55,7 +55,7 @@ class UploadDownloadFlowEngine {
   static final _random = Random();
 
   final String languageCode;
-  final TransferFacade Function(
+  final Future<TransferFacade> Function(
     TerminalSession session, {
     required TransferDirection direction,
   })
@@ -97,7 +97,7 @@ class UploadDownloadFlowEngine {
     final sanitized = _sanitizeLocalPaths(localPaths);
     if (sanitized.isEmpty) return;
 
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.upload,
     );
@@ -148,7 +148,7 @@ class UploadDownloadFlowEngine {
         .toList(growable: false);
     if (sanitized.isEmpty) return;
 
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -307,7 +307,7 @@ class UploadDownloadFlowEngine {
     String localPath, {
     String? displayName,
   }) async {
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -465,7 +465,7 @@ class UploadDownloadFlowEngine {
     required VirtualFileEventSinkProvider sinkProvider,
     required WriteProgress progress,
   }) async {
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );
@@ -514,7 +514,7 @@ class UploadDownloadFlowEngine {
     required VirtualFileEventSinkProvider sinkProvider,
     required WriteProgress progress,
   }) async {
-    final facade = createTransferFacade(
+    final facade = await createTransferFacade(
       session,
       direction: TransferDirection.download,
     );

@@ -280,6 +280,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
   int _lastSessionCount = -1;
 
   String _focusedStageId = '';
+  String _lastScrolledStageId = '';
   bool _showFileTreePanel = true;
   double _fileTreeHeight = 220;
   final ScrollController _stageTabScrollController = ScrollController();
@@ -310,8 +311,14 @@ class _TerminalAreaState extends State<_TerminalArea> {
     widget.appState.addListener(_onAppStateChanged);
   }
 
+  String _lastStageStateToken = '';
   void _onAppStateChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final stages = widget.appState.terminalStages;
+    final token = '${stages.length}:${stages.map((s) => '${s.id},${widget.appState.activeTerminalStageId}').join('|')}';
+    if (token == _lastStageStateToken) return;
+    _lastStageStateToken = token;
+    setState(() {});
   }
 
   @override
@@ -908,13 +915,15 @@ class _TerminalAreaState extends State<_TerminalArea> {
   }
 
   void _onStageTapFromGrid(String stageId) {
-    _cachedPaneWidgets.clear();
     widget.appState.switchTerminalStage(stageId);
     setState(() {
       _focusedStageId = stageId;
-      _updateSessionBackgroundMode();
     });
-    _ensureSftpForFocusedStage();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateSessionBackgroundMode();
+      _ensureSftpForFocusedStage();
+    });
   }
 
   void _ensureSftpForFocusedStage() {
@@ -1114,11 +1123,13 @@ class _TerminalAreaState extends State<_TerminalArea> {
     if (idx < 0) return;
     final target = (idx + direction) % stages.length;
     final targetId = stages[target].id;
-    _cachedPaneWidgets.clear();
     appState.switchTerminalStage(targetId);
     setState(() => _focusedStageId = targetId);
-    _updateSessionBackgroundMode();
-    _ensureSftpForFocusedStage();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateSessionBackgroundMode();
+      _ensureSftpForFocusedStage();
+    });
   }
 
   static const double _stageTabWidth = 180;
@@ -1126,15 +1137,18 @@ class _TerminalAreaState extends State<_TerminalArea> {
   Widget _buildStageTabs(TerminalAppState appState) {
     final stages = appState.terminalStages;
     final currentId = _focusedStageId.isNotEmpty ? _focusedStageId : appState.activeTerminalStageId;
-    final currentIndex = stages.indexWhere((s) => s.id == currentId);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || currentIndex < 0) return;
-      final target = currentIndex * _stageTabWidth - _stageTabScrollController.position.viewportDimension / 2 + _stageTabWidth / 2;
-      final clamped = target.clamp(0.0, _stageTabScrollController.position.maxScrollExtent);
-      if (_stageTabScrollController.hasClients && _stageTabScrollController.offset != clamped) {
-        _stageTabScrollController.animateTo(clamped, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
-      }
-    });
+    if (currentId != _lastScrolledStageId) {
+      _lastScrolledStageId = currentId;
+      final currentIndex = stages.indexWhere((s) => s.id == currentId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || currentIndex < 0) return;
+        final target = currentIndex * _stageTabWidth - _stageTabScrollController.position.viewportDimension / 2 + _stageTabWidth / 2;
+        final clamped = target.clamp(0.0, _stageTabScrollController.position.maxScrollExtent);
+        if (_stageTabScrollController.hasClients && _stageTabScrollController.offset != clamped) {
+          _stageTabScrollController.animateTo(clamped, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
+        }
+      });
+    }
     return SizedBox(
       height: 32,
       child: ListView.builder(
@@ -1148,11 +1162,13 @@ class _TerminalAreaState extends State<_TerminalArea> {
           return GestureDetector(
             onTap: () {
               if (!isActive) {
-                _cachedPaneWidgets.clear();
                 appState.switchTerminalStage(s.id);
                 setState(() => _focusedStageId = s.id);
-                _updateSessionBackgroundMode();
-                _ensureSftpForFocusedStage();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _updateSessionBackgroundMode();
+                  _ensureSftpForFocusedStage();
+                });
               }
             },
             child: Container(

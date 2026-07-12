@@ -2,7 +2,6 @@
 
 跨平台终端模拟器与远程管理工具，目前仅支持Android和Windows。
 
-![Platform](https://img.shields.io/badge/platform-Windows%20|%20Android%20|%20)
 [![Release](https://img.shields.io/github/v/release/PNOS-770/Polarmote)](https://github.com/PNOS-770/Polarmote/releases)
 
 ## 截图

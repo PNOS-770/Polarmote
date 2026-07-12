@@ -952,6 +952,11 @@ class _TerminalAreaState extends State<_TerminalArea> {
       details.globalPosition & const Size(1, 1),
       Offset.zero & overlay.size,
     );
+    final session = stage.sessionIds
+        .map((sid) => widget.appState.terminalSessionById(sid))
+        .whereType<TerminalSession>()
+        .firstOrNull;
+
     showStageCardContextMenu(
       context: context,
       appState: widget.appState,
@@ -960,6 +965,10 @@ class _TerminalAreaState extends State<_TerminalArea> {
       includeBackground: true,
       onBackgroundTap: () =>
           showStageBackgroundPicker(context, widget.appState, stage),
+      onEditSession: session != null
+          ? () => showHostDialog(context, widget.appState, host: session.profile)
+          : null,
+      editSessionLabel: l(widget.appState, AppStrings.values.editSession),
       selectBackgroundLabel:
           l(widget.appState, AppStrings.values.selectBackground),
       renameLabel: l(widget.appState, AppStrings.values.renameStage),

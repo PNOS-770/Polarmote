@@ -8,6 +8,10 @@
 ```
 跨平台终端模拟器与远程管理工具，支持 **Android** 和 **Windows**。
 
+## 截图
+
+![主界面](screenshots/main.png)
+
 ## 功能
 
 - **连接管理** — SSH（密码/密钥/Agent）、本地终端、串口、Telnet；ProxyJump 跳板、SOCKS5 代理；会话树分组、搜索、筛选、排序、常用主机固定

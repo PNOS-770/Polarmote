@@ -367,7 +367,38 @@ class _StageCardState extends State<_StageCard> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (session != null)
+            if (widget.appState.restoringStageIds.contains(widget.stage.id))
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6, height: 6,
+                      decoration: const BoxDecoration(
+                        color: Colors.amber, shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Connecting',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.amber.shade200,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (session != null)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xs,

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-
+import 'dart:io' show Platform, Process;
 
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
@@ -11,7 +11,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
   void startMetricsPolling(TerminalSession session) {
     _stopMetricsPolling(session);
     session.metricsTimer = Timer.periodic(
-      const Duration(seconds: 4),
+      const Duration(milliseconds: 2500),
       (_) => _pollMetrics(session),
     );
     unawaited(_pollMetrics(session));
@@ -36,8 +36,51 @@ extension TerminalAppStateMetrics on TerminalAppState {
     }
     if (session.profile.isLocal) {
       await _pollLocalMetrics(session);
+      if (session.deviceModel == null) {
+        await _pollLocalSystemInfo(session);
+      }
     } else {
       await _pollRemoteMetrics(session);
+      if (session.deviceModel == null) {
+        await _pollSystemInfo(session);
+      }
+    }
+    _shareMetricsWithSiblingSessions(session);
+  }
+
+  void _shareMetricsWithSiblingSessions(TerminalSession source) {
+    final hostId = source.profile.id;
+    for (final s in sessions) {
+      if (s.id == source.id || s.profile.id != hostId) continue;
+      s.cpuUsage = source.cpuUsage;
+      s.cpuHistory
+        ..clear()
+        ..addAll(source.cpuHistory);
+      s.lastCpuTotal = source.lastCpuTotal;
+      s.lastCpuIdle = source.lastCpuIdle;
+      s.memUsage = source.memUsage;
+      s.memUsedBytes = source.memUsedBytes;
+      s.memTotalBytes = source.memTotalBytes;
+      s.diskUsage = source.diskUsage;
+      s.diskReadRate = source.diskReadRate;
+      s.diskWriteRate = source.diskWriteRate;
+      s.loadAvg = source.loadAvg;
+      s.netRxRate = source.netRxRate;
+      s.netTxRate = source.netTxRate;
+      s.netRxHistory
+        ..clear()
+        ..addAll(source.netRxHistory);
+      s.netTxHistory
+        ..clear()
+        ..addAll(source.netTxHistory);
+      s.metricsUpdatedAt = source.metricsUpdatedAt;
+      s.deviceModel ??= source.deviceModel;
+      s.cpuCores ??= source.cpuCores;
+      s.osInfo ??= source.osInfo;
+      s.kernelVersion ??= source.kernelVersion;
+      s.totalMem ??= source.totalMem;
+      s.hostName ??= source.hostName;
+      s.uptime ??= source.uptime;
     }
   }
 
@@ -97,9 +140,9 @@ extension TerminalAppStateMetrics on TerminalAppState {
       if (data.netRx != null && data.netTx != null) {
         _updateNetRates(session, data.netRx!, data.netTx!);
         session.netRxHistory.add(session.netRxRate ?? 0);
-        if (session.netRxHistory.length > 60) session.netRxHistory.removeAt(0);
+        if (session.netRxHistory.length > 120) session.netRxHistory.removeAt(0);
         session.netTxHistory.add(session.netTxRate ?? 0);
-        if (session.netTxHistory.length > 60) session.netTxHistory.removeAt(0);
+        if (session.netTxHistory.length > 120) session.netTxHistory.removeAt(0);
       }
 
       // Disk - cumulative I/O, need delta for rate
@@ -164,6 +207,139 @@ extension TerminalAppStateMetrics on TerminalAppState {
     } catch (_) {
       // Ignore metrics failures (non-Linux or permission issues).
     }
+  }
+
+  Future<void> _pollSystemInfo(TerminalSession session) async {
+    if (session.metricsClient == null) return;
+    try {
+      final output = await session.metricsClient!
+          .run(
+            "sh -c '"
+            "cat /proc/cpuinfo 2>/dev/null | grep -m1 \"model name\" | cut -d: -f2 | xargs; "
+            "echo __CPUCORES__; "
+            "grep -c ^processor /proc/cpuinfo 2>/dev/null; "
+            "echo __OS__; "
+            "(cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME | cut -d= -f2 | tr -d \"\\\"\") || uname -s; "
+            "echo __KERNEL__; "
+            "uname -r; "
+            "echo __MEM__; "
+            "grep MemTotal /proc/meminfo 2>/dev/null | tr -s ' ' | cut -d' ' -f2; "
+            "echo __HOSTNAME__; "
+            "uname -n; "
+            "echo __UPTIME__; "
+            "cat /proc/uptime 2>/dev/null | tr -s ' ' | cut -d' ' -f1"
+            "'",
+            stdout: true,
+            stderr: false,
+          )
+          .timeout(const Duration(seconds: 5));
+      final text = utf8.decode(output, allowMalformed: true);
+      final lines = text.split('\n').map((l) => l.trim()).toList();
+
+      if (lines.isNotEmpty && !lines[0].contains('__')) session.deviceModel = lines[0];
+
+      final ccIdx = lines.indexWhere((l) => l.contains('__CPUCORES__'));
+      if (ccIdx >= 0 && ccIdx + 1 < lines.length) {
+        final c = int.tryParse(lines[ccIdx + 1]);
+        if (c != null) session.cpuCores = c > 1 ? '$c cores' : '$c core';
+      }
+
+      final osIdx = lines.indexWhere((l) => l.contains('__OS__'));
+      if (osIdx >= 0 && osIdx + 1 < lines.length) session.osInfo = lines[osIdx + 1];
+
+      final kernIdx = lines.indexWhere((l) => l.contains('__KERNEL__'));
+      if (kernIdx >= 0 && kernIdx + 1 < lines.length) session.kernelVersion = lines[kernIdx + 1];
+
+      final memIdx = lines.indexWhere((l) => l.contains('__MEM__'));
+      if (memIdx >= 0 && memIdx + 1 < lines.length) {
+        final kb = int.tryParse(lines[memIdx + 1]);
+        if (kb != null) {
+          final gb = kb / (1024 * 1024);
+          session.totalMem = gb >= 1 ? '${gb.toStringAsFixed(0)} GB' : '${(kb / 1024).toStringAsFixed(0)} MB';
+        }
+      }
+
+      final hnIdx = lines.indexWhere((l) => l.contains('__HOSTNAME__'));
+      if (hnIdx >= 0 && hnIdx + 1 < lines.length) session.hostName = lines[hnIdx + 1];
+
+      final upIdx = lines.indexWhere((l) => l.contains('__UPTIME__'));
+      if (upIdx >= 0 && upIdx + 1 < lines.length) {
+        final secs = double.tryParse(lines[upIdx + 1]);
+        if (secs != null) {
+          final days = (secs / 86400).floor();
+          final hours = ((secs % 86400) / 3600).floor();
+          final mins = ((secs % 3600) / 60).floor();
+          session.uptime = days > 0
+              ? '${days}d ${hours}h ${mins}m'
+              : '${hours}h ${mins}m';
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pollLocalSystemInfo(TerminalSession session) async {
+    session.hostName = Platform.localHostname;
+    session.deviceModel = '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+    session.cpuCores = '${Platform.numberOfProcessors} cores';
+
+    try {
+      if (Platform.isLinux) {
+        final mem = await Process.run('sh', ['-c', 'grep MemTotal /proc/meminfo | tr -s " " | cut -d" " -f2']);
+        if (mem.exitCode == 0) {
+          final kb = int.tryParse((mem.stdout as String).trim());
+          if (kb != null) {
+            final gb = kb / (1024 * 1024);
+            session.totalMem = gb >= 1 ? '${gb.toStringAsFixed(0)} GB' : '${(kb / 1024).toStringAsFixed(0)} MB';
+          }
+        }
+        final up = await Process.run('sh', ['-c', 'cat /proc/uptime | cut -d" " -f1']);
+        if (up.exitCode == 0) {
+          final secs = double.tryParse((up.stdout as String).trim());
+          if (secs != null) {
+            final days = (secs / 86400).floor();
+            final hours = ((secs % 86400) / 3600).floor();
+            final mins = ((secs % 3600) / 60).floor();
+            session.uptime = days > 0 ? '${days}d ${hours}h ${mins}m' : '${hours}h ${mins}m';
+          }
+        }
+        final kern = await Process.run('uname', ['-r']);
+        if (kern.exitCode == 0) session.kernelVersion = (kern.stdout as String).trim();
+      } else if (Platform.isMacOS) {
+        final mem = await Process.run('sysctl', ['-n', 'hw.memsize']);
+        if (mem.exitCode == 0) {
+          final bytes = int.tryParse((mem.stdout as String).trim());
+          if (bytes != null) {
+            final gb = bytes / (1024 * 1024 * 1024);
+            session.totalMem = '${gb.toStringAsFixed(0)} GB';
+          }
+        }
+        final kern = await Process.run('uname', ['-r']);
+        if (kern.exitCode == 0) session.kernelVersion = (kern.stdout as String).trim();
+        final up = await Process.run('sh', ['-c', 'sysctl -n kern.boottime | cut -d" " -f4 | tr -d ","']);
+        if (up.exitCode == 0) {
+          final boot = int.tryParse((up.stdout as String).trim());
+          if (boot != null) {
+            final secs = DateTime.now().millisecondsSinceEpoch ~/ 1000 - boot;
+            final days = (secs / 86400).floor();
+            final hours = ((secs % 86400) / 3600).floor();
+            final mins = ((secs % 3600) / 60).floor();
+            session.uptime = days > 0 ? '${days}d ${hours}h ${mins}m' : '${hours}h ${mins}m';
+          }
+        }
+      } else if (Platform.isWindows) {
+        final os = await Process.run('wmic', ['os', 'get', 'Caption,Version', '/format:list']);
+        if (os.exitCode == 0) session.osInfo = (os.stdout as String).trim().replaceAll('\r\n', '; ');
+        final mem = await Process.run('wmic', ['computersystem', 'get', 'TotalPhysicalMemory', '/format:list']);
+        if (mem.exitCode == 0) {
+          final val = (mem.stdout as String).trim().split('\n').lastOrNull?.trim();
+          final bytes = int.tryParse(val ?? '');
+          if (bytes != null) {
+            final gb = bytes / (1024 * 1024 * 1024);
+            session.totalMem = '${gb.toStringAsFixed(0)} GB';
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   void _parseMetrics(TerminalSession session, String text) {
@@ -264,9 +440,9 @@ extension TerminalAppStateMetrics on TerminalAppState {
       }
       _updateNetRates(session, rxTotal, txTotal);
       session.netRxHistory.add(session.netRxRate ?? 0);
-      if (session.netRxHistory.length > 60) session.netRxHistory.removeAt(0);
+      if (session.netRxHistory.length > 120) session.netRxHistory.removeAt(0);
       session.netTxHistory.add(session.netTxRate ?? 0);
-      if (session.netTxHistory.length > 60) session.netTxHistory.removeAt(0);
+      if (session.netTxHistory.length > 120) session.netTxHistory.removeAt(0);
     }
 
     final diskIndex = lines.indexWhere((line) => line.startsWith('__DISK__'));
@@ -336,13 +512,13 @@ extension TerminalAppStateMetrics on TerminalAppState {
   void _updateMetricHistory(TerminalSession session) {
     if (session.cpuUsage != null) {
       session.cpuHistory.add(session.cpuUsage!);
-      if (session.cpuHistory.length > 60) {
+      if (session.cpuHistory.length > 120) {
         session.cpuHistory.removeAt(0);
       }
     }
     if (session.memUsage != null) {
       session.memHistory.add(session.memUsage!);
-      if (session.memHistory.length > 60) {
+      if (session.memHistory.length > 120) {
         session.memHistory.removeAt(0);
       }
     }

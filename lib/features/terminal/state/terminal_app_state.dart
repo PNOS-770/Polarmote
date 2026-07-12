@@ -208,6 +208,7 @@ class TerminalAppState extends ChangeNotifier {
   int _terminalStageIdSeed = 0;
   bool stageManagerEnabled = true;
   bool restorationInProgress = false;
+  final Set<String> restoringStageIds = {};
   bool broadcastEnabled = false;
   double terminalSplitPrimaryRatio = 0.5;
   double terminalSplitSecondaryRatio = 0.5;

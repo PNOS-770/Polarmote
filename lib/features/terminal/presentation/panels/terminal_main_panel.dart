@@ -32,6 +32,7 @@ import '../modal_panels/port_forward_modal_panel.dart';
 import '../modal_panels/lan_scan_modal_panel.dart';
 import '../modal_panels/log_viewer_modal_panel.dart';
 import 'terminal_home_panels.dart';
+import 'terminal_side_status_panel.dart';
 import 'terminal_status_bar.dart';
 
 part 'terminal_pane.dart';
@@ -985,6 +986,31 @@ class _TerminalAreaState extends State<_TerminalArea> {
     );
   }
 
+  void _showStageTabMenu(BuildContext context, TerminalAppState appState, TerminalStage stage, Offset globalPosition) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      globalPosition & const Size(1, 1),
+      Offset.zero & overlay.size,
+    );
+    showStageCardContextMenu(
+      context: context,
+      appState: appState,
+      stage: stage,
+      position: position,
+      includeBackground: false,
+      renameLabel: l(appState, AppStrings.values.renameStage),
+      renameTitle: l(appState, AppStrings.values.renameStageTitle),
+      renameConfirm: l(appState, AppStrings.values.rename),
+      renameCancel: l(appState, AppStrings.values.cancel),
+      closeSessionLabel: l(appState, AppStrings.values.commandBarCloseSession),
+      deleteLabel: l(appState, AppStrings.values.deleteStage),
+      deleteTitle: l(appState, AppStrings.values.deleteStage),
+      deleteMessage: l(appState, AppStrings.values.deleteVar),
+      deleteConfirm: l(appState, AppStrings.values.delete),
+      deleteCancel: l(appState, AppStrings.values.cancel),
+    );
+  }
+
   void _showCreateStageDialog(BuildContext context) {
     final appState = widget.appState;
     showInputDialog(
@@ -1186,6 +1212,9 @@ class _TerminalAreaState extends State<_TerminalArea> {
                   _ensureSftpForFocusedStage();
                 });
               }
+            },
+            onSecondaryTapDown: (details) {
+              _showStageTabMenu(context, appState, s, details.globalPosition);
             },
             child: Container(
               height: 24,

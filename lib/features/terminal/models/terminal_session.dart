@@ -120,6 +120,13 @@ class TerminalSession {
   double? diskReadRate;
   double? diskWriteRate;
   DateTime? metricsUpdatedAt;
+  String? deviceModel;     // e.g. "Apple M3 Pro", "Intel Xeon E-2288G"
+  String? cpuCores;        // e.g. "8 cores, 16 threads"
+  String? osInfo;          // e.g. "Ubuntu 22.04.3 LTS", "macOS 14.3"
+  String? kernelVersion;   // e.g. "6.6.15-arm64"
+  String? totalMem;        // e.g. "64 GB"
+  String? hostName;        // hostname from uname -n
+  String? uptime;          // e.g. "3 days, 12:34"
   int? lastCpuTotal;
   int? lastCpuIdle;
   int? lastNetRxBytes;
@@ -759,4 +766,7 @@ class TerminalSession {
     _adaptiveThrottle.enabled = value;
   }
 }
+
+/// Holds timestamped sparkline samples and smoothed values that persist
+/// across widget recreation (e.g. switching terminal stages).
 

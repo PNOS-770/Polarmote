@@ -409,11 +409,13 @@ extension TerminalAppStateSftp on TerminalAppState {
       } else {
         session.fileState.selected.add(path);
       }
-    } else {
+    } else if (!session.fileState.selected.contains(path)) {
+      // 点击未选中文件：替换选择
       session.fileState.selected
         ..clear()
         ..add(path);
     }
+    // 点击已选中文件：保留选择（用于拖拽）
     session.fileState.bumpSelection();
   }
 

@@ -593,46 +593,7 @@ class FileTreeState extends State<FileTree> {
                       return DragItemWidget(
                         key: ValueKey<String>('drag-${fileNode.path}'),
                         dragItemProvider: (request) async {
-                          final selectedPaths = session.fileState.selected;
-                          final selectedNodes = _selectedNodesForEntries(
-                            session,
-                            entries,
-                          );
-                          final activeSelection =
-                              selectedNodes.length > 1 &&
-                                      selectedPaths.contains(fileNode.path)
-                                  ? selectedNodes
-                                  : <FileNode>[fileNode];
-
-                          if (activeSelection.length > 1) {
-                            final folderName =
-                                '${session.tab.title.replaceAll(RegExp(r'\s+'), '_')}-selection';
-                            final folderPath = await appState
-                                .prepareDesktopDropDirectoryBundle(folderName);
-                            final item = DragItem(
-                              suggestedName: p.basename(folderPath),
-                              localData: _remoteFileTreeDragLocalDataTag,
-                            );
-                            item.add(Formats.fileUri(Uri.file(folderPath)));
-                            unawaited(() async {
-                              final accepted = await _waitForDrop(
-                                request.session,
-                              );
-                              if (!accepted) {
-                                unawaited(
-                                  appState.cleanupDragFolder(folderPath),
-                                );
-                                return;
-                              }
-                              await appState.downloadSelectionToLocal(
-                                session,
-                                activeSelection,
-                                folderPath,
-                              );
-                            }());
-                            return item;
-                          }
-
+                          // 多选时拖拽只当作单个文件处理，不支持多选拖拽下载
                           final item = DragItem(
                             suggestedName: fileNode.name,
                             localData: _remoteFileTreeDragLocalDataTag,
@@ -653,9 +614,7 @@ class FileTreeState extends State<FileTree> {
                                 return;
                               }
                               await appState.downloadDirectoryToLocal(
-                                session,
-                                fileNode.path,
-                                folderPath,
+                                session, fileNode.path, folderPath,
                               );
                             }());
                           } else {
@@ -673,9 +632,7 @@ class FileTreeState extends State<FileTree> {
                                 return;
                               }
                               await appState.downloadFileToLocal(
-                                session,
-                                fileNode.path,
-                                filePath,
+                                session, fileNode.path, filePath,
                                 displayName: fileNode.name,
                               );
                             }());

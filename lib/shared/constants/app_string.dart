@@ -2095,6 +2095,8 @@ class _AppStringValues {
 
   final cpu = const AppText(en: 'CPU', zh: 'CPU');
   final mem = const AppText(en: 'MEM', zh: '内存');
+  final dl = const AppText(en: 'DL', zh: '下载');
+  final ul = const AppText(en: 'UL', zh: '上传');
 
   // LAN Scan
   final lanScanTitle = const AppText(en: 'LAN Scan', zh: '局域网扫描');
@@ -2202,6 +2204,15 @@ class _AppStringValues {
   final addStage = const AppText(en: 'Add Stage', zh: '新建 Stage');
   final previousStage = const AppText(en: 'Previous stage', zh: '上一个工作区');
   final nextStage = const AppText(en: 'Next stage', zh: '下一个工作区');
+
+  // Device Info
+  final deviceModel = const AppText(en: 'Model', zh: '型号');
+  final cpuCores = const AppText(en: 'CPU', zh: 'CPU');
+  final osInfo = const AppText(en: 'OS', zh: '系统');
+  final kernelVersion = const AppText(en: 'Kernel', zh: '内核');
+  final totalMem = const AppText(en: 'Memory', zh: '内存');
+  final hostName = const AppText(en: 'Hostname', zh: '主机名');
+  final uptime = const AppText(en: 'Uptime', zh: '运行时间');
 }
 
 class AppStrings {

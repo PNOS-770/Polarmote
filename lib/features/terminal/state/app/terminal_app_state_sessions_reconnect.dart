@@ -74,6 +74,8 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
     var count = 0;
     for (final stage in terminalStages) {
       if (stage.connectedHostIds.isEmpty) continue;
+      restoringStageIds.add(stage.id);
+      notifyState();
       for (final hostId in stage.connectedHostIds) {
         final host = hosts.where((h) => h.id == hostId).firstOrNull;
         if (host == null) {
@@ -83,9 +85,13 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
         await Future.delayed(const Duration(milliseconds: 500));
         final capturedStageId = stage.id;
         await connectToHost(host, background: true);
-        // Manually assign session to the correct stage (silent, no notifyState).
-        // Guards (onAppStateChanged, statusBar) check restorationInProgress to
-        // suppress rebuilds; next external timer tick will expose final state.
+        // Wait for connection to actually finish before starting next one
+        final deadline = DateTime.now().add(const Duration(seconds: 20));
+        while (DateTime.now().isBefore(deadline) &&
+            sessions.last.tab.status != TerminalStatus.connected &&
+            sessions.last.tab.status != TerminalStatus.disconnected) {
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
         if (sessions.isNotEmpty) {
           final newSession = sessions.last;
           final idx = terminalStages.indexWhere((s) => s.id == capturedStageId);
@@ -97,10 +103,17 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
                 host.id,
               ],
             );
+            // 如果这是当前活跃 stage 且没有活跃会话，设置新会话为活跃
+            if (capturedStageId == activeTerminalStageId &&
+                (activeSessionIndexValue < 0 || activeSessionIndexValue >= sessions.length)) {
+              activeSessionIndexValue = sessions.length - 1;
+            }
           }
         }
         count++;
       }
+      restoringStageIds.remove(stage.id);
+      notifyState();
     }
     if (count > 0) {
       addStructuredLog(category: TerminalLogCategory.session, message: 'Restored $count stage sessions silently', notifyListeners: false);

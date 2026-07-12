@@ -10,6 +10,21 @@ import '../../state/terminal_app_state.dart';
 import '../common/terminal_formatters.dart';
 import '../common/terminal_localization.dart';
 import '../common/terminal_ui_palette.dart';
+import 'terminal_sparkline.dart';
+
+const _networkTiers = <double>[
+  102400,       // 100 KB/s
+  512000,       // 500 KB/s
+  1048576,      // 1 MB/s
+  5242880,      // 5 MB/s
+  10485760,     // 10 MB/s
+  20971520,     // 20 MB/s
+  52428800,     // 50 MB/s
+  104857600,    // 100 MB/s
+  209715200,    // 200 MB/s
+  524288000,    // 500 MB/s
+  1073741824,   // 1 GB/s
+];
 
 class TerminalStatusBar extends StatefulWidget {
   const TerminalStatusBar({
@@ -29,6 +44,11 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
   DateTime? _lastMetricsAt;
   bool _lastBroadcast = false;
   Timer? _throttleUpdateTimer;
+
+  int _rxNetTier = 0;
+  int _txNetTier = 0;
+  DateTime? _rxDowngradeAt;
+  DateTime? _txDowngradeAt;
 
   @override
   void initState() {
@@ -72,25 +92,6 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     if (fraction < 0.5) return AppColors.success;
     if (fraction < 0.8) return AppColors.warning;
     return AppColors.error;
-  }
-
-  Widget _miniBar(double fraction) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(2),
-      child: SizedBox(
-        width: 20,
-        height: 8,
-        child: Stack(
-          children: [
-            Container(color: TerminalUiPalette.statusBarBorder),
-            FractionallySizedBox(
-              widthFactor: fraction.clamp(0.0, 1.0),
-              child: Container(color: _barColor(fraction)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _badge(String label, Color color) {
@@ -142,7 +143,7 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
         children: [
           Flexible(
             child: Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 6),
               child: Text(
                 session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
                 maxLines: 1,
@@ -152,21 +153,14 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
             ),
           ),
           Container(width: 1, height: 12, color: TerminalUiPalette.statusBarBorder),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           if (appState.broadcastEnabled)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: _badge(l(appState, AppStrings.values.broadcast), AppColors.error),
-            ),
-          _statCpu(appState, cpuUsage),
-          const SizedBox(width: 8),
-          _statMem(appState, memUsage, memText),
-          const SizedBox(width: 8),
-          _statNet(rxText, txText),
-          if (showThrottle) ...[
-            const SizedBox(width: 8),
+            _badge(l(appState, AppStrings.values.broadcast), AppColors.error),
+          Expanded(flex: 1, child: _statCpu(appState, cpuUsage)),
+          Expanded(flex: 1, child: _statMem(appState, memUsage, memText)),
+          Expanded(flex: 3, child: _statNet(appState, rxText, txText)),
+          if (showThrottle)
             _statThrottle(appState, level, diagnostics),
-          ],
         ],
       ),
     );
@@ -208,12 +202,12 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
   }
 
   Widget _statCpu(TerminalAppState appState, double fraction) {
+    final history = widget.session.cpuHistory;
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Text(l(appState, AppStrings.values.cpu), style: _labelStyle),
         const SizedBox(width: 2),
-        _miniBar(fraction),
+        Expanded(child: _cpuSparkline(history)),
         const SizedBox(width: 2),
         Text(
           formatPercent(fraction.isNaN ? null : fraction),
@@ -223,27 +217,124 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     );
   }
 
+  Widget _cpuSparkline(List<double> history) {
+    return AnimatedSparkline(
+      history: history,
+      getColor: _barColor,
+      smooth: true,
+    );
+  }
+
   Widget _statMem(TerminalAppState appState, double fraction, String text) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Text(l(appState, AppStrings.values.mem), style: _labelStyle),
         const SizedBox(width: 2),
-        _miniBar(fraction),
+        Expanded(
+          child: SizedBox(
+            height: 8,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: Stack(
+                children: [
+                  Container(color: TerminalUiPalette.statusBarBorderDim),
+                  FractionallySizedBox(
+                    widthFactor: fraction.clamp(0.0, 1.0),
+                    child: Container(color: _barColor(fraction)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         const SizedBox(width: 2),
         Text(text, style: _valueStyle),
       ],
     );
   }
 
-  Widget _statNet(String rx, String tx) {
+  void _advanceRxNetTier() {
+    final history = widget.session.netRxHistory;
+    if (history.isEmpty) return;
+    final maxVal = history.reduce((a, b) => a > b ? a : b);
+    var target = _networkTiers.length - 1;
+    for (var i = 0; i < _networkTiers.length; i++) {
+      if (_networkTiers[i] >= maxVal) { target = i; break; }
+    }
+    if (target > _rxNetTier) {
+      _rxNetTier = target;
+      _rxDowngradeAt = null;
+    } else if (target < _rxNetTier) {
+      final threshold = _networkTiers[_rxNetTier] * 0.3;
+      if (maxVal < threshold) {
+        final now = DateTime.now();
+        _rxDowngradeAt ??= now;
+        if (now.difference(_rxDowngradeAt!).inSeconds >= 60) {
+          _rxNetTier = target;
+          _rxDowngradeAt = null;
+        }
+      } else {
+        _rxDowngradeAt = null;
+      }
+    }
+  }
+
+  void _advanceTxNetTier() {
+    final history = widget.session.netTxHistory;
+    if (history.isEmpty) return;
+    final maxVal = history.reduce((a, b) => a > b ? a : b);
+    var target = _networkTiers.length - 1;
+    for (var i = 0; i < _networkTiers.length; i++) {
+      if (_networkTiers[i] >= maxVal) { target = i; break; }
+    }
+    if (target > _txNetTier) {
+      _txNetTier = target;
+      _txDowngradeAt = null;
+    } else if (target < _txNetTier) {
+      final threshold = _networkTiers[_txNetTier] * 0.3;
+      if (maxVal < threshold) {
+        final now = DateTime.now();
+        _txDowngradeAt ??= now;
+        if (now.difference(_txDowngradeAt!).inSeconds >= 60) {
+          _txNetTier = target;
+          _txDowngradeAt = null;
+        }
+      } else {
+        _txDowngradeAt = null;
+      }
+    }
+  }
+
+  Widget _statNet(TerminalAppState appState, String rx, String tx) {
+    final rxHistory = widget.session.netRxHistory;
+    final txHistory = widget.session.netTxHistory;
+    _advanceRxNetTier();
+    _advanceTxNetTier();
+    final rxScale = _networkTiers[_rxNetTier];
+    final txScale = _networkTiers[_txNetTier];
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Text('\u2193$rx', style: _valueStyle),
+        Text(l(appState, AppStrings.values.dl), style: _labelStyle),
+        const SizedBox(width: 2),
+        Expanded(child: _netSparkline(rxHistory, rxScale)),
+        const SizedBox(width: 2),
+        Text(rx, style: _valueStyle),
         const SizedBox(width: 4),
-        Text('\u2191$tx', style: _valueStyle),
+        Text(l(appState, AppStrings.values.ul), style: _labelStyle),
+        const SizedBox(width: 2),
+        Expanded(child: _netSparkline(txHistory, txScale)),
+        const SizedBox(width: 2),
+        Text(tx, style: _valueStyle),
       ],
+    );
+  }
+
+  Widget _netSparkline(List<double> history, double maxScale) {
+    if (history.isEmpty || maxScale <= 0) return const SizedBox(height: 16);
+    final normalized = history.map((v) => (v / maxScale).clamp(0.0, 1.0)).toList();
+    return AnimatedSparkline(
+      history: normalized,
+      getColor: (_) => TerminalUiPalette.info,
     );
   }
 
@@ -260,4 +351,6 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     fontFamily: 'monospace',
   );
 }
+
+
 

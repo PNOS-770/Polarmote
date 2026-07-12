@@ -34,6 +34,7 @@ class _TerminalPaneState extends State<_TerminalPane> {
   TerminalCursorShape _lastCursorShape = TerminalCursorShape.block;
   String? _lastBackgroundPath;
   double _lastBackgroundOpacity = 0.15;
+  TerminalStatus _lastSessionStatus = TerminalStatus.connected;
 
   bool _ghostActive = false;
   int _ghostStartCol = 0;
@@ -343,6 +344,7 @@ class _TerminalPaneState extends State<_TerminalPane> {
   @override
   void initState() {
     super.initState();
+    _lastSessionStatus = widget.session.tab.status;
     widget.appState.addListener(_onAppStateChanged);
     widget.session.onUserInput = _onUserInput;
     widget.session.terminal.addListener(_onTerminalChanged);
@@ -367,21 +369,29 @@ class _TerminalPaneState extends State<_TerminalPane> {
 
   void _onAppStateChanged() {
     if (!mounted) return;
-    if (widget.appState.restorationInProgress) return;
     var needsRebuild = false;
-    final cursorShape = widget.appState.globalAppearance.cursorShape;
-    if (cursorShape != _lastCursorShape) {
-      _lastCursorShape = cursorShape;
-      needsRebuild = true;
+    // 恢复期间仍然需要刷新会话状态（connecting → connected）
+    if (!widget.appState.restorationInProgress) {
+      final cursorShape = widget.appState.globalAppearance.cursorShape;
+      if (cursorShape != _lastCursorShape) {
+        _lastCursorShape = cursorShape;
+        needsRebuild = true;
+      }
+      final bgPath = widget.appState.backgroundImagePathForActiveStage();
+      if (bgPath != _lastBackgroundPath) {
+        _lastBackgroundPath = bgPath;
+        needsRebuild = true;
+      }
+      final bgOpacity = widget.appState.terminalBackgroundOpacity;
+      if (bgOpacity != _lastBackgroundOpacity) {
+        _lastBackgroundOpacity = bgOpacity;
+        needsRebuild = true;
+      }
     }
-    final bgPath = widget.appState.backgroundImagePathForActiveStage();
-    if (bgPath != _lastBackgroundPath) {
-      _lastBackgroundPath = bgPath;
-      needsRebuild = true;
-    }
-    final bgOpacity = widget.appState.terminalBackgroundOpacity;
-    if (bgOpacity != _lastBackgroundOpacity) {
-      _lastBackgroundOpacity = bgOpacity;
+    // 会话状态变化（connecting ↔ connected / disconnected）始终需要刷新
+    final status = widget.session.tab.status;
+    if (status != _lastSessionStatus) {
+      _lastSessionStatus = status;
       needsRebuild = true;
     }
     if (needsRebuild) {
@@ -568,15 +578,31 @@ class _TerminalPaneState extends State<_TerminalPane> {
         ],
       );
     }
-    return Column(
-      children: [
-        Expanded(child: paneContent),
-        if (widget.session.tab.status == TerminalStatus.connected)
-          widget.session.profile.isLocal
-              ? _LocalStatusBar(session: widget.session, appState: widget.appState)
-              : TerminalStatusBar(session: widget.session, appState: widget.appState),
-      ],
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      final wideLayout = constraints.maxWidth >= 500;
+      if (wideLayout) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.session.tab.status == TerminalStatus.connected)
+              TerminalSideStatusPanel(
+                session: widget.session,
+                appState: widget.appState,
+              ),
+            Expanded(child: paneContent),
+          ],
+        );
+      }
+      return Column(
+        children: [
+          Expanded(child: paneContent),
+          if (widget.session.tab.status == TerminalStatus.connected)
+            widget.session.profile.isLocal
+                ? _LocalStatusBar(session: widget.session, appState: widget.appState)
+                : TerminalStatusBar(session: widget.session, appState: widget.appState),
+        ],
+      );
+    });
   }
 }
 

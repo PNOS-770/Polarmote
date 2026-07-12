@@ -39,6 +39,7 @@ class TerminalUiPalette {
 
   static const Color statusBarBg = Color(0xFFFFFFFF);
   static const Color statusBarBorder = Color(0xFFE5E7EB);
+  static const Color statusBarBorderDim = Color(0x4DE5E7EB);
   static const Color statusBarLabel = Color(0xFF888888);
   static const Color statusBarValue = Color(0xFF333333);
 }

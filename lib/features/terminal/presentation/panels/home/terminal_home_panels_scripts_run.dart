@@ -368,7 +368,8 @@ Future<void> _showRunScriptDialog(
                         ),
                         const SizedBox(height: 8),
                         ...scriptVariableKeys.map((key) {
-                          final controller = templateControllers[key]!;
+                          final controller = templateControllers[key];
+                          if (controller == null) return const SizedBox.shrink();
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: TextField(
@@ -620,9 +621,11 @@ Future<void> _showRunScriptDialog(
       },
     );
   } finally {
-    for (final controller in templateControllers.values) {
-      controller.dispose();
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final controller in templateControllers.values) {
+        controller.dispose();
+      }
+    });
   }
   if (confirmed != true) return;
   appState.updateScriptLastRunConfig(

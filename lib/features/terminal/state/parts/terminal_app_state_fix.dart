@@ -130,7 +130,20 @@ extension TerminalAppStateFix on TerminalAppState {
     final nn = name.trim(); final nc = commands.map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
     if (nn.isEmpty || nc.isEmpty) return;
     final now = DateTime.now();
-    scripts.add(ScriptEntry(id: 'script-${now.microsecondsSinceEpoch}', name: nn, folderId: folderId.trim(), commands: nc, createdAt: now, updatedAt: now));
+    scripts.add(ScriptEntry(
+      id: 'script-${now.microsecondsSinceEpoch}',
+      name: nn, folderId: folderId.trim(), commands: nc,
+      createdAt: now, updatedAt: now,
+      variables: variables ?? const {},
+      stepConfigs: stepConfigs != null
+          ? stepConfigs.map((e) {
+              if (e == null) return null;
+              if (e is ScriptStepConfig) return e;
+              return ScriptStepConfig.fromJson(e as Map<String, dynamic>);
+            }).toList()
+          : const [],
+      environment: environment ?? const {},
+    ));
     scheduleStateSave(); notifyState();
   }
 
@@ -139,8 +152,32 @@ extension TerminalAppStateFix on TerminalAppState {
     if (i == -1) return;
     final nn = name.trim(); final nc = commands.map((c) => c.trim()).where((c) => c.isNotEmpty).toList();
     if (nn.isEmpty || nc.isEmpty) return;
-    scripts[i] = scripts[i].copyWith(name: nn, folderId: folderId.trim(), commands: nc, updatedAt: DateTime.now());
-    scheduleStateSave(); notifyState();
+    try {
+      final existing = scripts[i];
+      final updated = ScriptEntry(
+        id: existing.id,
+        name: nn,
+        folderId: folderId.trim(),
+        commands: nc,
+        createdAt: existing.createdAt,
+        updatedAt: DateTime.now(),
+        lastRunConfig: existing.lastRunConfig,
+        variables: variables ?? existing.variables,
+        environment: environment ?? existing.environment,
+        precheckCommands: existing.precheckCommands,
+        maxConcurrency: existing.maxConcurrency,
+      stepConfigs: stepConfigs != null
+          ? stepConfigs.map((e) {
+              if (e == null) return null;
+              if (e is ScriptStepConfig) return e;
+              return ScriptStepConfig.fromJson(e as Map<String, dynamic>);
+            }).toList()
+          : existing.stepConfigs,
+      );
+      scripts.removeAt(i);
+      scripts.insert(i, updated);
+    } catch (_) {}
+    scheduleStateSave();
   }
 
   void moveScriptEntry(int from, int to) {

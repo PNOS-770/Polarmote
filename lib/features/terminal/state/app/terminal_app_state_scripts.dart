@@ -570,9 +570,9 @@ extension TerminalAppStateScripts on TerminalAppState {
     bool? notifyEnabled,
     ScriptFailurePolicy failurePolicy = ScriptFailurePolicy.continueOnFailure,
     int retryPerHost = 1,
+    int maxConcurrency = 1,
     Map<String, String> templateArgs = const <String, String>{},
     Map<String, String> environmentOverrides = const <String, String>{},
-    int? maxConcurrency,
   }) async {
     final script = findScriptById(scriptId);
     if (script == null) {

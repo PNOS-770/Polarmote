@@ -77,13 +77,12 @@ class _ScriptsModalPanelState extends State<_ScriptsModalPanel> {
             onPressed: () => state.triggerScriptMultiSelect(),
           ),
         ),
-        if (!widget.runMode)
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            iconSize: 20,
-            tooltip: l(appState, AppStrings.values.addScript),
-            onPressed: () => showScriptEditorDialog(context, appState),
-          ),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline),
+          iconSize: 20,
+          tooltip: l(appState, AppStrings.values.addScript),
+          onPressed: () => showScriptEditorDialog(context, appState),
+        ),
       ],
       child: _ScriptsPanel(appState: appState, isCompact: false, onRunScripts: widget.onRunScripts, runMode: widget.runMode),
     );

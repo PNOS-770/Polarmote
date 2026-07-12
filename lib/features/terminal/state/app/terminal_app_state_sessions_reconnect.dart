@@ -72,7 +72,9 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
     if (terminalStages.isEmpty) return;
     restorationInProgress = true;
     var count = 0;
-    for (final stage in terminalStages) {
+    // 用快照遍历，避免脚本执行修改 terminalStages 时抛 ConcurrentModificationError
+    final stages = terminalStages.toList(growable: false);
+    for (final stage in stages) {
       if (stage.connectedHostIds.isEmpty) continue;
       restoringStageIds.add(stage.id);
       notifyState();
@@ -82,18 +84,26 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
           addStructuredLog(category: TerminalLogCategory.session, message: 'restore: host not found id=$hostId', notifyListeners: false);
           continue;
         }
+        addStructuredLog(category: TerminalLogCategory.session,
+          message: 'restore: connecting host=$hostId stage=${stage.id}',
+          notifyListeners: false);
         await Future.delayed(const Duration(milliseconds: 500));
         final capturedStageId = stage.id;
         await connectToHost(host, background: true);
-        // Wait for connection to actually finish before starting next one
-        final deadline = DateTime.now().add(const Duration(seconds: 20));
-        while (DateTime.now().isBefore(deadline) &&
-            sessions.last.tab.status != TerminalStatus.connected &&
-            sessions.last.tab.status != TerminalStatus.disconnected) {
-          await Future.delayed(const Duration(milliseconds: 100));
+        // 按 hostId 查找刚创建的会话，不依赖 sessions.last
+        final connectingSession = sessions.where((s) =>
+            s.profile.id == host.id && s.tab.status == TerminalStatus.connecting
+        ).firstOrNull ?? (sessions.isNotEmpty ? sessions.last : null);
+        if (connectingSession != null) {
+          final deadline = DateTime.now().add(const Duration(seconds: 20));
+          while (DateTime.now().isBefore(deadline) &&
+              connectingSession.tab.status != TerminalStatus.connected &&
+              connectingSession.tab.status != TerminalStatus.disconnected) {
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
         }
-        if (sessions.isNotEmpty) {
-          final newSession = sessions.last;
+        if (sessions.isNotEmpty && connectingSession != null) {
+          final newSession = connectingSession;
           final idx = terminalStages.indexWhere((s) => s.id == capturedStageId);
           if (idx >= 0) {
             terminalStages[idx] = terminalStages[idx].copyWith(

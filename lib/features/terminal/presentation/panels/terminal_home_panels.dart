@@ -31,9 +31,11 @@ part 'home/terminal_home_panels_scripts_ops.dart';
 
 /// 脚本面板弹窗（脚本列表 + 监控 + 管理）
 class _ScriptsModalPanel extends StatefulWidget {
-  const _ScriptsModalPanel({required this.appState});
+  const _ScriptsModalPanel({required this.appState, this.onRunScripts, this.runMode = false});
 
   final TerminalAppState appState;
+  final void Function(List<String> scriptIds)? onRunScripts;
+  final bool runMode;
 
   @override
   State<_ScriptsModalPanel> createState() => _ScriptsModalPanelState();
@@ -48,20 +50,21 @@ class _ScriptsModalPanelState extends State<_ScriptsModalPanel> {
       width: 800,
       height: 600,
       actions: [
-        Consumer<TerminalAppState>(
-          builder: (context, state, _) => IconButton(
-            icon: Icon(
-              state.showScriptMonitorInline
-                  ? Icons.arrow_back
-                  : Icons.monitor_heart_outlined,
+        if (!widget.runMode)
+          Consumer<TerminalAppState>(
+            builder: (context, state, _) => IconButton(
+              icon: Icon(
+                state.showScriptMonitorInline
+                    ? Icons.arrow_back
+                    : Icons.monitor_heart_outlined,
+              ),
+              iconSize: 20,
+              tooltip: l(appState, AppStrings.values.scriptMonitor),
+              onPressed: () {
+                state.toggleScriptMonitorInline();
+              },
             ),
-            iconSize: 20,
-            tooltip: l(appState, AppStrings.values.scriptMonitor),
-            onPressed: () {
-              state.toggleScriptMonitorInline();
-            },
           ),
-        ),
         Consumer<TerminalAppState>(
           builder: (context, state, _) => IconButton(
             icon: Icon(
@@ -74,25 +77,26 @@ class _ScriptsModalPanelState extends State<_ScriptsModalPanel> {
             onPressed: () => state.triggerScriptMultiSelect(),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          iconSize: 20,
-          tooltip: l(appState, AppStrings.values.addScript),
-          onPressed: () => showScriptEditorDialog(context, appState),
-        ),
+        if (!widget.runMode)
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            iconSize: 20,
+            tooltip: l(appState, AppStrings.values.addScript),
+            onPressed: () => showScriptEditorDialog(context, appState),
+          ),
       ],
-      child: _ScriptsPanel(appState: appState, isCompact: false),
+      child: _ScriptsPanel(appState: appState, isCompact: false, onRunScripts: widget.onRunScripts, runMode: widget.runMode),
     );
   }
 }
 
 /// 显示脚本面板弹窗
-Future<void> showScriptsPanelDialog(BuildContext context, TerminalAppState appState) {
+Future<void> showScriptsPanelDialog(BuildContext context, TerminalAppState appState, {void Function(List<String> scriptIds)? onRunScripts, bool runMode = false}) {
   return showDialog(
     context: context,
     barrierDismissible: true,
     barrierColor: AppColors.overlay,
-    builder: (context) => _ScriptsModalPanel(appState: appState),
+    builder: (context) => _ScriptsModalPanel(appState: appState, onRunScripts: onRunScripts, runMode: runMode),
   );
 }
 

@@ -16,10 +16,12 @@ class _ScriptTreeBuildResult {
 }
 
 class _ScriptsPanel extends StatefulWidget {
-  const _ScriptsPanel({required this.appState, required this.isCompact});
+  const _ScriptsPanel({required this.appState, required this.isCompact, this.onRunScripts, this.runMode = false});
 
   final TerminalAppState appState;
   final bool isCompact;
+  final void Function(List<String> scriptIds)? onRunScripts;
+  final bool runMode;
 
   @override
   State<_ScriptsPanel> createState() => _ScriptsPanelState();
@@ -48,6 +50,9 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
   void initState() {
     super.initState();
     _registerGlobalShortcutHandler();
+    if (widget.runMode) {
+      _selectionMode = true;
+    }
   }
 
   void _registerGlobalShortcutHandler() {
@@ -139,10 +144,11 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
   ) {
     final shortcut = appState.shortcutForScript(script.id);
     return [
-      compactMenuItem(
-        value: _ScriptItemAction.run,
-        label: l(appState, AppStrings.values.run),
-      ),
+      if (!widget.runMode)
+        compactMenuItem(
+          value: _ScriptItemAction.run,
+          label: l(appState, AppStrings.values.run),
+        ),
       compactMenuItem(
         value: _ScriptItemAction.edit,
         label: t(context, AppStrings.values.edit),
@@ -566,27 +572,29 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                 ),
               ),
             ),
-            IconButton(
-              tooltip: l(appState, AppStrings.values.run),
-              icon: const Icon(Icons.play_arrow_rounded, size: 18),
-              splashRadius: 14,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-              onPressed: () => _showRunScriptDialog(context, appState, script),
-            ),
-            CompactMoreMenuButton(
-              tooltip: l(appState, AppStrings.values.more),
-              iconSize: 16,
-              padding: 0,
-              onTapDown: (details) => unawaited(
-                _showScriptItemMenu(
-                  context,
-                  appState,
-                  script,
-                  details.globalPosition,
+            if (!widget.runMode)
+              IconButton(
+                tooltip: l(appState, AppStrings.values.run),
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                splashRadius: 14,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 24, height: 24),
+                onPressed: () => _showRunScriptDialog(context, appState, script),
+              ),
+            if (!widget.runMode)
+              CompactMoreMenuButton(
+                tooltip: l(appState, AppStrings.values.more),
+                iconSize: 16,
+                padding: 0,
+                onTapDown: (details) => unawaited(
+                  _showScriptItemMenu(
+                    context,
+                    appState,
+                    script,
+                    details.globalPosition,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -676,9 +684,13 @@ class _ScriptsPanelState extends State<_ScriptsPanel> {
                     : () {
                         final ids = _selectedScriptIds.toList(growable: false);
                         _setSelectionMode(false);
-                        unawaited(
-                          _runSelectedScriptsWithSavedConfig(appState, ids),
-                        );
+                        if (widget.onRunScripts != null) {
+                          widget.onRunScripts!(ids);
+                        } else {
+                          unawaited(
+                            _runSelectedScriptsWithSavedConfig(appState, ids),
+                          );
+                        }
                       },
                 label: l(appState, AppStrings.values.run),
                 size: ButtonSize.medium,

@@ -1289,6 +1289,89 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     }
     return null;
   }
+
+  /// 将多个脚本按列表顺序作为宏依次注入到指定会话中执行，并在脚本监控中显示
+  Future<void> runScriptsAsMacrosOnSession({
+    required List<String> scriptIds,
+    required TerminalSession session,
+  }) async {
+    for (final scriptId in scriptIds) {
+      final script = findScriptById(scriptId);
+      if (script == null) continue;
+
+      final runId = nextScriptRunId;
+      final runSession = ScriptRunSession(
+        runId: runId,
+        scriptId: script.id,
+        scriptName: script.name,
+        targetCount: 1,
+        silent: false,
+      );
+      runSession.ensureTarget(session.id, session.tab.title);
+      activeScriptRuns[runId] = runSession;
+      notifyState();
+
+      _emitScriptEvent(
+        runId: runId,
+        type: ScriptRunEventType.runStarted,
+        target: session.tab.title,
+        targetId: session.id,
+        notify: true,
+      );
+      _emitScriptEvent(
+        runId: runId,
+        type: ScriptRunEventType.targetStarted,
+        target: session.tab.title,
+        targetId: session.id,
+        notify: true,
+      );
+
+      final success = await runScriptAsMacroOnSession(
+        scriptId: script.id,
+        session: session,
+        onStepStarted: (stepIndex, totalSteps, command) {
+          _emitScriptEvent(
+            runId: runId,
+            type: ScriptRunEventType.stepStarted,
+            target: session.tab.title,
+            targetId: session.id,
+            stepIndex: stepIndex,
+            command: command,
+            notify: true,
+          );
+        },
+      );
+
+      if (success) {
+        _emitScriptEvent(
+          runId: runId,
+          type: ScriptRunEventType.targetSucceeded,
+          target: session.tab.title,
+          targetId: session.id,
+          notify: true,
+        );
+      } else {
+        _emitScriptEvent(
+          runId: runId,
+          type: ScriptRunEventType.targetFailed,
+          target: session.tab.title,
+          targetId: session.id,
+          message: 'macro failed',
+          notify: true,
+        );
+      }
+
+      _emitScriptEvent(
+        runId: runId,
+        type: ScriptRunEventType.runFinished,
+        target: session.tab.title,
+        targetId: session.id,
+        notify: true,
+      );
+      runSession.isFinished = true;
+      notifyState();
+    }
+  }
 }
 
 

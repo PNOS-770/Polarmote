@@ -311,13 +311,8 @@ class _TerminalAreaState extends State<_TerminalArea> {
     widget.appState.addListener(_onAppStateChanged);
   }
 
-  String _lastStageStateToken = '';
   void _onAppStateChanged() {
     if (!mounted) return;
-    final stages = widget.appState.terminalStages;
-    final token = '${stages.length}:${stages.map((s) => '${s.id},${widget.appState.activeTerminalStageId}').join('|')}';
-    if (token == _lastStageStateToken) return;
-    _lastStageStateToken = token;
     setState(() {});
   }
 

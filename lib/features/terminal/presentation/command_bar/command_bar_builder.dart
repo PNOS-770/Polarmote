@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../state/terminal_app_state.dart';
 import 'command_bar_models.dart';
 import '../dialogs/terminal_dialogs.dart';
-import '../modal_panels/script_modal_panel.dart';
 import '../modal_panels/transfer_modal_panel.dart';
+import '../panels/terminal_home_panels.dart';
 import '../modal_panels/file_tree_modal_panel.dart';
 import '../common/terminal_localization.dart';
 import '../../../../shared/constants/app_string.dart';
@@ -99,20 +99,17 @@ CommandBarSection _buildScriptsSection(
         label: l(appState, AppStrings.values.commandBarRunScript),
         icon: Icons.play_arrow,
         shortcut: 'Ctrl+Shift+R',
-        onTap: () => ScriptModalPanel.show(context),
+        onTap: () => showScriptsPanelDialog(context, appState),
       ),
       CommandBarItem(
         label: l(appState, AppStrings.values.commandBarNewScript),
         icon: Icons.add,
-        onTap: () {
-          // 打开脚本管理面板
-          ScriptModalPanel.show(context);
-        },
+        onTap: () => showScriptsPanelDialog(context, appState),
       ),
       CommandBarItem(
         label: l(appState, AppStrings.values.commandBarManageScripts),
         icon: Icons.folder,
-        onTap: () => ScriptModalPanel.show(context),
+        onTap: () => showScriptsPanelDialog(context, appState),
       ),
     ],
   );

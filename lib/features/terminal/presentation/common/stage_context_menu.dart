@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/constants/app_string.dart';
 import '../../../../shared/design_system/design_system.dart';
 import '../../state/terminal_app_state.dart';
+import '../common/terminal_localization.dart';
+import '../panels/terminal_home_panels.dart';
 
 Future<void> showStageCardContextMenu({
   required BuildContext context,
@@ -96,6 +99,22 @@ Future<void> showStageCardContextMenu({
             ],
           ),
         ),
+      if (stage.sessionIds.isNotEmpty)
+        PopupMenuItem(
+          value: 'run_script',
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          height: 28,
+          child: Row(
+            children: [
+              Icon(Icons.play_arrow, size: 14, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                l(appState, AppStrings.values.commandBarRunScript),
+                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+        ),
       if (appState.terminalStages.length > 1)
         PopupMenuItem(
           value: 'delete',
@@ -139,6 +158,25 @@ Future<void> showStageCardContextMenu({
           break;
         }
       }
+    case 'run_script':
+      if (!context.mounted) return;
+      final session = appState.sessions.where(
+        (s) => stage.sessionIds.contains(s.id),
+      ).firstOrNull;
+      if (session == null) return;
+      showScriptsPanelDialog(
+        context,
+        appState,
+        runMode: true,
+        onRunScripts: (scriptIds) {
+          if (context.mounted) {
+            appState.runScriptsAsMacrosOnSession(
+              scriptIds: scriptIds,
+              session: session,
+            );
+          }
+        },
+      );
     case 'delete':
       if (!context.mounted) return;
       // 空白 stage（无活跃 session）直接删除，不弹确认框

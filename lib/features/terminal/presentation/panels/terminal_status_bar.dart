@@ -127,9 +127,7 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     final diagnostics = session.getAdaptiveThrottleDiagnostics();
     final levelName = diagnostics['currentLevel'] as String;
     final level = ThrottleLevel.values.byName(levelName);
-    // TODO: 测试模式 - 始终显示限流状态，方便验证
-    // 生产环境改为：final showThrottle = appState.performanceSettings.adaptiveThrottleEnabled && level != ThrottleLevel.normal;
-    final showThrottle = appState.performanceSettings.adaptiveThrottleEnabled;
+    final showThrottle = appState.performanceSettings.adaptiveThrottleEnabled && level != ThrottleLevel.normal;
 
     return Container(
       height: 22,

@@ -24,6 +24,7 @@ class _AppStringValues {
 
   final addScript = const AppText(en: 'Add script', zh: '添加脚本');
   final add = const AppText(en: 'Add', zh: '新增');
+  // ignore: non_constant_identifier_names
   final PolarmoteTerminal = const AppText(en: 'Polarmote Terminal', zh: 'Polarmote 终端');
   final auth = const AppText(en: 'Auth:', zh: '认证方式：');
   final autoReconnect = const AppText(en: 'Auto reconnect', zh: '自动重连');
@@ -1607,6 +1608,7 @@ class _AppStringValues {
   final versionReadFailedVar = const AppText(en: 'Version info read failed: {error}', zh: '版本信息读取失败：{error}');
   final transferEngineUnavailable = const AppText(en: 'Transfer engine unavailable', zh: '传输引擎不可用');
   final transferEngineReady = const AppText(en: 'Transfer engine ready', zh: '传输引擎就绪');
+  // ignore: non_constant_identifier_names
   final PolarmoteTerminalReady = const AppText(en: 'Polarmote Terminal Ready', zh: 'Polarmote 终端就绪');
   final sessionLabel = const AppText(en: 'Session:', zh: '会话：');
   final modeLabel = const AppText(en: 'Mode:', zh: '模式：');

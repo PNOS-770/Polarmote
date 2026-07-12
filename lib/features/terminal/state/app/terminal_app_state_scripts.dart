@@ -1082,7 +1082,7 @@ extension TerminalAppStateScripts on TerminalAppState {
       session = candidate;
       break;
     }
-    if (session == null) session = sessions.lastOrNull;
+    session ??= sessions.lastOrNull;
     if (session == null) return null;
 
     if (!sessions.contains(session) ||
@@ -1096,24 +1096,6 @@ extension TerminalAppStateScripts on TerminalAppState {
     return session;
   }
 
-  void _cleanupVisibleScriptSession(String sessionId) {
-    scriptBusySessions.remove(sessionId);
-    final stage = terminalStages.cast<TerminalStage?>().firstWhere(
-      (s) => s!.sessionIds.contains(sessionId),
-      orElse: () => null,
-    );
-    if (stage != null) {
-      if (terminalStages.length > 1) {
-        removeStageById(stage.id);
-      } else {
-        closeSession(sessionId);
-        scheduleStateSave();
-        notifyState();
-      }
-    } else {
-      closeSession(sessionId);
-    }
-  }
 
   Future<void> _runScriptScheduleTick() async {
     if (scriptSchedules.isEmpty) {

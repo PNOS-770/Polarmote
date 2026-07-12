@@ -1,6 +1,3 @@
-import 'package:xterm/src/core/input/keytab/keytab_parse.dart';
-import 'package:xterm/src/core/input/keytab/keytab_token.dart';
-
 const kDefaultKeytab = r'''
 # [README.default.Keytab] Default Keyboard Table
 #
@@ -206,8 +203,4 @@ key PgDown  +Shift-AppScreen  : scrollPageDown
 key End   +Shift-AppScreen  : scrollDownToBottom
 ''';
 
-void main() {
-  final tokens = tokenize(kDefaultKeytab).toList();
-  final parser = KeytabParser()..addTokens(tokens);
-  print(parser.result);
-}
+

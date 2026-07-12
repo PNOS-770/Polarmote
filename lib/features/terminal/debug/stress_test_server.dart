@@ -401,12 +401,10 @@ class StressTestServer {
         await Future.delayed(const Duration(milliseconds: 200));
       }
 
-      int switchCount = 0;
       final stopwatch = Stopwatch()..start();
       timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
         if (stageIds.isEmpty) return;
         _appState.switchTerminalStage(stageIds[rng.nextInt(stageIds.length)]);
-        switchCount++;
       });
 
       
@@ -415,7 +413,7 @@ class StressTestServer {
       stopwatch.stop();
 
       
-    } catch (e, s) {
+    } catch (_) {
       
     } finally {
       timer?.cancel();

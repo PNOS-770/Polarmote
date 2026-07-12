@@ -41,7 +41,9 @@ extension TerminalAppStateSftpPaths on TerminalAppState {
     final trimmed = path.trim();
     if (trimmed.isEmpty) return '';
     var candidate = trimmed;
-    if (candidate == '~') candidate = session.fileState.homePath ?? '';
+    if (candidate == '~') {
+      candidate = session.fileState.homePath ?? '';
+    }
     else if (candidate.startsWith('~/') || candidate.startsWith('~\\')) {
       final home = session.fileState.homePath ?? '';
       if (home.isNotEmpty) candidate = p.join(home, candidate.substring(2));
@@ -72,12 +74,16 @@ extension TerminalAppStateSftpPaths on TerminalAppState {
   String _normalizePathForCompare(TerminalSession session, String path) {
     if (!session.profile.isLocal) {
       var normalized = _normalizePath(path);
-      while (normalized.length > 1 && normalized.endsWith('/')) normalized = normalized.substring(0, normalized.length - 1);
+      while (normalized.length > 1 && normalized.endsWith('/')) {
+        normalized = normalized.substring(0, normalized.length - 1);
+      }
       return normalized;
     }
     var normalized = _normalizePathForSession(session, path);
     normalized = normalized.replaceAll('\\', '/');
-    while (normalized.length > 1 && normalized.endsWith('/')) normalized = normalized.substring(0, normalized.length - 1);
+    while (normalized.length > 1 && normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
     if (Platform.isWindows) normalized = normalized.toLowerCase();
     return normalized;
   }

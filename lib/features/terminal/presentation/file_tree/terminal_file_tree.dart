@@ -427,7 +427,9 @@ class FileTreeState extends State<FileTree> {
     for (final task in session.transferQueue) {
       final remotePath = task.direction == TransferDirection.download
           ? task.sourcePath
-          : task.destinationPath;
+          : task.destinationPath != null
+              ? p.posix.join(task.destinationPath!, task.name)
+              : null;
       if (remotePath != null) transferTasks[remotePath] = task;
     }
     final entries = _sortEntries(

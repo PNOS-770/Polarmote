@@ -48,8 +48,11 @@ extension TerminalAppStateScriptsSchedule on TerminalAppState {
       updatedAt: now,
       lastEvaluatedAt: entry.lastEvaluatedAt ?? CronExpression.minuteBucket(now.toUtc()),
     );
-    if (index >= 0) scriptSchedules[index] = normalized;
-    else scriptSchedules.add(normalized);
+    if (index >= 0) {
+      scriptSchedules[index] = normalized;
+    } else {
+      scriptSchedules.add(normalized);
+    }
     ensureScriptScheduleRuntime();
     scheduleStateSave();
     notifyState();

@@ -85,6 +85,7 @@ Future<void> showHostDialog(
     text: '${host?.serialStopBits ?? 1}',
   );
   var serialParity = host?.serialParity ?? SerialParity.none;
+  if (!context.mounted) return;
   await showDialog<void>(
     context: context,
     builder: (context) {

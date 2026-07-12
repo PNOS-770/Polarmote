@@ -50,8 +50,8 @@ class PolarmoteSystemNotifications {
         );
       }
       _initialized = true;
-    } catch (error) {
-      
+    } catch (_) {
+      // Notification init errors are non-fatal
     }
   }
 
@@ -109,8 +109,8 @@ class PolarmoteSystemNotifications {
         body: body,
         notificationDetails: details,
       );
-    } catch (error) {
-      
+    } catch (_) {
+      // Notification display errors are non-fatal
     }
   }
 }

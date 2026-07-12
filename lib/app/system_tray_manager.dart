@@ -67,8 +67,8 @@ class PolarmoteSystemTray {
         await _tray.setSystemTrayInfo(toolTip: 'Polarmote');
         
       }
-    } catch (e) {
-      
+    } catch (_) {
+      // System tray init errors are non-fatal
     }
 
     // --- Step 3: event handler + menu ---
@@ -84,8 +84,8 @@ class PolarmoteSystemTray {
             windowManager.show();
             windowManager.focus();
           }
-        } catch (e) {
-          
+        } catch (_) {
+          // System tray event errors are non-fatal
         }
       });
       
@@ -95,8 +95,8 @@ class PolarmoteSystemTray {
       
 
       _initialized = true;
-    } catch (e) {
-      
+    } catch (_) {
+      // System tray setup errors are non-fatal
     }
   }
 

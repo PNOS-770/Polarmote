@@ -688,25 +688,6 @@ class _NativeBindings {
     return normalized;
   }
 
-  String _sourceMeta() {
-    final source = loadedFrom.trim();
-    if (source.isEmpty) {
-      return 'source=unknown';
-    }
-    if (source == '<process>') {
-      return 'source=<process>';
-    }
-    try {
-      final file = File(source);
-      if (!file.existsSync()) {
-        return 'source=$source';
-      }
-      final stat = file.statSync();
-      return 'source=$source, mtime=${stat.modified.toIso8601String()}, size=${stat.size}';
-    } catch (_) {
-      return 'source=$source';
-    }
-  }
 
   String _takeOwnedString(Pointer<Utf8> ptr, {required String fallback}) {
     if (ptr.address == 0) {

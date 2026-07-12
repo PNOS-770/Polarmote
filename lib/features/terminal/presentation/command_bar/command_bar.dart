@@ -63,7 +63,7 @@ class _CommandBarState extends State<CommandBar> {
             builder: (context, constraints) {
               // 响应式布局：计算可显示的 Tab 数量
               final maxWidth = constraints.maxWidth;
-              final tabWidth = 120.0;  // 每个 Tab 约 120px（减小）
+              const tabWidth = 120.0;
               final maxTabs = (maxWidth / tabWidth).floor();
 
               List<Widget> tabs;

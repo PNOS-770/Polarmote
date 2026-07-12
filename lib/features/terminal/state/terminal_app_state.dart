@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -142,7 +141,7 @@ class TerminalAppState extends ChangeNotifier {
   Timer? _memoryMonitorTimer;
   DateTime? _lastMemoryWarning;
   MemoryMode? _originalMemoryMode;
-  final Map<String, DateTime> _errorCooldownUntil = <String, DateTime>{};
+
 
   int get terminalBufferSize => switch (memoryMode) { MemoryMode.low => 2000, MemoryMode.medium => 5000, MemoryMode.high => 10000, MemoryMode.custom => customTerminalBufferSize.clamp(1000, 50000) };
   double get estimatedMemoryPerTerminal => (terminalBufferSize * 200) / (1024 * 1024);
@@ -202,18 +201,13 @@ class TerminalAppState extends ChangeNotifier {
   HomeLayoutMode homeLayoutMode = _defaultHomeLayoutMode();
   bool terminalSplitViewEnabled = true;
   final List<TerminalSplitPaneConfig> terminalSplitPanes = [];
-  int _terminalSplitIdSeed = 0;
   String activeTerminalSplitPaneId = '';
   String maximizedTerminalSplitPaneId = '';
   final List<TerminalStage> terminalStages = [];
   String activeTerminalStageId = '';
   int _terminalStageIdSeed = 0;
   bool stageManagerEnabled = true;
-  bool _restorationInProgress = false;
-  bool get restorationInProgress => _restorationInProgress;
-  set restorationInProgress(bool value) {
-    _restorationInProgress = value;
-  }
+  bool restorationInProgress = false;
   bool broadcastEnabled = false;
   double terminalSplitPrimaryRatio = 0.5;
   double terminalSplitSecondaryRatio = 0.5;

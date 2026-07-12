@@ -210,7 +210,7 @@ String _emptyPaneTreeKey(TerminalAppState state) {
   return parts.join('\u001f');
 }
 
-enum _TerminalMenuAction { copy, paste, selectAll, openUrl, toggleBlockSelect, selectBackground }
+enum _TerminalMenuAction { copy, paste, selectAll, openUrl, toggleBlockSelect, selectBackground, closeSession }
 
 class _TerminalArea extends StatefulWidget {
   const _TerminalArea({
@@ -485,6 +485,15 @@ class _TerminalAreaState extends State<_TerminalArea> {
           value: _TerminalMenuAction.selectBackground,
           label: l(appState, AppStrings.values.selectBackground),
         ),
+        const PopupMenuDivider(height: 1),
+        compactMenuItem(
+          value: _TerminalMenuAction.closeSession,
+          label: l(appState, AppStrings.values.commandBarCloseSession),
+          shortcut: appState.shortcutBindings
+              .where((sb) => sb.id == 'closeSession')
+              .firstOrNull
+              ?.effectiveKeys,
+        ),
       ],
     );
     if (!context.mounted || action == null) return;
@@ -629,6 +638,9 @@ class _TerminalAreaState extends State<_TerminalArea> {
         if (result != null && context.mounted && appState.activeTerminalStageId.isNotEmpty) {
           appState.setStageBackgroundImage(appState.activeTerminalStageId, result);
         }
+        return;
+      case _TerminalMenuAction.closeSession:
+        appState.closeSession(session.id);
         return;
     }
   }

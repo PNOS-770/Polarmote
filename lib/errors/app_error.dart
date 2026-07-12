@@ -27,6 +27,7 @@ class ConnectionError extends AppError {
   final String host;
   final int? port;
   final String? underlyingMessage;
+  @override
   final String? detail;
 
   @override
@@ -65,6 +66,7 @@ class TransferError extends AppError {
   final TransferErrorType type;
   final String? path;
   final String? underlyingMessage;
+  @override
   final String? detail;
 
   @override
@@ -101,6 +103,7 @@ class ScriptError extends AppError {
   final ScriptErrorType type;
   final String? scriptName;
   final String? underlyingMessage;
+  @override
   final String? detail;
 
   @override
@@ -134,6 +137,7 @@ class PortForwardError extends AppError {
   final PortForwardErrorType type;
   final String? ruleName;
   final String? underlyingMessage;
+  @override
   final String? detail;
 
   @override

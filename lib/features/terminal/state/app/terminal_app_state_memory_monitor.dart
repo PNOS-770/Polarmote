@@ -57,9 +57,7 @@ extension TerminalAppStateMemoryMonitor on TerminalAppState {
     _lastMemoryWarning = now;
     
     // 保存原始设置
-    if (_originalMemoryMode == null) {
-      _originalMemoryMode = memoryMode;
-    }
+    _originalMemoryMode ??= memoryMode;
     
     // 根据当前模式降级
     final newMode = switch (memoryMode) {

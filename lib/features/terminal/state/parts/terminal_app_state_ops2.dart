@@ -1,7 +1,5 @@
 part of '../terminal_app_state.dart';
 
-const Duration _stateSaveDebounce = Duration(milliseconds: 100);
-
 extension TerminalAppStateOps2 on TerminalAppState {
   // === Logging ===
 
@@ -77,7 +75,7 @@ extension TerminalAppStateOps2 on TerminalAppState {
     if (data['portForwards'] is List) { portForwards.clear(); for (final e in data['portForwards'] as List) { if (e is Map<String, dynamic>) portForwards.add(PortForwardEntry.fromJson(e)); } }
     if (data['portForwardTemplates'] is List) { portForwardTemplates.clear(); for (final e in data['portForwardTemplates'] as List) { if (e is Map<String, dynamic>) portForwardTemplates.add(PortForwardTemplate.fromJson(e)); } }
     if (data['knownHostFingerprints'] is Map) { knownHostFingerprints.clear(); (data['knownHostFingerprints'] as Map).forEach((k, v) => knownHostFingerprints[k.toString()] = v.toString()); }
-    if (data['pinnedHostIds'] is List) { pinnedHostIds.clear(); for (final id in data['pinnedHostIds'] as List) pinnedHostIds.add(id.toString()); }
+    if (data['pinnedHostIds'] is List) { pinnedHostIds.clear(); for (final id in data['pinnedHostIds'] as List) { pinnedHostIds.add(id.toString()); } }
     expandedSessionFolderKeys.clear(); sessionFolderExpansionConfigured = false;
     if (data['visitedFiles'] is List) { visitedFiles.clear(); for (final e in data['visitedFiles'] as List) { if (e is Map<String, dynamic>) visitedFiles.add(VisitedFileEntry.fromJson(e)); } }
     if (data['scriptRunHistory'] is List) { scriptRunHistory.clear(); for (final e in data['scriptRunHistory'] as List) { if (e is Map<String, dynamic>) scriptRunHistory.add(ScriptHostRunRecord.fromJson(e)); } }

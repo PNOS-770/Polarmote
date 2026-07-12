@@ -115,8 +115,8 @@ extension TerminalAppStateMetrics on TerminalAppState {
       session.metricsUpdatedAt = DateTime.now();
       _updateMetricHistory(session);
       notifyState();
-    } catch (e) {
-      
+    } catch (_) {
+      // Metrics polling errors are non-fatal
     }
   }
 

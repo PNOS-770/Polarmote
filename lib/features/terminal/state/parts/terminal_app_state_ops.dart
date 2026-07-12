@@ -1,9 +1,5 @@
 part of '../terminal_app_state.dart';
 
-const Duration _hostKeyPromptTimeout = Duration(minutes: 3);
-const Duration _errorCooldownDuration = Duration(seconds: 5);
-const int _maxPreviewScrollOffsets = 240;
-const int _previewScrollOffsetCleanup = 40;
 const Duration _sessionProbeTimeout = Duration(seconds: 4);
 const int _sessionProbeMaxConcurrency = 10;
 
@@ -162,7 +158,9 @@ extension TerminalAppStateOps on TerminalAppState {
     if (existing != null && (existing - safe).abs() < 0.5) return;
     filePreviewScrollOffsets[normalized] = safe;
     if (filePreviewScrollOffsets.length > 240) {
-      for (final k in filePreviewScrollOffsets.keys.take(40).toList()) filePreviewScrollOffsets.remove(k);
+      for (final k in filePreviewScrollOffsets.keys.take(40).toList()) {
+        filePreviewScrollOffsets.remove(k);
+      }
     }
     scheduleStateSave();
   }
@@ -347,10 +345,10 @@ extension TerminalAppStateOps on TerminalAppState {
     return trusted;
   }
 
-  bool beginHostKeyPromptDialog() => !_hostKeyPromptDialogVisible && pendingHostKeyPrompt != null ? (_hostKeyPromptDialogVisible = true) as bool : false;
+  bool beginHostKeyPromptDialog() => !_hostKeyPromptDialogVisible && pendingHostKeyPrompt != null ? (_hostKeyPromptDialogVisible = true) : false;
   void endHostKeyPromptDialog() { _hostKeyPromptDialogVisible = false; }
   void resolveHostKeyPrompt(bool trusted, {bool remember = true}) { final d = _hostKeyPromptDecision; if (d == null || d.isCompleted) return; _hostKeyPromptRemember = remember; d.complete(trusted); }
-  bool beginShortcutConflictDialog() => !_shortcutConflictDialogVisible && shortcutConflicts.isNotEmpty ? (_shortcutConflictDialogVisible = true) as bool : false;
+  bool beginShortcutConflictDialog() => !_shortcutConflictDialogVisible && shortcutConflicts.isNotEmpty ? (_shortcutConflictDialogVisible = true) : false;
   void endShortcutConflictDialog() { _shortcutConflictDialogVisible = false; }
 
   // === Shortcuts ===
@@ -413,12 +411,6 @@ extension TerminalAppStateOps on TerminalAppState {
     } catch (_) {}
   }
 
-  Future<void> _deleteHostSecret(String hostId) async {
-    await _ensureSecureStorageReady();
-    try { await _secureStorage.delete(key: _secureHostSecretKey(hostId), wOptions: Platform.isWindows ? const WindowsOptions(useBackwardCompatibility: false) : null); } catch (_) {}
-  }
-
-
   // === Host Session Lookup ===
 
   Future<void> _synchronizeHostSecrets() async {}
@@ -447,7 +439,9 @@ extension TerminalAppStateOps on TerminalAppState {
   HostEntry? resolveHostForVisitedFile(VisitedFileEntry e) {
     for (final h in hosts) {
       if (h.id == e.hostId.trim() ||
-          (h.host.trim() == e.host.trim() && h.username.trim() == e.username.trim() && h.connectionType.name == e.connectionType && h.port == e.port)) return h;
+          (h.host.trim() == e.host.trim() && h.username.trim() == e.username.trim() && h.connectionType.name == e.connectionType && h.port == e.port)) {
+        return h;
+      }
     }
     return null;
   }
@@ -484,8 +478,11 @@ extension TerminalAppStateOps on TerminalAppState {
 
   void triggerKeyboardRecovery({String? reason}) {
     keyboardRecoveryToken++;
-    if ((reason ?? '').trim().isEmpty) addStructuredLog(category: TerminalLogCategory.system, message: _l(AppStrings.values.logKeyboardRecoveryTriggered), notifyListeners: false);
-    else addStructuredLog(category: TerminalLogCategory.system, message: _l(AppStrings.values.logKeyboardRecoveryTriggeredReasonVar, params: {'reason': reason!}), notifyListeners: false);
+    if ((reason ?? '').trim().isEmpty) {
+      addStructuredLog(category: TerminalLogCategory.system, message: _l(AppStrings.values.logKeyboardRecoveryTriggered), notifyListeners: false);
+    } else {
+      addStructuredLog(category: TerminalLogCategory.system, message: _l(AppStrings.values.logKeyboardRecoveryTriggeredReasonVar, params: {'reason': reason!}), notifyListeners: false);
+    }
     notifyState();
   }
 
@@ -498,7 +495,7 @@ extension TerminalAppStateOps on TerminalAppState {
   }
 
   bool isHostPinned(String id) => pinnedHostIds.contains(id);
-  void toggleHostPinned(String id) { if (pinnedHostIds.contains(id)) pinnedHostIds.remove(id); else pinnedHostIds.add(id); scheduleStateSave(); notifyState(); }
+  void toggleHostPinned(String id) { if (pinnedHostIds.contains(id)) { pinnedHostIds.remove(id); } else { pinnedHostIds.add(id); } scheduleStateSave(); notifyState(); }
 
   TerminalSession? terminalSessionForHost(HostEntry host) {
     final key = _hostConnectionKey(host);
@@ -516,7 +513,7 @@ extension TerminalAppStateOps on TerminalAppState {
   void setShowHiddenFiles(bool v) { showHiddenFiles = v; scheduleStateSave(); notifyState(); }
   void setAutoReconnect(bool v) { autoReconnect = v; scheduleStateSave(); syncSshForegroundGuardNow(); notifyState(); }
   void setConfirmPaste(bool v) { confirmPaste = v; scheduleStateSave(); notifyState(); }
-  void setTerminalSplitViewEnabled(bool v) { if (terminalSplitViewEnabled == v) return; terminalSplitViewEnabled = v; if (v) ensureTerminalSplitPanes(); else maximizedTerminalSplitPaneId = ''; scheduleStateSave(); notifyState(); }
+  void setTerminalSplitViewEnabled(bool v) { if (terminalSplitViewEnabled == v) { return; } terminalSplitViewEnabled = v; if (v) { ensureTerminalSplitPanes(); } else { maximizedTerminalSplitPaneId = ''; } scheduleStateSave(); notifyState(); }
   void setSessionSortMode(SessionSortMode m) { if (sessionSortMode == m) return; sessionSortMode = m; scheduleStateSave(); notifyState(); }
   void setSessionFilterOnlineOnly(bool v) { if (sessionFilterOnlineOnly == v) return; sessionFilterOnlineOnly = v; scheduleStateSave(); notifyState(); }
   void setSessionFilterPinnedOnly(bool v) { if (sessionFilterPinnedOnly == v) return; sessionFilterPinnedOnly = v; scheduleStateSave(); notifyState(); }
@@ -524,7 +521,7 @@ extension TerminalAppStateOps on TerminalAppState {
   void setReuseSessionForNewPane(bool v) { reuseSessionForNewPane = v; scheduleStateSave(); notifyState(); }
   void setShowThumbnailBackground(bool v) { showThumbnailBackground = v; thumbnailBackgroundVersion++; scheduleStateSave(); notifyState(); }
   void toggleHostSelection(String id, {bool multi = false}) {
-    if (multi) { if (selectedHostIds.contains(id)) selectedHostIds.remove(id); else selectedHostIds.add(id); }
+    if (multi) { if (selectedHostIds.contains(id)) { selectedHostIds.remove(id); } else { selectedHostIds.add(id); } }
     else { selectedHostIds..clear()..add(id); }
     notifyState();
   }
@@ -544,7 +541,7 @@ extension TerminalAppStateOps on TerminalAppState {
   void setAndroidKeepSshAliveInBackground(bool v) { androidKeepSshAliveInBackground = v; scheduleStateSave(); notifyState(); }
   void applyShortcutPreset(ShortcutPreset preset) { shortcutPresetId = preset.id; for (final sb in preset.bindings) { final i = shortcutBindings.indexWhere((s) => s.id == sb.id); if (i >= 0) shortcutBindings[i] = shortcutBindings[i].copyWith(customKeys: sb.customKeys); } scheduleStateSave(); notifyState(); }
   void renameSessionFolder({required String folderKey, required String newName}) {}
-  void toggleSessionFolderExpanded(String k) { if (expandedSessionFolderKeys.contains(k)) expandedSessionFolderKeys.remove(k); else expandedSessionFolderKeys.add(k); scheduleStateSave(); notifyState(); }
+  void toggleSessionFolderExpanded(String k) { if (expandedSessionFolderKeys.contains(k)) { expandedSessionFolderKeys.remove(k); } else { expandedSessionFolderKeys.add(k); } scheduleStateSave(); notifyState(); }
   void setActiveTerminalSession(String sessionId) {
     final s = findSessionById(sessionId);
     if (s == null) return;

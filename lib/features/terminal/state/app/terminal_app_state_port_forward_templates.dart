@@ -4,8 +4,11 @@ extension TerminalAppStatePFTemplates on TerminalAppState {
   void upsertPortForwardTemplate(PortForwardTemplate template) {
     final index = portForwardTemplates.indexWhere((it) => it.id == template.id);
     final normalized = template.copyWith(updatedAt: DateTime.now());
-    if (index >= 0) portForwardTemplates[index] = normalized;
-    else portForwardTemplates.add(normalized);
+    if (index >= 0) {
+      portForwardTemplates[index] = normalized;
+    } else {
+      portForwardTemplates.add(normalized);
+    }
     scheduleStateSave();
     notifyState();
   }

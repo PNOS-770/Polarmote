@@ -749,9 +749,9 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
     for (final line in normalized.split('\n')) {
       buffer.writeln('$i$line');
     }
-    buffer.writeln('${i}set "Polarmote_RC=!ERRORLEVEL!"');
-    buffer.writeln('${i}@echo $prefix:END:$index:!Polarmote_RC!');
-    buffer.writeln('${i}if not "!Polarmote_RC!"=="0" set "Polarmote_FAILED=1"');
+    buffer.writeln('$i set "Polarmote_RC=!ERRORLEVEL!"');
+    buffer.writeln('$i @echo $prefix:END:$index:!Polarmote_RC!');
+    buffer.writeln('$i if not "!Polarmote_RC!"=="0" set "Polarmote_FAILED=1"');
     if (!step.allowFailure) {
       buffer.writeln('${i}if "!Polarmote_FAILED!"=="0" if not "!Polarmote_RC!"=="0" exit /b !Polarmote_RC!');
     }
@@ -789,11 +789,11 @@ extension TerminalAppStateScriptsExecution on TerminalAppState {
       '${i}Write-Output "$prefix:START:$index:${step.kind.name}"',
     );
     buffer.writeln(
-      "${i}\$PolarmoteCommand = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('$encodedCommand'))",
+      "$i \$PolarmoteCommand = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('$encodedCommand'))",
     );
     buffer.writeln('${i}Invoke-Expression \$PolarmoteCommand');
     buffer.writeln(
-      '${i}\$PolarmoteRc = if (\$null -eq \$LASTEXITCODE) { if (\$?) { 0 } else { 1 } } else { [int]\$LASTEXITCODE }',
+      '$i \$PolarmoteRc = if (\$null -eq \$LASTEXITCODE) { if (\$?) { 0 } else { 1 } } else { [int]\$LASTEXITCODE }',
     );
     buffer.writeln(
       '${i}Write-Output "$prefix:END:$index:\$PolarmoteRc"',

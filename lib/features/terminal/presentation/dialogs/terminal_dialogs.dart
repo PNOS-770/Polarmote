@@ -16,7 +16,6 @@ import '../../../../shared/design_system/design_system.dart';
 import '../../../../shared/utils/secret_encryption.dart';
 import '../../models/file_node.dart';
 import '../../models/host_entry.dart';
-import '../../models/terminal_adaptive_throttle.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
 import '../../state/terminal_app_state.dart';

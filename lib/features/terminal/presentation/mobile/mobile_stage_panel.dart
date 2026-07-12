@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../../shared/design_system/design_system.dart';
 import '../../../../shared/constants/app_string.dart';
 import '../../state/terminal_app_state.dart';
-import '../../models/host_entry.dart';
 import '../../models/terminal_session.dart';
 import '../../models/terminal_tab.dart';
 import '../common/session_thumbnail.dart';

@@ -40,7 +40,9 @@ extension TerminalAppStateSessionsReconnect on TerminalAppState {
     if (!autoReconnect) { _stopAutoReconnectLoop(session.id); return; }
     if (session.tab.status == TerminalStatus.connected ||
         session.tab.status == TerminalStatus.connecting ||
-        session.tab.status == TerminalStatus.reconnecting) return;
+        session.tab.status == TerminalStatus.reconnecting) {
+      return;
+    }
     try { await reconnectSession(session); } catch (_) {}
   }
 

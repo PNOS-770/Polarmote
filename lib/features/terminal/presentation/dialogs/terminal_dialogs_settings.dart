@@ -22,6 +22,8 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
   final List<TextEditingController> _pendingDisposals = [];
   final ScrollController _scrollController = ScrollController();
   int _selectedCategoryIndex = 0;
+  @override
+  // ignore: overridden_fields
   String? _scrollToBindingId;
 
   void _disposeControllerLater(TextEditingController controller) {
@@ -476,7 +478,7 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? TerminalUiPalette.accent.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? TerminalUiPalette.accent.withValues(alpha: 0.1) : Colors.transparent,
           border: Border.all(
             color: isSelected ? TerminalUiPalette.accent : AppColors.border,
             width: isSelected ? 2 : 1,

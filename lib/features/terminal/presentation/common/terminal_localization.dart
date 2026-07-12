@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_layout_x/safe_layout_x.dart';
@@ -30,7 +28,7 @@ void showBannerAndLog(TerminalAppState appState, BannerData data) {
   });
 }
 
-final _errorThrottle = LinkedHashMap<String, int>();
+final _errorThrottle = <String, int>{};
 const _errorThrottleMs = 60000;
 
 void showErrorIfNeeded(BuildContext context, TerminalAppState appState) {

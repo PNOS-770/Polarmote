@@ -705,7 +705,6 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   void setMouseMode(MouseMode mode) {
-    print('[TERMINAL] setMouseMode: $_mouseMode -> $mode');
     _mouseMode = mode;
     notifyListeners();
   }
@@ -722,14 +721,12 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   void useAltBuffer() {
-    print('[TERMINAL] useAltBuffer');
     _buffer = _altBuffer;
     notifyListeners();
   }
 
   @override
   void useMainBuffer() {
-    print('[TERMINAL] useMainBuffer');
     _buffer = _mainBuffer;
     notifyListeners();
   }
@@ -751,7 +748,6 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
   @override
   void setMouseReportMode(MouseReportMode mode) {
-    print('[TERMINAL] setMouseReportMode: $_mouseReportMode -> $mode');
     _mouseReportMode = mode;
     notifyListeners();
   }

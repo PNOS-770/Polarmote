@@ -146,7 +146,9 @@ class NativeTransport implements TransportProvider {
       unawaited(() async {
         try {
           await tempDir.delete(recursive: true);
-        } catch (e) {  }
+        } catch (_) {
+          // Temp dir cleanup errors are non-fatal
+        }
       }());
     }
   }

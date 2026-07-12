@@ -40,8 +40,8 @@ extension TerminalAppStateFix on TerminalAppState {
     externalEditSubscriptions[p]?.cancel(); externalEditSubscriptions.remove(p);
     externalEdits.remove(p);
   }
-  void disposeExternalEditsForSession(String sid) { for (final p in externalEdits.entries.where((e) => e.value.sessionId == sid).map((e) => e.key).toList()) disposeExternalEdit(p); }
-  void disposeAllExternalEdits() { for (final p in externalEdits.keys.toList()) disposeExternalEdit(p); }
+  void disposeExternalEditsForSession(String sid) { for (final p in externalEdits.entries.where((e) => e.value.sessionId == sid).map((e) => e.key).toList()) { disposeExternalEdit(p); } }
+  void disposeAllExternalEdits() { for (final p in externalEdits.keys.toList()) { disposeExternalEdit(p); } }
 
   // === Stage Manager ===
   void ensureTerminalSplitPanes() {

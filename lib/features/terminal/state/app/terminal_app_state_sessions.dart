@@ -116,13 +116,22 @@ extension TerminalAppStateSessions on TerminalAppState {
       var stageIndex = terminalStages.indexWhere(
         (s) => s.id == activeTerminalStageId,
       );
-      if (stageIndex >= 0 && terminalStages[stageIndex].sessionIds.isEmpty) {
-        // 当前 Stage 为空 → 使用它
-        terminalStages[stageIndex] = terminalStages[stageIndex].copyWith(
-          sessionIds: [session.id],
-          connectedHostIds: [host.id],
-        );
-        switchTerminalStage(terminalStages[stageIndex].id);
+      if (stageIndex >= 0) {
+        if (Platform.isAndroid || Platform.isIOS) {
+          terminalStages[stageIndex] = terminalStages[stageIndex].copyWith(
+            sessionIds: [...terminalStages[stageIndex].sessionIds, session.id],
+            connectedHostIds: [...terminalStages[stageIndex].connectedHostIds, host.id],
+          );
+          switchTerminalStage(terminalStages[stageIndex].id);
+        } else if (terminalStages[stageIndex].sessionIds.isEmpty) {
+          terminalStages[stageIndex] = terminalStages[stageIndex].copyWith(
+            sessionIds: [session.id],
+            connectedHostIds: [host.id],
+          );
+          switchTerminalStage(terminalStages[stageIndex].id);
+        } else {
+          createTerminalStage(host.name, sessionIds: [session.id], connectedHostIds: [host.id]);
+        }
       } else {
         createTerminalStage(host.name, sessionIds: [session.id], connectedHostIds: [host.id]);
       }

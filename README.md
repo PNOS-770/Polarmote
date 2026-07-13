@@ -10,7 +10,7 @@
 
 ## 截图
 
-<img src="screenshots/main.png" alt="主界面" style="max-width: 800px; width: 100%;">
+<img src="screenshots/main.png?v=2" alt="主界面" style="max-width: 800px; width: 100%;">
 
 ## 功能
 

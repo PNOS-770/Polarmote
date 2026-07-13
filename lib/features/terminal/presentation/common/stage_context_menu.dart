@@ -115,6 +115,22 @@ Future<void> showStageCardContextMenu({
             ],
           ),
         ),
+      if (stage.sessionIds.isNotEmpty)
+        PopupMenuItem(
+          value: 'script_monitor',
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          height: 28,
+          child: Row(
+            children: [
+              Icon(Icons.monitor_heart_outlined, size: 14, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                l(appState, AppStrings.values.scriptMonitor),
+                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+        ),
       if (appState.terminalStages.length > 1)
         PopupMenuItem(
           value: 'delete',
@@ -177,6 +193,10 @@ Future<void> showStageCardContextMenu({
           }
         },
       );
+    case 'script_monitor':
+      if (!context.mounted) return;
+      appState.showScriptMonitorInline = true;
+      showScriptsPanelDialog(context, appState);
     case 'delete':
       if (!context.mounted) return;
       // 空白 stage（无活跃 session）直接删除，不弹确认框

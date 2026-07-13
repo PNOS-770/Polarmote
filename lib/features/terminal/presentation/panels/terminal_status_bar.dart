@@ -11,20 +11,6 @@ import '../common/terminal_formatters.dart';
 import '../common/terminal_localization.dart';
 import '../common/terminal_ui_palette.dart';
 
-const _networkTiers = <double>[
-  102400,       // 100 KB/s
-  512000,       // 500 KB/s
-  1048576,      // 1 MB/s
-  5242880,      // 5 MB/s
-  10485760,     // 10 MB/s
-  20971520,     // 20 MB/s
-  52428800,     // 50 MB/s
-  104857600,    // 100 MB/s
-  209715200,    // 200 MB/s
-  524288000,    // 500 MB/s
-  1073741824,   // 1 GB/s
-];
-
 class TerminalStatusBar extends StatefulWidget {
   const TerminalStatusBar({
     super.key,
@@ -43,11 +29,6 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
   DateTime? _lastMetricsAt;
   bool _lastBroadcast = false;
   Timer? _throttleUpdateTimer;
-
-  int _rxNetTier = 0;
-  int _txNetTier = 0;
-  DateTime? _rxDowngradeAt;
-  DateTime? _txDowngradeAt;
 
   @override
   void initState() {
@@ -138,59 +119,30 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: LayoutBuilder(builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 500;
-        if (wide) {
-          return Row(
-            children: [
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Text(
-                    session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10, color: TerminalUiPalette.statusBarLabel, fontWeight: FontWeight.w500),
-                  ),
-                ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10, color: TerminalUiPalette.statusBarLabel, fontWeight: FontWeight.w500),
               ),
-              Container(width: 1, height: 12, color: TerminalUiPalette.statusBarBorder),
-              const SizedBox(width: 4),
-              if (appState.broadcastEnabled)
-                _badge(l(appState, AppStrings.values.broadcast), AppColors.error),
-              Expanded(flex: 1, child: _statCpuWide(appState, cpuUsage)),
-              Expanded(flex: 1, child: _statMemWide(appState, memUsage, memText)),
-              Expanded(flex: 3, child: _statNetWide(appState, rxText, txText)),
-              if (showThrottle)
-                _statThrottle(appState, level, diagnostics),
-            ],
-          );
-        }
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text(
-                  session.tab.title.isNotEmpty ? session.tab.title : session.profile.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: TerminalUiPalette.statusBarLabel, fontWeight: FontWeight.w500),
-                ),
-              ),
-              Container(width: 1, height: 12, color: TerminalUiPalette.statusBarBorder),
-              const SizedBox(width: 4),
-              if (appState.broadcastEnabled)
-                _badge(l(appState, AppStrings.values.broadcast), AppColors.error),
-              _statCpuNarrow(appState, cpuUsage),
-              _statMemNarrow(appState, memUsage, memText),
-              _statNetNarrow(appState, rxText, txText),
-              if (showThrottle) _statThrottle(appState, level, diagnostics),
-            ],
-          ),
-        );
-      }),
+            ),
+            Container(width: 1, height: 12, color: TerminalUiPalette.statusBarBorder),
+            const SizedBox(width: 4),
+            if (appState.broadcastEnabled)
+              _badge(l(appState, AppStrings.values.broadcast), AppColors.error),
+            _statCpu(appState, cpuUsage),
+            _statMem(appState, memUsage, memText),
+            _statNet(appState, rxText, txText),
+            if (showThrottle) _statThrottle(appState, level, diagnostics),
+          ],
+        ),
+      ),
     );
   }
   
@@ -229,7 +181,7 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     );
   }
 
-  Widget _statCpuNarrow(TerminalAppState appState, double fraction) {
+  Widget _statCpu(TerminalAppState appState, double fraction) {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: Row(
@@ -248,22 +200,7 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     );
   }
 
-  Widget _statCpuWide(TerminalAppState appState, double fraction) {
-    return Row(
-      children: [
-        Text(l(appState, AppStrings.values.cpu), style: _labelStyle),
-        const SizedBox(width: 2),
-        Expanded(child: _miniBar(fraction)),
-        const SizedBox(width: 2),
-        Text(
-          formatPercent(fraction.isNaN ? null : fraction),
-          style: _valueStyle,
-        ),
-      ],
-    );
-  }
-
-  Widget _statMemNarrow(TerminalAppState appState, double fraction, String text) {
+  Widget _statMem(TerminalAppState appState, double fraction, String text) {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: Row(
@@ -277,70 +214,6 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
         ],
       ),
     );
-  }
-
-  Widget _statMemWide(TerminalAppState appState, double fraction, String text) {
-    return Row(
-      children: [
-        Text(l(appState, AppStrings.values.mem), style: _labelStyle),
-        const SizedBox(width: 2),
-        Expanded(child: _miniBar(fraction)),
-        const SizedBox(width: 2),
-        Text(text, style: _valueStyle),
-      ],
-    );
-  }
-
-  void _advanceRxNetTier() {
-    final history = widget.session.netRxHistory;
-    if (history.isEmpty) return;
-    final maxVal = history.reduce((a, b) => a > b ? a : b);
-    var target = _networkTiers.length - 1;
-    for (var i = 0; i < _networkTiers.length; i++) {
-      if (_networkTiers[i] >= maxVal) { target = i; break; }
-    }
-    if (target > _rxNetTier) {
-      _rxNetTier = target;
-      _rxDowngradeAt = null;
-    } else if (target < _rxNetTier) {
-      final threshold = _networkTiers[_rxNetTier] * 0.3;
-      if (maxVal < threshold) {
-        final now = DateTime.now();
-        _rxDowngradeAt ??= now;
-        if (now.difference(_rxDowngradeAt!).inSeconds >= 60) {
-          _rxNetTier = target;
-          _rxDowngradeAt = null;
-        }
-      } else {
-        _rxDowngradeAt = null;
-      }
-    }
-  }
-
-  void _advanceTxNetTier() {
-    final history = widget.session.netTxHistory;
-    if (history.isEmpty) return;
-    final maxVal = history.reduce((a, b) => a > b ? a : b);
-    var target = _networkTiers.length - 1;
-    for (var i = 0; i < _networkTiers.length; i++) {
-      if (_networkTiers[i] >= maxVal) { target = i; break; }
-    }
-    if (target > _txNetTier) {
-      _txNetTier = target;
-      _txDowngradeAt = null;
-    } else if (target < _txNetTier) {
-      final threshold = _networkTiers[_txNetTier] * 0.3;
-      if (maxVal < threshold) {
-        final now = DateTime.now();
-        _txDowngradeAt ??= now;
-        if (now.difference(_txDowngradeAt!).inSeconds >= 60) {
-          _txNetTier = target;
-          _txDowngradeAt = null;
-        }
-      } else {
-        _txDowngradeAt = null;
-      }
-    }
   }
 
   Widget _miniBar(double fraction) {
@@ -361,7 +234,7 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
     );
   }
 
-  Widget _statNetNarrow(TerminalAppState appState, String rx, String tx) {
+  Widget _statNet(TerminalAppState appState, String rx, String tx) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -370,36 +243,6 @@ class _TerminalStatusBarState extends State<TerminalStatusBar> {
         Text(rx, style: _valueStyle),
         const SizedBox(width: 6),
         Text(l(appState, AppStrings.values.ul), style: _labelStyle),
-        const SizedBox(width: 2),
-        Text(tx, style: _valueStyle),
-      ],
-    );
-  }
-
-  Widget _statNetWide(TerminalAppState appState, String rx, String tx) {
-    final rxHistory = widget.session.netRxHistory;
-    final txHistory = widget.session.netTxHistory;
-    _advanceRxNetTier();
-    _advanceTxNetTier();
-    final rxScale = _networkTiers[_rxNetTier];
-    final txScale = _networkTiers[_txNetTier];
-    final rxFraction = rxHistory.isEmpty || rxScale <= 0
-        ? 0.0
-        : (rxHistory.last / rxScale).clamp(0.0, 1.0);
-    final txFraction = txHistory.isEmpty || txScale <= 0
-        ? 0.0
-        : (txHistory.last / txScale).clamp(0.0, 1.0);
-    return Row(
-      children: [
-        Text(l(appState, AppStrings.values.dl), style: _labelStyle),
-        const SizedBox(width: 2),
-        Expanded(child: _miniBar(rxFraction)),
-        const SizedBox(width: 2),
-        Text(rx, style: _valueStyle),
-        const SizedBox(width: 4),
-        Text(l(appState, AppStrings.values.ul), style: _labelStyle),
-        const SizedBox(width: 2),
-        Expanded(child: _miniBar(txFraction)),
         const SizedBox(width: 2),
         Text(tx, style: _valueStyle),
       ],

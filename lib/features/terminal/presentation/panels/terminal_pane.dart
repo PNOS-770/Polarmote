@@ -578,6 +578,19 @@ class _TerminalPaneState extends State<_TerminalPane> {
         ],
       );
     }
+    if (isDesktop) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.session.tab.status == TerminalStatus.connected)
+            TerminalSideStatusPanel(
+              session: widget.session,
+              appState: widget.appState,
+            ),
+          Expanded(child: paneContent),
+        ],
+      );
+    }
     return Column(
       children: [
         Expanded(child: paneContent),

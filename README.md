@@ -10,7 +10,7 @@
 
 ## 截图
 
-![主界面](screenshots/main.png)
+<img src="screenshots/main.png" alt="主界面" width="80%">
 
 ## 功能
 

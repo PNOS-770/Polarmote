@@ -578,31 +578,15 @@ class _TerminalPaneState extends State<_TerminalPane> {
         ],
       );
     }
-    return LayoutBuilder(builder: (context, constraints) {
-      final wideLayout = constraints.maxWidth >= 500;
-      if (wideLayout) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.session.tab.status == TerminalStatus.connected)
-              TerminalSideStatusPanel(
-                session: widget.session,
-                appState: widget.appState,
-              ),
-            Expanded(child: paneContent),
-          ],
-        );
-      }
-      return Column(
-        children: [
-          Expanded(child: paneContent),
-          if (widget.session.tab.status == TerminalStatus.connected)
-            widget.session.profile.isLocal
-                ? _LocalStatusBar(session: widget.session, appState: widget.appState)
-                : TerminalStatusBar(session: widget.session, appState: widget.appState),
-        ],
-      );
-    });
+    return Column(
+      children: [
+        Expanded(child: paneContent),
+        if (widget.session.tab.status == TerminalStatus.connected)
+          widget.session.profile.isLocal
+              ? _LocalStatusBar(session: widget.session, appState: widget.appState)
+              : TerminalStatusBar(session: widget.session, appState: widget.appState),
+      ],
+    );
   }
 }
 

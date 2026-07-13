@@ -95,15 +95,22 @@ extension TerminalAppStateSessions on TerminalAppState {
       status: TerminalStatus.connecting,
     );
 
+    final hostKey = hostKeyForHost(host);
+    final shared = sharedFileStates[hostKey];
+
     final session = TerminalSession(
       id: sessionId,
       profile: host,
       tab: tab,
-      fileState: SessionFileState(rootPath: '/'),
+      fileState: shared ?? SessionFileState(rootPath: '/'),
       transferQueue: [],
       maxLines: terminalBufferSize, // 使用动态的 buffer 大小
       adaptiveThrottleEnabled: performanceSettings.adaptiveThrottleEnabled,
     );
+
+    if (shared == null) {
+      sharedFileStates[hostKey] = session.fileState;
+    }
     session.onCommandSubmitted = (hostId, command) {
       recordCommandHistory(hostId, command);
       unawaited(runScriptTriggersForCommandSubmitted(session, command));
@@ -226,6 +233,16 @@ extension TerminalAppStateSessions on TerminalAppState {
       _queuePolarmoteTerminalWelcome(session);
       session.attachSession(sshSession);
       session.closedByUser = false;
+      // Isolated SSH client for SFTP so terminal shell is never affected
+      unawaited(
+        connectSshClientForHost(session.profile).then((sftpClient) {
+          if (!sessions.contains(session) || session.closedByUser) {
+            sftpClient.close();
+            return;
+          }
+          session.sftpClient = sftpClient;
+        }).catchError((_) {}),
+      );
       unawaited(
         client.done.catchError((_) {}).then((_) {
           if (!sessions.contains(session) || session.closedByUser) return;
@@ -860,7 +877,17 @@ extension TerminalAppStateSessions on TerminalAppState {
     terminalThumbnailImages[session.id]?.dispose();
     terminalThumbnailImages.remove(session.id);
 
+    final closedHostKey = hostKeyForSession(session);
     sessions.removeAt(index);
+    // Clean up shared file tree cache if no more sessions on that host
+    if (!sessions.any((s) => hostKeyForSession(s) == closedHostKey)) {
+      fileTreeDirectoryCache.remove(closedHostKey);
+      fileTreeLoadingByHost.remove(closedHostKey);
+      final shared = sharedFileStates.remove(closedHostKey);
+      if (shared != null) {
+        shared.dispose();
+      }
+    }
     for (
       var paneIndex = 0;
       paneIndex < terminalSplitPanes.length;

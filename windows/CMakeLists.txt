@@ -105,6 +105,14 @@ if(TARGET super_native_extensions_plugin_cargokit)
   add_dependencies(super_native_extensions_plugin_cargokit ensure_super_native_precompiled)
 endif()
 
+# media_kit_video depends on ANGLE & libmpv archives being extracted by
+# media_kit_libs_windows_video at build time.  If the extraction targets exist,
+# force a build‑order dependency so compilation doesn't race with extraction.
+if(TARGET media_kit_libs_windows_video_LIBMPV_EXTRACT AND TARGET media_kit_libs_windows_video_ANGLE_EXTRACT AND TARGET media_kit_video_plugin)
+  add_dependencies(media_kit_video_plugin media_kit_libs_windows_video_LIBMPV_EXTRACT)
+  add_dependencies(media_kit_video_plugin media_kit_libs_windows_video_ANGLE_EXTRACT)
+endif()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

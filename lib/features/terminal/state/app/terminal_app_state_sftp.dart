@@ -44,6 +44,10 @@ extension TerminalAppStateSftp on TerminalAppState {
 
   Future<void> ensureSftpReady(TerminalSession session) async {
     if (session.profile.isLocal) {
+      if (session.fileState.rootPath.isNotEmpty &&
+          session.fileState.directories.isNotEmpty) {
+        return;
+      }
       try {
         final homePath = await _resolveLocalHomePath();
         session.fileState.rootPath = Platform.isAndroid ? '/' : homePath;
@@ -55,7 +59,8 @@ extension TerminalAppStateSftp on TerminalAppState {
         session.fileState.backStack.clear();
         session.fileState.forwardStack.clear();
         _bumpFileTreeVersion(session);
-        await loadDirectory(session, homePath, force: true);
+        // Don't force — let loadDirectory use the shared host cache
+        await loadDirectory(session, homePath);
         _expandToPath(session, homePath);
         _startCurrentDirectoryAutoRefresh(session);
         notifyState();
@@ -69,12 +74,25 @@ extension TerminalAppStateSftp on TerminalAppState {
       }
       return;
     }
-    if (session.sftp != null) return;
-    final client = session.client;
-    if (client == null) return;
+    // Remote: skip if both SFTP channel and directories are ready
+    if (session.sftp != null && session.fileState.directories.isNotEmpty) {
+      return;
+    }
+    // If shared fileState is already populated by another session on the
+    // same host, skip re-init (preserves cached directories/navigation).
+    if (session.fileState.directories.isNotEmpty) {
+      final hostKey = hostKeyForSession(session);
+      if (sessions.any((s) =>
+          hostKeyForSession(s) == hostKey && s.sftp != null && s.id != session.id)) {
+        return;
+      }
+    }
+    // Use dedicated sftpClient if available, fall back to main client
+    final sftpClient = session.sftpClient ?? session.client;
+    if (sftpClient == null) return;
     try {
-      final sftp = await client.sftp();
-      session.sftp = sftp;
+      final sftp = session.sftp ?? await sftpClient.sftp();
+      session.sftp ??= sftp;
       final homePath = await sftp.absolute('.');
       String rootPath;
       try {
@@ -95,12 +113,11 @@ extension TerminalAppStateSftp on TerminalAppState {
       session.fileState.backStack.clear();
       session.fileState.forwardStack.clear();
       _bumpFileTreeVersion(session);
-      await loadDirectory(session, session.fileState.rootPath, force: true);
+      await loadDirectory(session, session.fileState.rootPath);
       if (session.fileState.currentPath != session.fileState.rootPath) {
         await loadDirectory(
           session,
           session.fileState.currentPath,
-          force: true,
         );
         _expandToPath(session, session.fileState.currentPath);
         _bumpFileTreeVersion(session);
@@ -128,10 +145,25 @@ extension TerminalAppStateSftp on TerminalAppState {
       return;
     }
     if (session.fileState.loading.contains(normalizedPath)) return;
+
+    // Check shared cache across sessions with the same host key
+    final hostKey = hostKeyForSession(session);
+    final hostCache = fileTreeDirectoryCache[hostKey];
+    if (!force && hostCache != null && hostCache.containsKey(normalizedPath)) {
+      session.fileState.directories[normalizedPath] =
+          List<FileNode>.from(hostCache[normalizedPath]!);
+      _bumpFileTreeVersion(session);
+      notifyState();
+      return;
+    }
+
     final sftp = session.sftp;
     if (!session.profile.isLocal && sftp == null) return;
 
     session.fileState.loading.add(normalizedPath);
+    // Track loading at host level to prevent concurrent fetches across sessions
+    final hostLoading = fileTreeLoadingByHost.putIfAbsent(hostKey, () => <String>{});
+    hostLoading.add(normalizedPath);
     try {
       final entries = <FileNode>[];
       if (session.profile.isLocal) {
@@ -192,6 +224,9 @@ extension TerminalAppStateSftp on TerminalAppState {
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
       session.fileState.directories[normalizedPath] = entries;
+      // Store in shared cache
+      fileTreeDirectoryCache.putIfAbsent(hostKey, () => <String, List<FileNode>>{})[normalizedPath] = entries;
+      _pruneHostDirectoryCache(hostKey);
       session.fileState.pruneDirectoryCache(); // 清理过多的缓存
       _bumpFileTreeVersion(session);
     } catch (e) {
@@ -229,6 +264,7 @@ extension TerminalAppStateSftp on TerminalAppState {
       );
     } finally {
       session.fileState.loading.remove(normalizedPath);
+      hostLoading.remove(normalizedPath);
       notifyState();
     }
   }
@@ -285,6 +321,14 @@ extension TerminalAppStateSftp on TerminalAppState {
     session.fileState.selected.removeWhere(
       (path) => _isSameOrChildPath(session, path, normalizedMissing),
     );
+    // Also remove from shared cache
+    final hostKey = hostKeyForSession(session);
+    final hostCache = fileTreeDirectoryCache[hostKey];
+    if (hostCache != null) {
+      hostCache.removeWhere(
+        (key, _) => _isSameOrChildPath(session, key, normalizedMissing),
+      );
+    }
     _bumpFileTreeVersion(session);
     notifyState();
     final currentPath = session.fileState.currentPath;
@@ -440,6 +484,7 @@ extension TerminalAppStateSftp on TerminalAppState {
       } else {
         await sftp!.mkdir(path);
       }
+      _invalidateHostCacheForPath(hostKeyForSession(session), parent);
       await refreshDirectory(session, parentPath);
     } catch (e) {
       final operation = AppStrings.values.createFolder.resolve(locale.languageCode);
@@ -482,6 +527,7 @@ extension TerminalAppStateSftp on TerminalAppState {
         );
         await file.close();
       }
+      _invalidateHostCacheForPath(hostKeyForSession(session), parent);
       await refreshDirectory(session, parentPath);
     } catch (e) {
       final operation = AppStrings.values.createFile.resolve(locale.languageCode);
@@ -523,6 +569,7 @@ extension TerminalAppStateSftp on TerminalAppState {
       } else {
         await sftp!.rename(oldNormalized, newPath);
       }
+      _invalidateHostCacheForPath(hostKeyForSession(session), parent);
       await refreshDirectory(session, parent);
     } catch (e) {
       final operation = AppStrings.values.renameFile.resolve(locale.languageCode);
@@ -564,10 +611,9 @@ extension TerminalAppStateSftp on TerminalAppState {
           await sftp!.remove(node.path);
         }
       }
-      await refreshDirectory(
-        session,
-        _parentPathForSession(session, node.path),
-      );
+      final parentPath = _parentPathForSession(session, node.path);
+      _invalidateHostCacheForPath(hostKeyForSession(session), parentPath);
+      await refreshDirectory(session, parentPath);
       session.fileState.selected.remove(node.path);
       _bumpFileTreeVersion(session);
       notifyState();
@@ -703,6 +749,27 @@ extension TerminalAppStateSftp on TerminalAppState {
 
   void _bumpFileTreeVersion(TerminalSession session) {
     session.fileState.version += 1;
+  }
+
+  void _pruneHostDirectoryCache(String hostKey) {
+    final cache = fileTreeDirectoryCache[hostKey];
+    if (cache == null || cache.length <= 100) return;
+    // Keep most recently accessed: keep up to 100 entries (favors 2 sessions × 50 each)
+    final keysToRemove = cache.keys.take(cache.length - 100).toList();
+    for (final key in keysToRemove) {
+      cache.remove(key);
+    }
+  }
+
+  void _invalidateHostCacheForPath(String hostKey, String normalizedPath) {
+    final cache = fileTreeDirectoryCache[hostKey];
+    if (cache == null) return;
+    cache.remove(normalizedPath);
+    // Also invalidate parent path since its content changed
+    final parent = parentOf(normalizedPath);
+    if (parent != normalizedPath) {
+      cache.remove(parent);
+    }
   }
 
   Future<String> _resolveAccessibleRoot(

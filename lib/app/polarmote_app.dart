@@ -12,7 +12,9 @@ import 'package:provider/provider.dart';
 import 'package:safe_layout_x/safe_layout_x.dart';
 
 import 'mobile_startup_gate.dart';
+import 'single_instance.dart';
 import 'system_tray_manager.dart';
+import '../shared/notifications/polarmote_system_notifications.dart';
 import '../features/terminal/debug/stress_test_server.dart';
 import '../features/terminal/presentation/terminal_home_page.dart';
 import '../features/terminal/state/terminal_app_state.dart';
@@ -103,6 +105,24 @@ class _PolarmoteAppState extends State<PolarmoteApp> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _runtimeRecoveryChannel.setMethodCallHandler(_handleRuntimeRecoveryCall);
     _startStressServer();
+    SingleInstance().onShow.listen((_) {
+      if (!mounted) return;
+      final appState = context.read<TerminalAppState>();
+      final locale = appState.locale;
+      unawaited(PolarmoteSystemNotifications.showBringToFront(
+        title: AppStrings.values.alreadyRunning.resolve(locale.languageCode),
+        body: AppStrings.values.clickToShowWindow.resolve(locale.languageCode),
+      ));
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.values.alreadyRunning.resolve(locale.languageCode),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    });
   }
 
   void _startStressServer() {

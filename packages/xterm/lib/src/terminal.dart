@@ -28,7 +28,7 @@ import 'package:xterm/src/utils/circular_buffer.dart';
 class Terminal with Observable implements TerminalState, EscapeHandler {
   /// The number of lines that the scrollback buffer can hold. If the buffer
   /// exceeds this size, the lines at the top of the buffer will be removed.
-  final int maxLines;
+  int maxLines;
 
   /// Function that is called when the program requests the terminal to ring
   /// the bell. If not set, the terminal will do nothing.
@@ -382,6 +382,13 @@ class Terminal with Observable implements TerminalState, EscapeHandler {
 
     _altBuffer.resetVerticalMargins();
     _mainBuffer.resetVerticalMargins();
+  }
+
+  void setBufferMaxLines(int newMaxLines) {
+    if (newMaxLines == maxLines) return;
+    maxLines = newMaxLines;
+    _mainBuffer.setMaxLines(newMaxLines);
+    _altBuffer.setMaxLines(newMaxLines);
   }
 
   @override

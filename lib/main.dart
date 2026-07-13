@@ -7,6 +7,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'app/Polarmote_app.dart';
+import 'app/single_instance.dart';
 import 'app/system_tray_manager.dart';
 import 'shared/notifications/Polarmote_system_notifications.dart';
 
@@ -25,6 +26,7 @@ Future<void> main(List<String> args) async {
       await PolarmoteSystemNotifications.ensureInitialized();
 
       if (!await _lockInstance()) {
+        await SingleInstance.notifyFirstInstance();
         return;
       }
       PolarmoteSystemTray.addShutdownHook(() {
@@ -35,6 +37,11 @@ Future<void> main(List<String> args) async {
       unawaited(
         PolarmoteSystemTray.init().catchError((_) {}),
       );
+      final singleInstance = SingleInstance();
+      unawaited(singleInstance.start().catchError((_) {}));
+      PolarmoteSystemTray.addShutdownHook(() {
+        singleInstance.stop();
+      });
       runApp(const PolarmoteAppBootstrap());
     },
     (error, stack) {},

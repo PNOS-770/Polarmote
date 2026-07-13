@@ -90,6 +90,15 @@ class _AppStringValues {
   final delete = const AppText(en: 'Delete', zh: '删除');
   final disconnected = const AppText(en: 'Disconnected', zh: '已断开');
   final done = const AppText(en: 'Done', zh: '完成');
+  final latency = const AppText(en: 'Latency', zh: '延迟');
+  final alreadyRunning = const AppText(
+    en: 'Polarmote is already running',
+    zh: 'Polarmote 已在运行',
+  );
+  final clickToShowWindow = const AppText(
+    en: 'Click to show window',
+    zh: '点击此处显示窗口',
+  );
   final openUrl = const AppText(en: 'Open URL', zh: '打开链接');
   final selectionModeLine = const AppText(en: 'Line selection', zh: '行选择');
   final selectionModeBlock = const AppText(en: 'Block selection', zh: '块选择');
@@ -886,6 +895,8 @@ class _AppStringValues {
     zh: '当前会话有传输任务，关闭会话将终止传输，是否继续？',
   );
   final uploads = const AppText(en: 'Uploads', zh: '上传');
+  final fileTreeUploadShort = const AppText(en: 'UL', zh: '上传');
+  final fileTreeDownloadShort = const AppText(en: 'DL', zh: '下载');
   final username = const AppText(en: 'Username', zh: '用户名');
   final size = const AppText(en: 'Size', zh: '大小');
   final showThumbnailBackground = const AppText(en: 'Show thumbnail background', zh: '缩略图背景显示');

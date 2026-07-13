@@ -1463,7 +1463,7 @@ class _TerminalAreaState extends State<_TerminalArea> {
               right: 0,
               bottom: 0,
               child: _FileTreePanel(
-                key: ValueKey('filetree_${session.id}'),
+                key: ValueKey('filetree_${appState.hostKeyForSession(session)}'),
                 appState: appState,
                 session: session,
                 initialHeight: _fileTreeHeight,

@@ -14,7 +14,7 @@ import 'package:xterm/src/utils/unicode_v11.dart';
 class Buffer {
   final TerminalState terminal;
 
-  final int maxLines;
+  int maxLines;
 
   final bool isAltBuffer;
 
@@ -50,6 +50,12 @@ class Buffer {
   final _savedCursorStyle = CursorStyle();
 
   final charset = Charset();
+
+  void setMaxLines(int newMaxLines) {
+    if (newMaxLines == maxLines) return;
+    maxLines = newMaxLines;
+    lines.maxLength = newMaxLines;
+  }
 
   /// Width of the viewport in columns. Also the index of the last column.
   int get viewWidth => terminal.viewWidth;

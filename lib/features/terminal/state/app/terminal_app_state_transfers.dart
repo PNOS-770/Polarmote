@@ -1153,6 +1153,8 @@ extension TerminalAppStateTransfers on TerminalAppState {
       _markTransferCanceled(session, id);
       return;
     }
+    // Invalidate shared file tree cache for the affected directory
+    _invalidateHostCacheForTransfer(session, finishedTask);
     _logTransferCompleted(session, finishedTask.copyWith(progress: 1));
     session.transferQueue[index] = session.transferQueue[index].copyWith(
       progress: 1,
@@ -1168,6 +1170,22 @@ extension TerminalAppStateTransfers on TerminalAppState {
     _scheduleTransferCleanup(session);
     _syncTransferForegroundService();
     notifyState();
+  }
+
+  void _invalidateHostCacheForTransfer(TerminalSession session, TransferTask task) {
+    final hostKey = hostKeyForSession(session);
+    final cache = fileTreeDirectoryCache[hostKey];
+    if (cache == null) return;
+    // Invalidate parent directories of source and destination paths on the remote host
+    final paths = <String>[
+      if (task.direction == TransferDirection.upload && task.destinationPath != null)
+        parentOf(task.destinationPath!),
+      if (task.direction == TransferDirection.download && task.sourcePath != null)
+        parentOf(task.sourcePath!),
+    ];
+    for (final p in paths) {
+      cache.remove(p);
+    }
   }
 
   void _failTransfer(TerminalSession session, String id, Object error) {
@@ -1612,7 +1630,10 @@ extension TerminalAppStateTransfers on TerminalAppState {
   }
 
   void _bumpTransferVersion(TerminalSession session) {
-    session.transferVersion += 1;
+    final hostKey = hostKeyForSession(session);
+    for (final s in sessions.where((s) => hostKeyForSession(s) == hostKey)) {
+      s.transferVersion += 1;
+    }
   }
 
   bool hasOngoingTransfers(TerminalSession session, {String? batchId}) {

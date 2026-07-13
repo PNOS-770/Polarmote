@@ -344,11 +344,16 @@ class NativeTransferBridge {
       throw const NativeTransferException('submit graph failed');
     }
 
+    const graphCompletedGracePeriod = Duration(seconds: 5);
+
     final deadline = DateTime.now().add(timeout);
     final hintedTotalBytes = graphSpec.totalBytesHint;
     final transferredByNode = <int, int>{};
     final totalByNode = <int, int>{};
     int? latestValueU64;
+    /// Timestamp when all known data bytes were first fully transferred.
+    /// Null until data transfer is confirmed complete.
+    DateTime? allDataTransferredAt;
 
     int aggregateTransferred() {
       var sum = 0;
@@ -381,12 +386,22 @@ class NativeTransferBridge {
         (null, int aggregated) => aggregated,
         (null, null) => null,
       };
+      // Track when all known data bytes have been fully transferred.
+      if (total != null && total > 0 && transferred >= total) {
+        allDataTransferredAt ??= DateTime.now();
+      }
       var safeTotal = total;
-      // Runtime V2 may discover/expand work incrementally, so aggregated total
-      // can temporarily equal transferred before graph actually completes.
-      // Avoid reporting 100% until we receive graph_completed.
       if (safeTotal != null && safeTotal > 0 && transferred >= safeTotal) {
-        safeTotal = transferred + 1;
+        // Runtime V2 may discover/expand work incrementally, so aggregated total
+        // can temporarily equal transferred before graph actually completes.
+        // After the grace period, report true 100% so the UI doesn't appear stuck.
+        if (allDataTransferredAt != null &&
+            DateTime.now().difference(allDataTransferredAt!) >=
+                graphCompletedGracePeriod) {
+          // Use real total — progress becomes 1.0.
+        } else {
+          safeTotal = transferred + 1;
+        }
       }
       try {
         onProgress(transferred, safeTotal);

@@ -35,7 +35,8 @@ const _fileTreePermissionsColWidth = 120.0;
 const _fileTreeSizeColWidth = 88.0;
 const _fileTreeOwnerColWidth = 88.0;
 const _fileTreeGroupColWidth = 88.0;
-const _fileTreeTransferColWidth = 80.0;
+const _fileTreeUploadColWidth = 40.0;
+const _fileTreeDownloadColWidth = 40.0;
 const _fileTreeColumnGapWidth = 10.0;
 const _fileTreeLeadingWidth = 51.0;
 const _fileTreeTrailingWidth = 6.0;
@@ -52,7 +53,9 @@ const _fileTreeColumnsContentWidth =
     _fileTreeColumnGapWidth +
     _fileTreeGroupColWidth +
     _fileTreeColumnGapWidth +
-    _fileTreeTransferColWidth;
+    _fileTreeUploadColWidth +
+    _fileTreeColumnGapWidth +
+    _fileTreeDownloadColWidth;
 
 class _FileTreeColumnLayout {
   const _FileTreeColumnLayout({
@@ -61,7 +64,8 @@ class _FileTreeColumnLayout {
     required this.permissionsWidth,
     required this.ownerWidth,
     required this.groupWidth,
-    required this.transferWidth,
+    required this.uploadWidth,
+    required this.downloadWidth,
     required this.gapAfterSize,
     required this.gapAfterModified,
     required this.gapAfterPermissions,
@@ -75,7 +79,8 @@ class _FileTreeColumnLayout {
   final double permissionsWidth;
   final double ownerWidth;
   final double groupWidth;
-  final double transferWidth;
+  final double uploadWidth;
+  final double downloadWidth;
   final double gapAfterSize;
   final double gapAfterModified;
   final double gapAfterPermissions;
@@ -86,7 +91,8 @@ class _FileTreeColumnLayout {
   bool get hasPermissions => permissionsWidth > 0;
   bool get hasOwner => ownerWidth > 0;
   bool get hasGroup => groupWidth > 0;
-  bool get hasTransfer => transferWidth > 0;
+  bool get hasUpload => uploadWidth > 0;
+  bool get hasDownload => downloadWidth > 0;
 }
 
 _FileTreeColumnLayout _computeFileTreeColumnLayout(double maxWidth) {
@@ -96,7 +102,8 @@ _FileTreeColumnLayout _computeFileTreeColumnLayout(double maxWidth) {
     permissionsWidth: _fileTreePermissionsColWidth,
     ownerWidth: _fileTreeOwnerColWidth,
     groupWidth: _fileTreeGroupColWidth,
-    transferWidth: _fileTreeTransferColWidth,
+    uploadWidth: _fileTreeUploadColWidth,
+    downloadWidth: _fileTreeDownloadColWidth,
     gapAfterSize: _fileTreeColumnGapWidth,
     gapAfterModified: _fileTreeColumnGapWidth,
     gapAfterPermissions: _fileTreeColumnGapWidth,
@@ -423,14 +430,26 @@ class FileTreeState extends State<FileTree> {
     if (nodes == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    final transferTasks = <String, TransferTask>{};
-    for (final task in session.transferQueue) {
-      final remotePath = task.direction == TransferDirection.download
-          ? task.sourcePath
-          : task.destinationPath != null
-              ? p.posix.join(task.destinationPath!, task.name)
-              : null;
-      if (remotePath != null) transferTasks[remotePath] = task;
+    final uploadTasks = <String, TransferTask>{};
+    final downloadTasks = <String, TransferTask>{};
+    final hostKey = appState.hostKeyForSession(session);
+    final sameHostSessions = appState.sessions.where(
+      (s) => appState.hostKeyForSession(s) == hostKey,
+    );
+    for (final s in sameHostSessions) {
+      for (final task in s.transferQueue) {
+        final remotePath = task.direction == TransferDirection.download
+            ? task.sourcePath
+            : task.destinationPath != null
+                ? p.posix.join(task.destinationPath!, task.name)
+                : null;
+        if (remotePath == null) continue;
+        if (task.direction == TransferDirection.upload) {
+          uploadTasks[remotePath] = task;
+        } else {
+          downloadTasks[remotePath] = task;
+        }
+      }
     }
     final entries = _sortEntries(
       nodes.where((node) {
@@ -582,7 +601,8 @@ class FileTreeState extends State<FileTree> {
                             ),
                           );
                         },
-                        transferTask: transferTasks[fileNode.path],
+                        uploadTask: uploadTasks[fileNode.path],
+                        downloadTask: downloadTasks[fileNode.path],
                       );
                       if (!isDesktop || session.profile.isLocal) {
                         return KeyedSubtree(

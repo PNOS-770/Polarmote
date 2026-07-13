@@ -34,6 +34,7 @@ import '../models/script_schedule_entry.dart';
 import '../models/script_trigger_entry.dart';
 import '../models/script_workflow_entry.dart';
 import '../models/file_node.dart';
+import '../models/session_file_state.dart';
 import '../models/terminal_session.dart';
 import '../models/terminal_tab.dart';
 import 'app/terminal_app_state_port_forward.dart';
@@ -210,6 +211,15 @@ class TerminalAppState extends ChangeNotifier {
   bool restorationInProgress = false;
   final Set<String> restoringStageIds = {};
   bool broadcastEnabled = false;
+  /// Host-keyed shared directory cache across sessions to the same host.
+  /// Outer key: host connection key (e.g. "ssh:user@host:22").
+  /// Inner key: normalized directory path.
+  final Map<String, Map<String, List<FileNode>>> fileTreeDirectoryCache = {};
+  /// Per-host loading guard to prevent concurrent fetches for the same path.
+  final Map<String, Set<String>> fileTreeLoadingByHost = {};
+  /// Shared SessionFileState keyed by host key — stages to the same host
+  /// reuse the same fileState so file tree navigation/scroll/selection persists.
+  final Map<String, SessionFileState> sharedFileStates = {};
   double terminalSplitPrimaryRatio = 0.5;
   double terminalSplitSecondaryRatio = 0.5;
   double mobileSidebarWidth = mobileSidebarWidthDefault;
@@ -228,6 +238,16 @@ class TerminalAppState extends ChangeNotifier {
   bool sessionFilterPinnedOnly = false;
   String sessionGroupFilter = '';
   SessionSortMode sessionSortMode = SessionSortMode.smart;
+
+  String hostKeyForSession(TerminalSession session) => _hostConnectionKey(session.profile);
+  String hostKeyForHost(HostEntry host) => _hostConnectionKey(host);
+
+  void applyBufferSizeToSessions() {
+    final size = terminalBufferSize;
+    for (final s in sessions) {
+      s.setBufferSize(size);
+    }
+  }
 
   String _hostConnectionKey(HostEntry profile) => switch (profile.connectionType) {
     ConnectionType.local => 'local:${profile.localShellType.name}',

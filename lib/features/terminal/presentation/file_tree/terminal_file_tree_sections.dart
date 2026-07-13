@@ -137,11 +137,24 @@ class _FileTreeColumnsHeader extends StatelessWidget {
                   ),
                 if (columnLayout.gapAfterGroup > 0)
                   SizedBox(width: columnLayout.gapAfterGroup),
-                if (columnLayout.hasTransfer)
+                if (columnLayout.hasUpload)
                   SizedBox(
-                    width: columnLayout.transferWidth,
+                    width: columnLayout.uploadWidth,
                     child: Text(
-                      l(appState, AppStrings.values.transfers),
+                      l(appState, AppStrings.values.fileTreeUploadShort),
+                      style: textStyle,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                if (columnLayout.gapAfterGroup > 0)
+                  SizedBox(width: columnLayout.gapAfterGroup),
+                if (columnLayout.hasDownload)
+                  SizedBox(
+                    width: columnLayout.downloadWidth,
+                    child: Text(
+                      l(appState, AppStrings.values.fileTreeDownloadShort),
                       style: textStyle,
                       textAlign: TextAlign.right,
                       maxLines: 1,
@@ -405,7 +418,8 @@ class _FileNodeRow extends StatefulWidget {
     required this.onOpen,
     this.onToggle,
     this.onOpenMenu,
-    this.transferTask,
+    this.uploadTask,
+    this.downloadTask,
   });
 
   final FileNode node;
@@ -419,7 +433,8 @@ class _FileNodeRow extends StatefulWidget {
   final VoidCallback onOpen;
   final VoidCallback? onToggle;
   final ValueChanged<Offset>? onOpenMenu;
-  final TransferTask? transferTask;
+  final TransferTask? uploadTask;
+  final TransferTask? downloadTask;
 
   @override
   State<_FileNodeRow> createState() => _FileNodeRowState();
@@ -470,8 +485,7 @@ class _FileNodeRowState extends State<_FileNodeRow> {
     return groupId.toString();
   }
 
-  Widget _buildTransferCell() {
-    final task = widget.transferTask;
+  static Widget _buildCell(TransferTask? task, double cellWidth) {
     if (task == null) return const SizedBox.shrink();
 
     final progress = task.progress;
@@ -483,7 +497,7 @@ class _FileNodeRowState extends State<_FileNodeRow> {
             alignment: Alignment.centerRight,
             children: [
               SizedBox(
-                width: _fileTreeTransferColWidth - 4,
+                width: cellWidth - 4,
                 height: 14,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(2),
@@ -774,10 +788,17 @@ class _FileNodeRowState extends State<_FileNodeRow> {
                         ),
                       if (widget.columnLayout.gapAfterGroup > 0)
                         SizedBox(width: widget.columnLayout.gapAfterGroup),
-                      if (widget.columnLayout.hasTransfer)
+                      if (widget.columnLayout.hasUpload)
                         SizedBox(
-                          width: widget.columnLayout.transferWidth,
-                          child: _buildTransferCell(),
+                          width: widget.columnLayout.uploadWidth,
+                          child: _buildCell(widget.uploadTask, widget.columnLayout.uploadWidth),
+                        ),
+                      if (widget.columnLayout.gapAfterGroup > 0)
+                        SizedBox(width: widget.columnLayout.gapAfterGroup),
+                      if (widget.columnLayout.hasDownload)
+                        SizedBox(
+                          width: widget.columnLayout.downloadWidth,
+                          child: _buildCell(widget.downloadTask, widget.columnLayout.downloadWidth),
                         ),
                     ],
                   ),
@@ -815,7 +836,8 @@ class _FileNodeSelectableRow extends StatefulWidget {
     required this.onOpen,
     this.onToggle,
     this.onOpenMenu,
-    this.transferTask,
+    this.uploadTask,
+    this.downloadTask,
   });
 
   final TerminalSession session;
@@ -824,16 +846,18 @@ class _FileNodeSelectableRow extends StatefulWidget {
   final double rowHeight;
   final int depth;
   final bool isExpanded;
-  final _FileTreeColumnLayout columnLayout;
   final bool showExpand;
+  final _FileTreeColumnLayout columnLayout;
   final VoidCallback onSelect;
   final VoidCallback onOpen;
   final VoidCallback? onToggle;
   final ValueChanged<Offset>? onOpenMenu;
-  final TransferTask? transferTask;
+  final TransferTask? uploadTask;
+  final TransferTask? downloadTask;
 
   @override
-  State<_FileNodeSelectableRow> createState() => _FileNodeSelectableRowState();
+  State<_FileNodeSelectableRow> createState() =>
+      _FileNodeSelectableRowState();
 }
 
 class _FileNodeSelectableRowState extends State<_FileNodeSelectableRow> {
@@ -898,7 +922,8 @@ class _FileNodeSelectableRowState extends State<_FileNodeSelectableRow> {
         onSelect: widget.onSelect,
         onOpen: widget.onOpen,
         onOpenMenu: widget.onOpenMenu,
-        transferTask: widget.transferTask,
+        uploadTask: widget.uploadTask,
+        downloadTask: widget.downloadTask,
       ),
     );
   }

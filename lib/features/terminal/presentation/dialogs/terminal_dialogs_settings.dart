@@ -472,6 +472,7 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
     return InkWell(
       onTap: () {
         appState.memoryMode = mode;
+        appState.applyBufferSizeToSessions();
         appState.notifyState();
       },
       child: Container(
@@ -984,6 +985,7 @@ class _SettingsDialogState extends State<TerminalSettingsPanel> with _ShortcutsT
                         label: '${appState.customTerminalBufferSize}',
                         onChanged: (value) {
                           appState.customTerminalBufferSize = value.toInt();
+                          appState.applyBufferSizeToSessions();
                           appState.notifyState();
                         },
                       ),

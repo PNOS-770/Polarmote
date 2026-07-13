@@ -106,6 +106,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
   static int? _prevTotal;
 
   Future<void> _pollLocalMetrics(TerminalSession session) async {
+    session.terminalLatencyMs = 0;
     try {
       final collector = _getCollector();
       final data = collector.collect();
@@ -188,10 +189,13 @@ extension TerminalAppStateMetrics on TerminalAppState {
     if (session.client == null) return;
     try {
       if (session.metricsClient == null) {
+        final start = DateTime.now();
         final c = await connectSshClientForHost(session.profile).timeout(const Duration(seconds: 10));
         if (session.client == null) { c.close(); return; }
         session.metricsClient = c;
+        session.terminalLatencyMs = DateTime.now().difference(start).inMilliseconds;
       }
+      final latencyStart = DateTime.now();
       final output = await session.metricsClient!
           .run(
             "sh -c 'cat /proc/stat; echo __MEM__; cat /proc/meminfo; echo __DF__; df -P /; echo __LOAD__; cat /proc/loadavg; echo __NET__; cat /proc/net/dev; echo __DISK__; cat /proc/diskstats'",
@@ -199,6 +203,7 @@ extension TerminalAppStateMetrics on TerminalAppState {
             stderr: false,
           )
           .timeout(const Duration(seconds: 5));
+      session.terminalLatencyMs = DateTime.now().difference(latencyStart).inMilliseconds;
       final text = utf8.decode(output, allowMalformed: true);
       _parseMetrics(session, text);
       session.metricsUpdatedAt = DateTime.now();

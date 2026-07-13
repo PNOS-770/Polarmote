@@ -204,6 +204,7 @@ class _TerminalSideStatusPanelState extends State<TerminalSideStatusPanel> {
           const SizedBox(height: 2),
           // ── Status badge ──
           _statusBadge(session.tab.status),
+          _latencyRow(),
           if (appState.broadcastEnabled) ...[
             const SizedBox(height: 4),
             Container(
@@ -293,11 +294,24 @@ class _TerminalSideStatusPanelState extends State<TerminalSideStatusPanel> {
 }
 
   Widget _statusBadge(TerminalStatus status) {
+    final appState = widget.appState;
     final (Color color, String text) = switch (status) {
-      TerminalStatus.connected => (const Color(0xFF22C55E), 'Connected'),
-      TerminalStatus.connecting => (const Color(0xFFF59E0B), 'Connecting'),
-      TerminalStatus.reconnecting => (const Color(0xFFFB923C), 'Reconnecting'),
-      TerminalStatus.disconnected => (const Color(0xFFEF4444), 'Disconnected'),
+      TerminalStatus.connected => (
+        const Color(0xFF22C55E),
+        l(appState, AppStrings.values.connected),
+      ),
+      TerminalStatus.connecting => (
+        const Color(0xFFF59E0B),
+        l(appState, AppStrings.values.connecting),
+      ),
+      TerminalStatus.reconnecting => (
+        const Color(0xFFFB923C),
+        l(appState, AppStrings.values.reconnecting),
+      ),
+      TerminalStatus.disconnected => (
+        const Color(0xFFEF4444),
+        l(appState, AppStrings.values.disconnected),
+      ),
     };
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -320,6 +334,42 @@ class _TerminalSideStatusPanelState extends State<TerminalSideStatusPanel> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _latencyRow() {
+    final session = widget.session;
+    final appState = widget.appState;
+    final ms = session.terminalLatencyMs;
+    if (ms == null) return const SizedBox.shrink();
+    final color = ms < 100
+        ? const Color(0xFF22C55E)
+        : ms < 300
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFFEF4444);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Text(
+            '${l(appState, AppStrings.values.latency)}  ',
+            style: const TextStyle(
+              fontSize: 9,
+              color: TerminalUiPalette.statusBarLabel,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            '${ms}ms',
+            style: TextStyle(
+              fontSize: 9,
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
     );
   }
 

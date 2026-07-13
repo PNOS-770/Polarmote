@@ -55,6 +55,48 @@ class PolarmoteSystemNotifications {
     }
   }
 
+  static Future<void> showBringToFront({
+    required String title,
+    required String body,
+  }) async {
+    if (!_isSupported) return;
+    await ensureInitialized();
+    if (!_initialized) return;
+    final id = DateTime.now().microsecondsSinceEpoch.remainder(0x7fffffff);
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'Polarmote_app_status',
+        'App Status',
+        channelDescription: 'Application status notifications.',
+        importance: Importance.low,
+        priority: Priority.low,
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: false,
+        presentSound: false,
+      ),
+      macOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: false,
+        presentSound: false,
+      ),
+      windows: WindowsNotificationDetails(
+        images: <WindowsImage>[
+          WindowsImage(
+            WindowsImage.getAssetUri('assets/images/app_icon_128.png'),
+            altText: 'Polarmote',
+            placement: WindowsImagePlacement.appLogoOverride,
+            crop: WindowsImageCrop.circle,
+          ),
+        ],
+      ),
+    );
+    try {
+      await _plugin.show(id: id, title: title, body: body, notificationDetails: details);
+    } catch (_) {}
+  }
+
   static Future<void> showScriptResult({
     required String title,
     required String body,

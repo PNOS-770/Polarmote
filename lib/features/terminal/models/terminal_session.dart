@@ -26,7 +26,8 @@ class TerminalSession {
     required this.transferQueue,
     int maxLines = 5000, // 降低默认值从 10000 到 5000
     bool adaptiveThrottleEnabled = true,
-  })  : terminal = Terminal(
+  })  : _appliedMaxLines = maxLines.clamp(1000, 50000),
+        terminal = Terminal(
           maxLines: maxLines.clamp(1000, 50000),
           reflowEnabled: false,
           sgrWheelEncoding: profile.connectionType == ConnectionType.local
@@ -91,6 +92,7 @@ class TerminalSession {
   final Set<String> pausedTransferTaskIds = {};
   bool transferCancelRequested = false;
   Timer? transferCleanupTimer;
+  int _appliedMaxLines;
   Timer? fileTreeRefreshTimer;
   bool closedByUser = false;
   bool _closedNotified = false;
@@ -127,6 +129,7 @@ class TerminalSession {
   String? totalMem;        // e.g. "64 GB"
   String? hostName;        // hostname from uname -n
   String? uptime;          // e.g. "3 days, 12:34"
+  int? terminalLatencyMs;  // round-trip latency to the remote host
   int? lastCpuTotal;
   int? lastCpuIdle;
   int? lastNetRxBytes;
@@ -155,6 +158,7 @@ class TerminalSession {
 
   SSHClient? client;
   SSHClient? metricsClient;
+  SSHClient? sftpClient;
   SSHSession? session;
   SftpClient? sftp;
   NativeTerminalPtySession? localPtySession;
@@ -400,6 +404,13 @@ class TerminalSession {
     });
   }
 
+  void setBufferSize(int maxLines) {
+    final clamped = maxLines.clamp(1000, 50000);
+    if (clamped == _appliedMaxLines) return;
+    _appliedMaxLines = clamped;
+    terminal.setBufferMaxLines(clamped);
+  }
+
   void dispose() {
     // 先清理 terminal 回调，防止在清理过程中触发
     terminal.onOutput = null;
@@ -412,7 +423,6 @@ class TerminalSession {
     _outputBufferSize = 0;
     
     closeConnection();
-    fileState.dispose();
     transferCleanupTimer?.cancel();
     transferCleanupTimer = null;
     
@@ -434,6 +444,7 @@ class TerminalSession {
     final currentSession = session;
     final currentClient = client;
     final currentMetricsClient = metricsClient;
+    final currentSftpClient = sftpClient;
     final currentSftp = sftp;
     final currentLocalPtySession = localPtySession;
     final currentByteChannelOutputSub = _byteChannelOutputSub;
@@ -445,6 +456,7 @@ class TerminalSession {
     session = null;
     client = null;
     metricsClient = null;
+    sftpClient = null;
     sftp = null;
     localPtySession = null;
     _byteChannelOutputSub = null;
@@ -461,6 +473,7 @@ class TerminalSession {
     _safeCall(() => currentSession?.close());
     _safeCall(() => currentClient?.close());
     _safeCall(() => currentMetricsClient?.close());
+    _safeCall(() => currentSftpClient?.close());
     _safeCall(() => currentSftp?.close());
     _safeCall(() => currentByteChannelOutputSub?.cancel());
     _safeCall(() => currentByteChannelCloser?.call());

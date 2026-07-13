@@ -50,21 +50,20 @@ class _ScriptsModalPanelState extends State<_ScriptsModalPanel> {
       width: 800,
       height: 600,
       actions: [
-        if (!widget.runMode)
-          Consumer<TerminalAppState>(
-            builder: (context, state, _) => IconButton(
-              icon: Icon(
-                state.showScriptMonitorInline
-                    ? Icons.arrow_back
-                    : Icons.monitor_heart_outlined,
-              ),
-              iconSize: 20,
-              tooltip: l(appState, AppStrings.values.scriptMonitor),
-              onPressed: () {
-                state.toggleScriptMonitorInline();
-              },
+        Consumer<TerminalAppState>(
+          builder: (context, state, _) => IconButton(
+            icon: Icon(
+              state.showScriptMonitorInline
+                  ? Icons.arrow_back
+                  : Icons.monitor_heart_outlined,
             ),
+            iconSize: 20,
+            tooltip: l(appState, AppStrings.values.scriptMonitor),
+            onPressed: () {
+              state.toggleScriptMonitorInline();
+            },
           ),
+        ),
         Consumer<TerminalAppState>(
           builder: (context, state, _) => IconButton(
             icon: Icon(
